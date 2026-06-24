@@ -1,0 +1,295 @@
+<%- include('../../partials/header') %>
+
+<link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
+
+<main class="login-main">
+    <a href="/" class="back-btn">&#8592; Back to Home</a>
+    
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            
+            <div class="login-header">
+                <h1 class="login-title">Administrator Login</h1>
+                <p class="login-description">
+                    Sign in to manage system configuration
+                </p>
+            </div>
+            
+            <!-- Step 1: Email + Password -->
+            <form action="/admin/login" method="POST" class="login-form" id="loginForm" style="<%= step === 'otp' ? 'display:none' : '' %>">
+                <div class="form-group">
+                    <label for="email" class="form-label">
+                        CSPC Email Address
+                        <span class="required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                            <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            class="form-input <%= (error && error !== 'Please enter your password.') ? 'input-error' : '' %>" 
+                            placeholder="admin@cspc.edu.ph"
+                            required
+                            pattern="[a-zA-Z0-9._%+\-]+@cspc\.edu\.ph$"
+                            title="Please use your CSPC email address"
+                            value="<%= email || '' %>"
+                        >
+                    </div>
+                    <% if (error && error !== 'Please enter your password.') { %>
+                        <span class="field-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <%= error %>
+                        </span>
+                    <% } %>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        Password
+                        <span class="required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-input <%= (error === 'Please enter your password.') ? 'input-error' : '' %>" 
+                            placeholder="Enter your password"
+                            required
+                            minlength="6"
+                        >
+                    </div>
+                    <% if (error === 'Please enter your password.') { %>
+                        <span class="field-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <%= error %>
+                        </span>
+                    <% } %>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    <span>Continue</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </form>
+
+            <!-- Step 2: OTP Verification -->
+            <form action="/admin/login/verify-otp" method="POST" class="login-form" id="otpForm" style="<%= step === 'otp' ? '' : 'display:none' %>">
+                <input type="hidden" name="email" value="<%= email || '' %>">
+                <input type="hidden" name="otpToken" value="<%= otpToken || '' %>">
+                
+                <div class="otp-header">
+                    <p class="otp-instructions">
+                        A 6-digit verification code has been sent to<br>
+                        <strong><%= email || '' %></strong>
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label for="otp" class="form-label">
+                        Verification Code
+                        <span class="required">*</span>
+                    </label>
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="0" pattern="[0-9]" required autocomplete="off">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="1" pattern="[0-9]" required autocomplete="off">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="2" pattern="[0-9]" required autocomplete="off">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="3" pattern="[0-9]" required autocomplete="off">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="4" pattern="[0-9]" required autocomplete="off">
+                        <input type="text" maxlength="1" class="otp-digit" data-index="5" pattern="[0-9]" required autocomplete="off">
+                    </div>
+                    <input type="hidden" name="otp" id="otpValue">
+                    <% if (otpError) { %>
+                        <span class="field-error">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <%= otpError %>
+                        </span>
+                    <% } %>
+                </div>
+
+                <div class="otp-timer">
+                    Code expires in <span id="otpTimer">5:00</span>
+                </div>
+                
+                <button type="submit" class="btn-login" id="btnVerifyOtp">
+                    <span>Verify & Sign In</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </button>
+
+                <div class="otp-resend">
+                    Didn't receive the code?
+                    <button type="button" class="btn-resend" id="btnResendOtp" disabled>
+                        Resend in <span id="resendTimer">60</span>s
+                    </button>
+                </div>
+
+                <button type="button" class="btn-back-login" id="btnBackToLogin">
+                    ← Back to login
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <div class="info-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <p>For testing: admin@cspc.edu.ph / admin123</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+
+<script>
+// ── OTP Input Handling ──
+const otpInputs = document.querySelectorAll('.otp-digit');
+const otpValue = document.getElementById('otpValue');
+const otpForm = document.getElementById('otpForm');
+const btnVerifyOtp = document.getElementById('btnVerifyOtp');
+const btnResendOtp = document.getElementById('btnResendOtp');
+const btnBackToLogin = document.getElementById('btnBackToLogin');
+const otpTimerEl = document.getElementById('otpTimer');
+const resendTimerEl = document.getElementById('resendTimer');
+
+if (otpInputs.length > 0) {
+    // Auto-focus first input
+    otpInputs[0].focus();
+
+    // Handle input
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            const value = e.target.value;
+            
+            // Only allow digits
+            if (!/^\d$/.test(value)) {
+                e.target.value = '';
+                return;
+            }
+
+            // Move to next input
+            if (value && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+
+            // Update hidden input
+            updateOtpValue();
+        });
+
+        // Handle backspace
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+
+        // Handle paste
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+            pastedData.split('').forEach((char, i) => {
+                if (otpInputs[i]) {
+                    otpInputs[i].value = char;
+                }
+            });
+            updateOtpValue();
+            if (pastedData.length === 6) {
+                otpInputs[5].focus();
+            }
+        });
+    });
+
+    function updateOtpValue() {
+        const code = Array.from(otpInputs).map(input => input.value).join('');
+        if (otpValue) otpValue.value = code;
+    }
+
+    // OTP Timer (5 minutes)
+    let otpSeconds = 300;
+    const otpInterval = setInterval(() => {
+        otpSeconds--;
+        const mins = Math.floor(otpSeconds / 60);
+        const secs = otpSeconds % 60;
+        if (otpTimerEl) otpTimerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        
+        if (otpSeconds <= 0) {
+            clearInterval(otpInterval);
+            if (btnVerifyOtp) btnVerifyOtp.disabled = true;
+            if (otpTimerEl) otpTimerEl.textContent = 'Expired';
+            alert('OTP has expired. Please request a new code.');
+        }
+    }, 1000);
+
+    // Resend Timer (60 seconds)
+    let resendSeconds = 60;
+    const resendInterval = setInterval(() => {
+        resendSeconds--;
+        if (resendTimerEl) resendTimerEl.textContent = resendSeconds;
+        
+        if (resendSeconds <= 0) {
+            clearInterval(resendInterval);
+            if (btnResendOtp) {
+                btnResendOtp.disabled = false;
+                btnResendOtp.innerHTML = 'Resend Code';
+            }
+        }
+    }, 1000);
+
+    // Resend OTP
+    if (btnResendOtp) {
+        btnResendOtp.addEventListener('click', async () => {
+            const email = document.querySelector('input[name="email"]').value;
+            try {
+                const res = await fetch('/admin/login/resend-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('New verification code sent to your email.');
+                    // Reset timer
+                    otpSeconds = 300;
+                    resendSeconds = 60;
+                    btnResendOtp.disabled = true;
+                    btnResendOtp.innerHTML = 'Resend in <span id="resendTimer">60</span>s';
+                } else {
+                    alert(data.error || 'Failed to resend code.');
+                }
+            } catch (err) {
+                alert('Failed to resend code. Please try again.');
+            }
+        });
+    }
+
+    // Back to login
+    if (btnBackToLogin) {
+        btnBackToLogin.addEventListener('click', () => {
+            window.location.href = '/admin/login';
+        });
+    }
+}
+</script>

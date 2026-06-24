@@ -1,0 +1,88 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
+<style>
+  .login-main { background: var(--bg-light); }
+  .sa-badge-wrap { display:flex; justify-content:center; margin-bottom:1rem; }
+  .sa-badge { display:inline-flex; align-items:center; gap:.375rem; padding:.3rem .875rem; background:linear-gradient(135deg,rgba(10,61,98,.1),rgba(30,136,229,.15)); border:1px solid rgba(10,61,98,.2); border-radius:var(--radius-full); font-size:.72rem; font-weight:700; color:var(--primary-blue); text-transform:uppercase; letter-spacing:.06em; }
+</style>
+
+<main class="login-main">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      </div>
+
+      <div class="sa-badge-wrap">
+        <span class="sa-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Super Administrator
+        </span>
+      </div>
+
+      <div class="login-header">
+        <h1 class="login-title">Secure Access</h1>
+        <p class="login-description">Institution-wide system oversight — CSPC</p>
+      </div>
+
+      <form action="/superadmin/login" method="POST" class="login-form">
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address <span class="required">*</span></label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <input type="email" id="email" name="email" class="form-input <%= (error && error !== 'Please enter your password.') ? 'input-error' : '' %>" placeholder="superadmin@cspc.edu.ph" required autofocus autocomplete="username">
+          </div>
+          <% if (error && error !== 'Please enter your password.') { %>
+            <span class="field-error">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <%= error %>
+            </span>
+          <% } %>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password <span class="required">*</span></label>
+          <div class="input-wrapper">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <input type="password" id="password" name="password" class="form-input <%= (error === 'Please enter your password.') ? 'input-error' : '' %>" placeholder="Enter your password" required autocomplete="current-password">
+          </div>
+          <% if (error === 'Please enter your password.') { %>
+            <span class="field-error">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <%= error %>
+            </span>
+          <% } %>
+        </div>
+
+        <button type="submit" class="btn-login">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          Sign In
+        </button>
+      </form>
+
+      <div class="login-footer">
+        <div class="info-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p>Demo — <strong>superadmin@cspc.edu.ph</strong> / superadmin123</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>

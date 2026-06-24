@@ -1,0 +1,671 @@
+<%- include('../../partials/header') %>
+    <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+    <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
+    <style>
+        .book-scroll {
+            padding: 1.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .book-form-card {
+            background: #fff;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            box-shadow: var(--shadow-sm);
+            max-width: 680px;
+            width: 100%;
+        }
+
+        .form-section-title {
+            font-size: 0.9375rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 0.625rem 0.875rem;
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            color: var(--gray-900);
+            background: white;
+            transition: border-color 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: var(--font-body);
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(10, 61, 98, 0.08);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        .slot-readonly-box {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            padding: .875rem 1rem;
+            background: rgba(10, 61, 98, .04);
+            border: 1.5px solid rgba(10, 61, 98, .15);
+            border-radius: var(--radius-md);
+        }
+
+        .slot-readonly-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .slot-readonly-text {
+            flex: 1;
+        }
+
+        .slot-readonly-time {
+            font-size: .9375rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .slot-readonly-date {
+            font-size: .8125rem;
+            color: var(--gray-500);
+            margin-top: .125rem;
+        }
+
+        .slot-readonly-change {
+            font-size: .75rem;
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .slot-readonly-change:hover {
+            text-decoration: underline;
+        }
+
+        .slot-day-label {
+            font-weight: 700;
+            font-size: 0.875rem;
+            color: var(--gray-900);
+            min-width: 80px;
+        }
+
+        .slot-time-label {
+            font-size: 0.8125rem;
+            color: var(--gray-600);
+        }
+
+        .slot-avail-badge {
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+        }
+
+        .slot-avail-badge.open {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .slot-avail-badge.full {
+            background: var(--gray-100);
+            color: var(--gray-400);
+            border: 1px solid var(--gray-200);
+        }
+
+        .consult-type-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .consult-type-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            background: white;
+            color: var(--gray-600);
+            font-size: 0.875rem;
+            font-weight: 600;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .consult-type-btn:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-50);
+        }
+
+        .consult-type-btn.active {
+            border-color: var(--primary-blue);
+            background: rgba(10, 61, 98, .07);
+            color: var(--primary-blue);
+        }
+
+        .btn-submit-book {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.75rem;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: var(--font-body);
+        }
+
+        .btn-submit-book:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-cancel-book {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            background: white;
+            color: var(--gray-700);
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-body);
+            text-decoration: none;
+        }
+
+        .btn-cancel-book:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-50);
+        }
+
+        .faculty-summary-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .faculty-summary-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .success-overlay.show {
+            display: flex;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: 2.5rem;
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .success-icon {
+            width: 72px;
+            height: 72px;
+            background: #f0fdf4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
+
+        .success-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .success-desc {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .book-actions-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 1.75rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--gray-100);
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .book-form-card {
+                padding: 1.25rem;
+            }
+
+            .faculty-summary-card {
+                align-items: flex-start;
+            }
+
+            .slot-readonly-box {
+                flex-wrap: wrap;
+            }
+
+            .slot-readonly-change {
+                width: 100%;
+                text-align: left;
+            }
+
+            .book-actions-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .success-card {
+                padding: 1.5rem;
+            }
+
+            .success-card>div:last-child {
+                flex-direction: column;
+            }
+
+            .btn-submit-book,
+            .btn-cancel-book {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <div class="instructor-layout">
+        <%- include('../../partials/student-sidebar', { activePage: 'dashboard' , appointmentCount: 0 }) %>
+
+            <main class="instructor-main">
+                <div class="main-container">
+
+                    <div class="page-header" style="margin-bottom:1rem;">
+                        <div>
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                                <a href="/student/faculty/<%= faculty.id %>"
+                                    style="font-size:0.8125rem;color:var(--gray-500);text-decoration:none;display:flex;align-items:center;gap:0.25rem;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="15 18 9 12 15 6" />
+                                    </svg>
+                                    Back to Profile
+                                </a>
+                                <span style="color:var(--gray-300);font-size:0.8125rem;">/</span>
+                                <span style="font-size:0.8125rem;color:var(--gray-700);font-weight:600;">Book
+                                    Appointment</span>
+                            </div>
+                            <h1 class="page-title">Book an Appointment</h1>
+                            <p class="page-subtitle">Fill in the details below to request a consultation with <%=
+                                    faculty.name %>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="book-scroll">
+                        <div class="book-form-card">
+
+                            <!-- Faculty Summary -->
+                            <div class="faculty-summary-card">
+                                <div class="faculty-summary-avatar">
+                                    <%= faculty.name.split(' ').map(n => n[0]).join('') %></div>
+                        <div>
+                            <p style="font-weight:700;font-size:0.9375rem;color:var(--gray-900);margin:0 0 0.125rem;"><%= faculty.name %></p>
+                            <p style="font-size:0.8125rem;color:var(--gray-500);margin:0;"><%= faculty.position %> — <%= faculty.department %></p>
+                        </div>
+                    </div>
+
+                    <form id="bookingForm" action="/student/faculty/<%= faculty.id %>/book" method="POST">
+
+                        <!-- Step 1: Consultation Slot (read-only — selected from profile page) -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Consultation Slot
+                        </p>
+
+                        <div class="form-group">
+                            <div class="slot-readonly-box" id="slotReadonlyBox">
+                                <div class="slot-readonly-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </div>
+                                <div class="slot-readonly-text">
+                                    <div class="slot-readonly-time" id="slotReadonlyTime">No slot selected</div>
+                                    <div class="slot-readonly-date" id="slotReadonlyDate"></div>
+                                </div>
+                                <a href="/student/faculty/<%= faculty.id %>" class="slot-readonly-change">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                    Change
+                                </a>
+                            </div>
+                            <!-- Hidden input carries the selected slot to the server -->
+                            <input type="hidden" name="selectedSlot" id="selectedSlotInput">
+                            <input type="hidden" name="reservationToken" id="reservationTokenInput">
+                            <span class="form-hint" id="slotHint" style="color:#e53e3e;display:none;">Please go back and select a time slot first.</span>
+                        </div>
+
+                        <!-- Step 2: Student Details -->
+                        <p class="form-section-title" style="margin-top:1.5rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            Your Information
+                        </p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Full Name <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" class="form-input" id="studentName" name="studentName" placeholder="e.g. Juan Dela Cruz" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Student ID <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" class="form-input" id="studentId" name="studentId" placeholder="e.g. 2021-00123" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Section/Group Name <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" class="form-input" id="studentSection" name="studentSection" placeholder="e.g. BSIT-3E" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Course/Subject <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" class="form-input" id="courseSubject" name="courseSubject" placeholder="e.g. Capstone Project 1" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">CSPC Email Address <span style="color:#e53e3e;">*</span></label>
+                            <input type="email" class="form-input" id="studentEmail" name="studentEmail" placeholder="student@my.cspc.edu.ph" required>
+                            <span class="form-hint">Use your official CSPC student email</span>
+                        </div>
+                            <!-- Step 3: Consultation Details -->
+                            <p class="form-section-title" style="margin-top:1.5rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                Consultation Details
+                            </p>
+
+                                <div class="form-group">
+                                    <label class="form-label">Consultation Topic <span style="color:#e53e3e;">*</span></label>
+                                    <input type="text" class="form-input" id="consultTopic" name="consultTopic" placeholder="e.g. Thesis consultation regarding system architecture" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Consultation Mode <span style="color:#e53e3e;">*</span></label>
+                                    <div class="consult-type-toggle" id="consultTypeToggle">
+                                        <button type="button" class="consult-type-btn active" data-type="Face-to-Face" id="btnFaceToFace">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                            Face-to-Face
+                                        </button>
+                                        <button type="button" class="consult-type-btn" data-type="Online" id="btnOnline">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                                            Online
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="consultType" id="consultTypeInput" value="Face-to-Face">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Additional Notes <span
+                                            style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
+                                    <textarea class="form-textarea" id="consultNotes" name="consultNotes" placeholder="Provide any additional context or specific questions you would like to discuss..."></textarea>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="book-actions-row">
+                                    <button type="submit" class="btn-submit-book">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                            <line x1="16" y1="2" x2="16" y2="6" />
+                                            <line x1="8" y1="2" x2="8" y2="6" />
+                                            <line x1="3" y1="10" x2="21" y2="10" />
+                                        </svg>
+                                        Submit Appointment Request
+                                    </button>
+                                    <a href="/student/faculty/<%= faculty.id %>" class="btn-cancel-book">Cancel</a>
+                                </div>
+
+                                <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.75rem;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" style="vertical-align:middle;margin-right:3px;">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="16" x2="12" y2="12" />
+                                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                                    </svg>
+                                    Your request will be sent to <%= faculty.name %> for approval. You will be notified
+                                        once the instructor responds.
+                                </p>
+
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+            </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <%- include('../../partials/footer') %>
+                                        <%- include('../../partials/script') %>
+                                            <script>
+                                                // Read slot, date, token and prefill values from URL query params
+                                                (function () {
+                                                    const params = new URLSearchParams(window.location.search);
+                                                    const slot = params.get('slot');
+                                                    const date = params.get('date');
+                                                    const token = params.get('token');
+
+                                                    const timeEl = document.getElementById('slotReadonlyTime');
+                                                    const dateEl = document.getElementById('slotReadonlyDate');
+                                                    const inputEl = document.getElementById('selectedSlotInput');
+                                                    const tokenEl = document.getElementById('reservationTokenInput');
+                                                    const hintEl = document.getElementById('slotHint');
+                                                    const box = document.getElementById('slotReadonlyBox');
+
+                                                    if (slot) {
+                                                        timeEl.textContent = slot;
+                                                        dateEl.textContent = date || '';
+                                                        inputEl.value = slot;
+                                                        if (tokenEl) tokenEl.value = token || '';
+                                                        box.style.borderColor = 'rgba(22,163,74,.4)';
+                                                        box.style.background = 'rgba(34,197,94,.05)';
+                                                    } else {
+                                                        timeEl.textContent = 'No slot selected';
+                                                        hintEl.style.display = 'block';
+                                                        box.style.borderColor = '#fca5a5';
+                                                        box.style.background = '#fef2f2';
+                                                    }
+
+                                                    // 5-minute countdown timer display
+                                                    if (token && slot) {
+                                                        const HOLD_MS = 5 * 60 * 1000;
+                                                        const startedAt = Date.now();
+                                                        const timerEl = document.createElement('p');
+                                                        timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
+                                                        timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown">Slot held for 5:00</span>`;
+                                                        box.parentNode.insertBefore(timerEl, box.nextSibling);
+
+                                                        const countdownEl = document.getElementById('holdCountdown');
+                                                        const interval = setInterval(() => {
+                                                            const elapsed = Date.now() - startedAt;
+                                                            const remaining = Math.max(0, HOLD_MS - elapsed);
+                                                            const mins = Math.floor(remaining / 60000);
+                                                            const secs = Math.floor((remaining % 60000) / 1000);
+                                                            countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
+                                                            if (remaining <= 0) {
+                                                                clearInterval(interval);
+                                                                // Release and redirect back
+                                                                fetch('/student/slot/release', {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ token })
+                                                                });
+                                                                window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+                                                            }
+                                                        }, 1000);
+                                                    }
+
+                                                    // Restore form fields if coming back from a previous attempt
+                                                    const name = params.get('prefill_name');
+                                                    const id = params.get('prefill_id');
+                                                    const section = params.get('prefill_section');
+                                                    const course = params.get('prefill_course');
+                                                    const email = params.get('prefill_email');
+                                                    const topic = params.get('prefill_topic');
+                                                    const notes = params.get('prefill_notes');
+                                                    if (name) document.getElementById('studentName').value = name;
+                                                    if (id) document.getElementById('studentId').value = id;
+                                                    if (section) document.getElementById('studentSection').value = section;
+                                                    if (course) document.getElementById('courseSubject').value = course;
+                                                    if (email) document.getElementById('studentEmail').value = email;
+                                                    if (topic) document.getElementById('consultTopic').value = topic;
+                                                    if (notes) document.getElementById('consultNotes').value = notes;
+                                                })();
+
+                                                function showToast(type, title, message) {
+                                                    const c = document.getElementById('toastContainer');
+                                                    const t = document.createElement('div');
+                                                    t.className = `toast ${type}`;
+                                                    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+                                                    c.appendChild(t);
+                                                    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+                                                }
+
+                                                // ── Consultation mode toggle ──
+                                                const typeButtons = document.querySelectorAll('.consult-type-btn');
+                                                const typeInput = document.getElementById('consultTypeInput');
+                                                typeButtons.forEach(function (btn) {
+                                                    btn.addEventListener('click', function () {
+                                                        typeButtons.forEach(function (b) { b.classList.remove('active'); });
+                                                        this.classList.add('active');
+                                                        typeInput.value = this.dataset.type;
+                                                    });
+                                                });
+
+                                                document.getElementById('bookingForm').addEventListener('submit', function (e) {
+                                                    e.preventDefault();
+
+                                                    const slot = document.getElementById('selectedSlotInput').value;
+                                                    const name = document.getElementById('studentName').value.trim();
+                                                    const id = document.getElementById('studentId').value.trim();
+                                                    const section = document.getElementById('studentSection').value.trim();
+                                                    const course = document.getElementById('courseSubject').value.trim();
+                                                    const email = document.getElementById('studentEmail').value.trim();
+                                                    const topic = document.getElementById('consultTopic').value.trim();
+
+                                                    if (!slot) { showToast('error', 'No Slot Selected', 'Please go back and select a consultation time slot.'); return; }
+                                                    if (!name) { showToast('error', 'Required', 'Please enter your full name.'); return; }
+                                                    if (!id) { showToast('error', 'Required', 'Please enter your student ID.'); return; }
+                                                    if (!section) { showToast('error', 'Required', 'Please enter your section/group name.'); return; }
+                                                    if (!course) { showToast('error', 'Required', 'Please enter your course/subject.'); return; }
+                                                    if (!email || !email.endsWith('@my.cspc.edu.ph')) { showToast('error', 'Invalid Email', 'Please use your CSPC student email (@my.cspc.edu.ph).'); return; }
+                                                    if (!topic) { showToast('error', 'Required', 'Please enter a consultation topic.'); return; }
+                                                    // Also carry the selected date so the back-URL can restore it
+                                                    const params = new URLSearchParams(window.location.search);
+                                                    const dateVal = params.get('date') || '';
+                                                    let dateInput = document.getElementById('selectedDateInput');
+                                                    if (!dateInput) {
+                                                        dateInput = document.createElement('input');
+                                                        dateInput.type = 'hidden';
+                                                        dateInput.name = 'selectedDate';
+                                                        dateInput.id = 'selectedDateInput';
+                                                        this.appendChild(dateInput);
+                                                    }
+                                                    dateInput.value = dateVal;
+
+                                                    this.submit();
+                                                });
+                                            </script>

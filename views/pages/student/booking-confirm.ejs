@@ -1,0 +1,151 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
+<style>
+.email-highlight { font-weight:700; color:var(--primary-blue); word-break:break-all; }
+.ref-input-wrap { position:relative; }
+.ref-input {
+    width:100%; padding:.7rem 1rem; border:1.5px solid var(--gray-300);
+    border-radius:var(--radius-md); font-size:1.125rem; font-weight:700;
+    text-align:center; letter-spacing:.1em; text-transform:uppercase;
+    font-family:var(--font-body); color:var(--gray-900); outline:none;
+    transition:border-color .2s; box-sizing:border-box;
+}
+.ref-input:focus { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.08); }
+.ref-input::placeholder { font-size:.875rem; letter-spacing:0; font-weight:400; text-transform:none; color:var(--gray-400); }
+.btn-verify {
+    width:100%; padding:.7rem 1rem; background:var(--teal-gradient); color:white;
+    border:none; border-radius:var(--radius-md); font-size:.9rem; font-weight:600;
+    font-family:var(--font-body); cursor:pointer; transition:all .2s; box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+}
+.btn-verify:hover:not(:disabled) { transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.btn-verify:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.back-outline {
+    display:flex; align-items:center; justify-content:center; gap:.4rem;
+    width:100%; padding:.65rem 1rem; margin-top:.625rem;
+    border:1.5px solid var(--gray-300); border-radius:var(--radius-md);
+    background:#fff; color:var(--gray-700); font-size:.875rem; font-weight:600;
+    font-family:var(--font-body); text-decoration:none; text-align:center; box-sizing:border-box;
+}
+.back-outline:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
+</style>
+
+<main class="login-main">
+    <div class="login-container">
+        <div class="login-card">
+
+            <div class="login-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+            </div>
+
+            <div class="login-header">
+                <h1 class="login-title">Check Your Email</h1>
+                <p class="login-description">
+                    Your booking was received. A reference number has been sent to
+                    <span class="email-highlight"><%= email %></span>.
+                    Enter it below to confirm your appointment.
+                </p>
+            </div>
+
+            <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-error" style="width:100%;margin-bottom:.5rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span><%= error %></span>
+            </div>
+            <% } %>
+
+            <div class="login-form" style="gap:.875rem;display:flex;flex-direction:column;width:100%;">
+                <div class="form-group" style="align-items:center;">
+                    <label class="form-label" style="justify-content:center;font-size:.8125rem;">Enter Reference Number</label>
+                    <div class="ref-input-wrap">
+                        <input type="text" class="ref-input" id="refInput" placeholder="e.g. FT-AB3K9Z" maxlength="9" autocomplete="off" spellcheck="false">
+                    </div>
+                    <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your inbox and spam folder</small>
+                </div>
+
+                <button class="btn-verify" id="verifyBtn" disabled>
+                    <span>Verify &amp; Continue</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+            </div>
+
+            <a href="<%= backHref %>" class="back-outline" style="margin-top:.625rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Go back to booking form
+            </a>
+
+            <div class="login-footer">
+                <div class="info-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <p>For testing, your reference number is: <strong><%= refNumber %></strong></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+var CORRECT_REF = <%- JSON.stringify(refNumber) %>;
+var BOOKING     = <%- JSON.stringify(bookingData) %>;
+
+var refInput  = document.getElementById('refInput');
+var verifyBtn = document.getElementById('verifyBtn');
+
+// Format input as FT-XXXXXX
+refInput.addEventListener('input', function() {
+    var raw = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (raw.startsWith('FT')) raw = raw.slice(2);
+    raw = raw.slice(0, 6);
+    this.value = raw.length > 0 ? 'FT-' + raw : '';
+    verifyBtn.disabled = this.value.length < 9;
+});
+
+refInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !verifyBtn.disabled) verifyBtn.click();
+});
+
+verifyBtn.addEventListener('click', function() {
+    var entered = refInput.value.trim().toUpperCase();
+    if (entered !== CORRECT_REF) {
+        refInput.style.borderColor = '#dc2626';
+        refInput.style.boxShadow   = '0 0 0 3px rgba(220,38,38,.1)';
+        // Show error
+        var existing = document.querySelector('.alert-error');
+        if (!existing) {
+            var err = document.createElement('div');
+            err.className = 'alert alert-error';
+            err.style.width = '100%';
+            err.style.marginBottom = '.5rem';
+            err.innerHTML = '<span>Incorrect reference number. Please check your email and try again.</span>';
+            refInput.closest('.login-form').before(err);
+        }
+        return;
+    }
+
+    // Correct — save appointment and go to My Appointments
+    var existing = JSON.parse(localStorage.getItem('studentAppointments') || '[]');
+    existing.push({
+        refNumber:   CORRECT_REF,
+        facultyName: BOOKING.facultyName || '',
+        topic:       BOOKING.topic       || '',
+        day:         BOOKING.date        || 'TBD',
+        time:        BOOKING.slot        || '',
+        duration:    '—',
+        status:      'pending',
+        requestedAt: new Date().toLocaleString()
+    });
+    localStorage.setItem('studentAppointments', JSON.stringify(existing));
+
+    var refs = JSON.parse(localStorage.getItem('studentRefs') || '[]');
+    if (refs.indexOf(CORRECT_REF) === -1) refs.push(CORRECT_REF);
+    localStorage.setItem('studentRefs', JSON.stringify(refs));
+
+    window.location.href = '/student/appointments';
+});
+</script>

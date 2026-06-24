@@ -1,0 +1,70 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "System Administrator",
+      "email": "admin@cspc.edu.ph",
+      "role": "admin",
+      "status": "active",
+      "passwordHash": "03320bffd5423421954edbfd567e2bac:8fb9fe91415bb76d9a923cf7b9592e895f0e2e71d72d174cfe12d89343b190e702e9533d3c7876c9450e59cd044cfffe45bfd0eee44768f906d8d8f5ae764e6e",
+      "createdAt": "2026-05-08T08:39:21.043Z"
+    },
+    {
+      "id": 2,
+      "name": "Dr. Lourdes Reyes",
+      "email": "dean@cspc.edu.ph",
+      "role": "dean",
+      "status": "active",
+      "passwordHash": "0f2e82bc1aa32fc07ccc24e10f7c71a2:c77faf9e62416ba4cabb76cbc6bcec68a8e2b938b3c34ad9a709c5070d7a65d6855d3344a1179ad11a47a87fc01658d3ae9cb377211e28c215e64da51e35f571",
+      "createdAt": "2026-05-08T08:39:21.114Z"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Maria Santos",
+      "email": "maria.santos@cspc.edu.ph",
+      "role": "instructor",
+      "status": "active",
+      "passwordHash": "feae79eaffd64b699778d724f66b82fe:1a5ba6b0aabbd74a5eb9af40d159f5e81d0726a1ff0736d3ccb2036f8545431d9822e3d06b69db3096217c185653beb60ec0a765b7f2360c730dc0dce02aa652",
+      "createdAt": "2026-05-08T08:39:21.180Z"
+    },
+    {
+      "id": 4,
+      "name": "Instructor Account",
+      "email": "instructor@cspc.edu.ph",
+      "role": "instructor",
+      "status": "active",
+      "passwordHash": "520e81e6249c42719d9559451e3644c4:bff24310153845186f8bbc043df3a096a5933c0caf7b67dffcd38fbe1b6bdce0c26dbd19974843915d7262bab850eda2b60bcd03081cc3e44df67536093baf31",
+      "createdAt": "2026-05-08T08:39:21.246Z"
+    },
+    {
+      "id": 5,
+      "name": "Super Administrator",
+      "email": "superadmin@cspc.edu.ph",
+      "role": "superadmin",
+      "status": "active",
+      "passwordHash": "1d076298bb1d75aa44eb85dcbc42e1dd:c3c80f44c9567de995480adfde30d8c4ea93175eb6d2f96f764b11629c2feadb485c51b85c0270a72cd8d0e20803152a4c221af0a4e46a088afead3f8816a520",
+      "createdAt": "2026-05-08T08:39:21.311Z"
+    },
+    {
+      "id": 6,
+      "name": "Student Account",
+      "email": "student@my.cspc.edu.ph",
+      "role": "student",
+      "status": "active",
+      "studentNo": "2021-00001",
+      "passwordHash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+      "createdAt": "2026-06-17T08:00:00.000Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "e2dbcf395132e6ecb3d91e16f572b4e25f03b7366f9dbd72795193638872dac3",
+      "userId": 4,
+      "role": "instructor",
+      "createdAt": 1782306368754,
+      "expiresAt": 1782349568754,
+      "ip": "::1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+    }
+  ]
+}

@@ -1,0 +1,423 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── Room View Tabs ── */
+.room-view-tabs { display:flex; gap:.5rem; padding:0 0 1rem; border-bottom:1.5px solid var(--gray-200); margin-bottom:1.5rem; }
+.room-tab { padding:.5rem 1rem; border:none; background:transparent; font-size:.875rem; font-weight:600; color:var(--gray-500); cursor:pointer; border-radius:var(--radius-md) var(--radius-md) 0 0; transition:all .15s; position:relative; }
+.room-tab:hover { color:var(--gray-900); background:rgba(10,61,98,.04); }
+.room-tab.active { color:var(--primary-blue); background:rgba(10,61,98,.06); }
+.room-tab.active::after { content:''; position:absolute; bottom:-1.5px; left:0; right:0; height:2.5px; background:var(--primary-blue); border-radius:2px 2px 0 0; }
+.room-tab .tab-count { display:inline-flex; align-items:center; justify-content:center; background:var(--gray-100); color:var(--gray-600); border-radius:999px; padding:1px 7px; font-size:.7rem; margin-left:.4rem; min-width:20px; }
+.room-tab.active .tab-count { background:rgba(10,61,98,.12); color:var(--primary-blue); }
+
+/* ── Room Grid ── */
+.room-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.25rem; }
+
+/* ── Room Card (Lecture & Lab) ── */
+.room-card { background:#fff; border:1.5px solid var(--gray-200); border-radius:14px; padding:1.25rem; transition:all .2s; box-shadow:0 2px 8px rgba(0,0,0,.04); cursor:pointer; }
+.room-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.1); transform:translateY(-2px); border-color:var(--primary-blue); }
+.room-card.available { border-color:rgba(34,197,94,.35); background:linear-gradient(135deg,#fff,rgba(34,197,94,.03)); }
+.room-card.occupied { border-color:rgba(239,68,68,.35); background:linear-gradient(135deg,#fff,rgba(239,68,68,.03)); }
+.room-card.scheduled { border-color:rgba(251,191,36,.35); background:linear-gradient(135deg,#fff,rgba(251,191,36,.03)); }
+
+.room-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.875rem; }
+.room-number { font-size:1.125rem; font-weight:800; color:var(--gray-900); margin:0; }
+.room-status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .7rem; border-radius:999px; font-size:.7rem; font-weight:700; }
+.room-status-badge.available { background:rgba(34,197,94,.12); color:#15803d; }
+.room-status-badge.occupied { background:rgba(239,68,68,.12); color:#b91c1c; }
+.room-status-badge.scheduled { background:rgba(251,191,36,.12); color:#b45309; }
+.room-status-badge .dot { width:5px; height:5px; border-radius:50%; }
+.room-status-badge.available .dot { background:#16a34a; animation:blink 1.5s infinite; }
+.room-status-badge.occupied .dot { background:#dc2626; animation:blink 1.5s infinite; }
+.room-status-badge.scheduled .dot { background:#f59e0b; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.room-details { display:flex; flex-direction:column; gap:.5rem; }
+.room-detail-row { display:flex; align-items:center; gap:.5rem; font-size:.8rem; color:var(--gray-600); }
+.room-detail-row svg { flex-shrink:0; color:var(--gray-400); }
+.room-detail-value { font-weight:600; color:var(--gray-900); }
+
+.room-current-activity { margin-top:.875rem; padding-top:.875rem; border-top:1px solid var(--gray-200); }
+.room-activity-label { font-size:.7rem; text-transform:uppercase; font-weight:700; color:var(--gray-500); letter-spacing:.05em; margin-bottom:.35rem; }
+.room-activity-text { font-size:.8rem; color:var(--gray-800); font-weight:600; }
+.room-activity-time { font-size:.7rem; color:var(--gray-500); margin-top:.2rem; }
+
+/* ── Faculty Room Card (special design) ── */
+.faculty-card { background:#fff; border:1.5px solid var(--gray-200); border-radius:14px; padding:1rem 1.25rem; display:flex; align-items:center; gap:.875rem; transition:all .2s; box-shadow:0 2px 8px rgba(0,0,0,.04); cursor:pointer; }
+.faculty-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.1); transform:translateY(-2px); }
+.faculty-card.present { border-color:rgba(34,197,94,.35); background:linear-gradient(135deg,#fff,rgba(34,197,94,.03)); }
+.faculty-card.absent { opacity:.7; }
+
+.faculty-avatar { width:44px; height:44px; border-radius:50%; background:var(--teal-gradient); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
+.faculty-card.absent .faculty-avatar { background:var(--gray-300); }
+
+.faculty-info { flex:1; min-width:0; }
+.faculty-name { font-size:.9rem; font-weight:700; color:var(--gray-900); margin:0 0 .1rem; }
+.faculty-position { font-size:.75rem; color:var(--gray-500); margin:0 0 .3rem; }
+.faculty-office { display:flex; align-items:center; gap:.3rem; font-size:.78rem; color:var(--primary-blue); font-weight:600; }
+.faculty-card.absent .faculty-office { color:var(--gray-500); }
+.faculty-time { font-size:.7rem; color:var(--gray-400); margin-top:.2rem; }
+
+.faculty-presence-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.22rem .65rem; border-radius:999px; font-size:.65rem; font-weight:700; flex-shrink:0; }
+.faculty-presence-pill.in { background:rgba(34,197,94,.12); color:#15803d; }
+.faculty-presence-pill.out { background:rgba(107,114,128,.12); color:#374151; }
+.faculty-presence-pill .dot { width:6px; height:6px; border-radius:50%; }
+.faculty-presence-pill.in .dot { background:#16a34a; animation:blink 1.5s infinite; }
+.faculty-presence-pill.out .dot { background:#9ca3af; }
+
+/* ── Filter Bar ── */
+.filter-bar { display:flex; align-items:center; gap:.75rem; margin-bottom:1.25rem; }
+.filter-label { font-size:.8rem; font-weight:600; color:var(--gray-600); }
+.filter-select { padding:.5rem .875rem; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); font-size:.875rem; font-family:var(--font-body); background:#fff; color:var(--gray-800); outline:none; cursor:pointer; transition:all .15s; }
+.filter-select:hover { border-color:var(--primary-blue); }
+.filter-select:focus { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.1); }
+
+/* ── Empty State ── */
+.empty-room-state { text-align:center; padding:3rem 1rem; }
+.empty-room-state svg { color:var(--gray-300); margin-bottom:1rem; }
+.empty-room-state p { font-size:.875rem; color:var(--gray-500); }
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/dean-sidebar', { activePage: 'rooms' }) %>
+
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Room Management</h1>
+                    <p class="page-subtitle">Monitor lecture rooms, laboratories, and faculty presence</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-header-action primary" id="btnRefreshRooms">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-card-large confirmed">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2-2v16"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Available Rooms</p>
+                        <h2 class="stat-card-value" id="statAvailable">12</h2>
+                        <p class="stat-card-sublabel">Ready for use</p>
+                    </div>
+                </div>
+                <div class="stat-card-large declined">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Occupied Rooms</p>
+                        <h2 class="stat-card-value" id="statOccupied">8</h2>
+                        <p class="stat-card-sublabel">Currently in use</p>
+                    </div>
+                </div>
+                <div class="stat-card-large pending">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Scheduled Next</p>
+                        <h2 class="stat-card-value" id="statScheduled">5</h2>
+                        <p class="stat-card-sublabel">Upcoming reservations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room View Tabs -->
+            <div class="room-view-tabs">
+                <button class="room-tab active" data-view="lecture">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:.3rem"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    Lecture Rooms
+                    <span class="tab-count">15</span>
+                </button>
+                <button class="room-tab" data-view="lab">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:.3rem"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    Laboratory Rooms
+                    <span class="tab-count">8</span>
+                </button>
+                <button class="room-tab" data-view="faculty">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-right:.3rem"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    Faculty Room
+                    <span class="tab-count"><%= faculty ? faculty.length : 0 %></span>
+                </button>
+            </div>
+
+            <!-- Filter Bar (for Lecture and Lab views) -->
+            <div class="filter-bar" id="filterBar">
+                <span class="filter-label">Filter by Status:</span>
+                <select class="filter-select" id="filterStatus">
+                    <option value="all">All Rooms</option>
+                    <option value="available">Available Only</option>
+                    <option value="occupied">Occupied Only</option>
+                    <option value="scheduled">Scheduled Only</option>
+                </select>
+                <span class="filter-label" style="margin-left:1rem">Building Floor:</span>
+                <select class="filter-select" id="filterFloor">
+                    <option value="all">All Floors</option>
+                    <option value="ground">Ground Floor</option>
+                    <option value="2nd">2nd Floor</option>
+                    <option value="3rd">3rd Floor</option>
+                    <option value="4th">4th Floor</option>
+                </select>
+            </div>
+
+            <!-- Lecture Rooms View -->
+            <div class="room-view-content" id="lectureView">
+                <div class="room-grid">
+                    <%
+                    const lectureRooms = [
+                        { number: 'CCS 201', floor: '2nd', capacity: 45, status: 'available', currentClass: null, nextSchedule: '10:00 AM - CS301' },
+                        { number: 'CCS 202', floor: '2nd', capacity: 40, status: 'occupied', currentClass: 'CS101 - Programming Fundamentals', time: '8:00 AM - 9:30 AM', instructor: 'Dr. Santos' },
+                        { number: 'CCS 301', floor: '3rd', capacity: 50, status: 'scheduled', currentClass: null, nextSchedule: '9:00 AM - Web Development' },
+                        { number: 'CCS 302', floor: '3rd', capacity: 45, status: 'available', currentClass: null, nextSchedule: '1:00 PM - Database Systems' },
+                        { number: 'CCS 401', floor: '4th', capacity: 40, status: 'occupied', currentClass: 'CS401 - Software Engineering', time: '8:00 AM - 10:00 AM', instructor: 'Prof. Reyes' },
+                        { number: 'CCS 402', floor: '4th', capacity: 35, status: 'available', currentClass: null, nextSchedule: '11:00 AM - AI Fundamentals' },
+                    ];
+                    lectureRooms.forEach(room => { %>
+                    <div class="room-card <%= room.status %>" data-status="<%= room.status %>" data-floor="<%= room.floor %>">
+                        <div class="room-card-header">
+                            <h3 class="room-number"><%= room.number %></h3>
+                            <span class="room-status-badge <%= room.status %>">
+                                <span class="dot"></span>
+                                <%= room.status.charAt(0).toUpperCase() + room.status.slice(1) %>
+                            </span>
+                        </div>
+                        <div class="room-details">
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                Capacity: <span class="room-detail-value"><%= room.capacity %> students</span>
+                            </div>
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2-2v16"/></svg>
+                                Floor: <span class="room-detail-value"><%= room.floor %></span>
+                            </div>
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                                Type: <span class="room-detail-value">Lecture Room</span>
+                            </div>
+                        </div>
+                        <% if (room.status === 'occupied') { %>
+                        <div class="room-current-activity">
+                            <div class="room-activity-label">Current Class</div>
+                            <div class="room-activity-text"><%= room.currentClass %></div>
+                            <div class="room-activity-time"><%= room.time %> • <%= room.instructor %></div>
+                        </div>
+                        <% } else if (room.nextSchedule) { %>
+                        <div class="room-current-activity">
+                            <div class="room-activity-label">Next Schedule</div>
+                            <div class="room-activity-text"><%= room.nextSchedule %></div>
+                        </div>
+                        <% } %>
+                    </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <!-- Laboratory Rooms View -->
+            <div class="room-view-content" id="labView" style="display:none">
+                <div class="room-grid">
+                    <%
+                    const labRooms = [
+                        { number: 'CCS Lab 1', floor: 'Ground', capacity: 30, computers: 30, status: 'available', equipment: 'Intel Core i5, 8GB RAM', nextSchedule: '10:00 AM - Programming Lab' },
+                        { number: 'CCS Lab 2', floor: 'Ground', capacity: 30, computers: 30, status: 'occupied', currentClass: 'CS102L - Programming Lab', time: '8:00 AM - 10:00 AM', instructor: 'Dr. Cruz', equipment: 'Intel Core i7, 16GB RAM' },
+                        { number: 'CCS Lab 3', floor: '2nd', capacity: 25, computers: 25, status: 'scheduled', equipment: 'AMD Ryzen 5, 8GB RAM', nextSchedule: '9:00 AM - Network Lab' },
+                        { number: 'CCS Lab 4', floor: '3rd', capacity: 35, computers: 35, status: 'available', equipment: 'Intel Core i5, 16GB RAM', nextSchedule: '1:00 PM - Database Lab' },
+                    ];
+                    labRooms.forEach(room => { %>
+                    <div class="room-card <%= room.status %>" data-status="<%= room.status %>" data-floor="<%= room.floor %>">
+                        <div class="room-card-header">
+                            <h3 class="room-number"><%= room.number %></h3>
+                            <span class="room-status-badge <%= room.status %>">
+                                <span class="dot"></span>
+                                <%= room.status.charAt(0).toUpperCase() + room.status.slice(1) %>
+                            </span>
+                        </div>
+                        <div class="room-details">
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                Computers: <span class="room-detail-value"><%= room.computers %> units</span>
+                            </div>
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                Capacity: <span class="room-detail-value"><%= room.capacity %> students</span>
+                            </div>
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2-2v16"/></svg>
+                                Floor: <span class="room-detail-value"><%= room.floor %></span>
+                            </div>
+                            <div class="room-detail-row">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                                Specs: <span class="room-detail-value"><%= room.equipment %></span>
+                            </div>
+                        </div>
+                        <% if (room.status === 'occupied') { %>
+                        <div class="room-current-activity">
+                            <div class="room-activity-label">Current Class</div>
+                            <div class="room-activity-text"><%= room.currentClass %></div>
+                            <div class="room-activity-time"><%= room.time %> • <%= room.instructor %></div>
+                        </div>
+                        <% } else if (room.nextSchedule) { %>
+                        <div class="room-current-activity">
+                            <div class="room-activity-label">Next Schedule</div>
+                            <div class="room-activity-text"><%= room.nextSchedule %></div>
+                        </div>
+                        <% } %>
+                    </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <!-- Faculty Room View -->
+            <div class="room-view-content" id="facultyView" style="display:none">
+                <div class="room-grid">
+                    <% if (faculty && faculty.length > 0) { %>
+                        <% faculty.forEach(f => { %>
+                        <div class="faculty-card <%= f.bleStatus === 'in-room' ? 'present' : 'absent' %>" data-status="<%= f.bleStatus %>">
+                            <div class="faculty-avatar"><%= f.name.split(' ').map(n => n[0]).join('') %></div>
+                            <div class="faculty-info">
+                                <p class="faculty-name"><%= f.name %></p>
+                                <p class="faculty-position"><%= f.position %></p>
+                                <div class="faculty-office">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <%= f.officeRoom %>
+                                </div>
+                                <p class="faculty-time">
+                                    <%= f.bleStatus === 'in-room' ? 'Detected ' + f.bleLastDetected : 'Last seen ' + f.bleLastDetected %>
+                                </p>
+                            </div>
+                            <span class="faculty-presence-pill <%= f.bleStatus === 'in-room' ? 'in' : 'out' %>">
+                                <span class="dot"></span>
+                                <%= f.bleStatus === 'in-room' ? 'In Room' : 'Out' %>
+                            </span>
+                        </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="empty-room-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <p>No faculty data available</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+// ── Toast notification ──
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+// ── View Tabs Switching ──
+const tabs = document.querySelectorAll('.room-tab');
+const views = {
+    lecture: document.getElementById('lectureView'),
+    lab: document.getElementById('labView'),
+    faculty: document.getElementById('facultyView')
+};
+const filterBar = document.getElementById('filterBar');
+
+tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        const view = tab.dataset.view;
+        
+        // Update active tab
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show selected view
+        Object.keys(views).forEach(key => {
+            views[key].style.display = key === view ? '' : 'none';
+        });
+        
+        // Show/hide filter bar (not needed for faculty view)
+        filterBar.style.display = view === 'faculty' ? 'none' : 'flex';
+    });
+});
+
+// ── Filter Functionality ──
+const filterStatus = document.getElementById('filterStatus');
+const filterFloor = document.getElementById('filterFloor');
+
+function applyFilters() {
+    const statusValue = filterStatus.value;
+    const floorValue = filterFloor.value;
+    
+    // Get current active view
+    const activeTab = document.querySelector('.room-tab.active');
+    const currentView = activeTab ? activeTab.dataset.view : 'lecture';
+    const currentViewElement = views[currentView];
+    
+    if (!currentViewElement) return;
+    
+    const cards = currentViewElement.querySelectorAll('.room-card');
+    
+    cards.forEach(card => {
+        const cardStatus = card.dataset.status;
+        const cardFloor = card.dataset.floor;
+        
+        const statusMatch = statusValue === 'all' || cardStatus === statusValue;
+        const floorMatch = floorValue === 'all' || cardFloor.toLowerCase().includes(floorValue.toLowerCase());
+        
+        card.style.display = (statusMatch && floorMatch) ? '' : 'none';
+    });
+    
+    // Update stats (simple count of visible cards)
+    updateStats();
+}
+
+filterStatus.addEventListener('change', applyFilters);
+filterFloor.addEventListener('change', applyFilters);
+
+// ── Update Stats ──
+function updateStats() {
+    // Count all room cards across lecture and lab views
+    const allCards = [...document.querySelectorAll('#lectureView .room-card, #labView .room-card')];
+    const available = allCards.filter(c => c.dataset.status === 'available').length;
+    const occupied = allCards.filter(c => c.dataset.status === 'occupied').length;
+    const scheduled = allCards.filter(c => c.dataset.status === 'scheduled').length;
+    
+    document.getElementById('statAvailable').textContent = available;
+    document.getElementById('statOccupied').textContent = occupied;
+    document.getElementById('statScheduled').textContent = scheduled;
+}
+
+// ── Refresh Button ──
+document.getElementById('btnRefreshRooms').addEventListener('click', () => {
+    showToast('success', 'Refreshing', 'Room status data is being updated...');
+    setTimeout(() => {
+        showToast('success', 'Updated', 'Room status refreshed successfully');
+    }, 1500);
+});
+
+// ── Room Card Click (for future detail modal) ──
+document.querySelectorAll('.room-card, .faculty-card').forEach(card => {
+    card.addEventListener('click', () => {
+        // Future: Open detail modal
+        console.log('Room card clicked');
+    });
+});
+
+// Initialize stats on page load
+updateStats();
+</script>
+
+</content>

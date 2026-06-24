@@ -1,0 +1,192 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<div class="instructor-layout">
+    <%- include('../../partials/dean-sidebar', { activePage: 'dashboard' }) %>
+
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Dashboard</h1>
+                    <p class="page-subtitle">Welcome, <%= dean.name.split(' ')[0] %>! Here's the faculty overview for today.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-header-action primary" id="btnDownloadReport">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="stats-overview">
+                <div class="stat-card-large confirmed">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Faculty In Room</p>
+                        <h2 class="stat-card-value"><%= faculty.filter(f => f.bleStatus === 'in-room').length %></h2>
+                        <p class="stat-card-sublabel">of <%= faculty.length %> total faculty</p>
+                    </div>
+                </div>
+                <div class="stat-card-large pending">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Pending Appointments</p>
+                        <h2 class="stat-card-value"><%= allAppointments.filter(a => a.status === 'pending').length %></h2>
+                        <p class="stat-card-sublabel">Across all faculty</p>
+                    </div>
+                </div>
+                <div class="stat-card-large workload">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Today's Consultations</p>
+                        <h2 class="stat-card-value"><%= allAppointments.filter(a => a.isToday && a.status === 'confirmed').length %></h2>
+                        <p class="stat-card-sublabel">Confirmed for today</p>
+                    </div>
+                </div>
+                <div class="stat-card-large presence">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Out of Room</p>
+                        <h2 class="stat-card-value"><%= faculty.filter(f => f.bleStatus === 'out-of-room').length %></h2>
+                        <p class="stat-card-sublabel">Currently undetected</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-content-grid">
+
+                <!-- Real-time Faculty Presence -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Real-Time Faculty Presence</h3>
+                        <a href="/dean/faculty" class="card-link">View All →</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="appointments-list-dashboard">
+                            <% faculty.slice(0, 4).forEach(f => { %>
+                            <div class="appointment-row">
+                                <div class="apt-row-left">
+                                    <div class="apt-avatar-xs"><%= f.name.split(' ').map(n => n[0]).join('') %></div>
+                                    <div class="apt-row-info">
+                                        <h4 class="apt-row-name"><%= f.name %></h4>
+                                        <p class="apt-row-details">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            <%= f.officeRoom %>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="table-badge <%= f.bleStatus === 'in-room' ? 'confirmed' : 'declined' %>">
+                                        <%= f.bleStatus === 'in-room' ? 'In Room' : 'Out' %>
+                                    </span>
+                                </div>
+                            </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Log -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Activity</h3>
+                        <a href="/dean/presence" class="card-link">View All →</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="presence-list-dashboard">
+                            <% recentActivity.slice(0, 5).forEach(log => { %>
+                            <div class="presence-row">
+                                <div class="presence-row-icon <%= log.status %>">
+                                    <% if (log.status === 'entered') { %>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                                    <% } else { %>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                                    <% } %>
+                                </div>
+                                <div class="presence-row-info">
+                                    <p class="presence-row-action"><%= log.facultyName %> — <%= log.status === 'entered' ? 'Entered' : 'Exited' %> <%= log.location %></p>
+                                    <p class="presence-row-time"><%= log.timestamp %></p>
+                                </div>
+                            </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Appointments -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Upcoming Appointments</h3>
+                        <a href="/dean/reports" class="card-link">View Reports →</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="appointments-list-dashboard">
+                            <% allAppointments.filter(a => a.status === 'confirmed').slice(0, 3).forEach(apt => { %>
+                            <div class="appointment-row">
+                                <div class="apt-row-left">
+                                    <div class="apt-row-info">
+                                        <h4 class="apt-row-name"><%= apt.studentName %></h4>
+                                        <p class="apt-row-details">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            <%= apt.date %> • <%= apt.time %> — with <%= apt.instructorName %>
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="table-badge confirmed">Confirmed</span>
+                            </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Faculty Workload Summary -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Faculty Workload (This Month)</h3>
+                        <a href="/dean/reports" class="card-link">Full Report →</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="workload-breakdown">
+                            <% faculty.forEach(f => { %>
+                            <div class="breakdown-row">
+                                <span class="breakdown-label"><%= f.name.split(' ').slice(-1)[0] %></span>
+                                <div class="breakdown-bar-wrap">
+                                    <div class="breakdown-bar" style="width:<%= (f.hoursThisMonth / 60) * 100 %>%"></div>
+                                </div>
+                                <span class="breakdown-value"><%= f.hoursThisMonth %>h</span>
+                            </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+document.getElementById('btnDownloadReport').addEventListener('click', () => showToast('success', 'Downloading', 'Faculty overview report is being prepared...'));
+</script>

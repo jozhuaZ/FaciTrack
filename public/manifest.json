@@ -1,0 +1,26 @@
+{
+  "name": "FaciTrack",
+  "short_name": "FaciTrack",
+  "description": "Faculty Appointment and Real-Time Monitoring System — CSPC",
+  "start_url": "/roles",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F5F7FA",
+  "theme_color": "#0A3D62",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/images/FaciTrack-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/FaciTrack-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

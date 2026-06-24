@@ -1,0 +1,200 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:900px){.settings-grid{grid-template-columns:1fr}}
+.settings-section-desc{font-size:.8125rem;color:var(--gray-500);margin:0 0 1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--gray-100)}
+.settings-field{display:flex;flex-direction:column;gap:.375rem;margin-bottom:1rem}
+.settings-label{font-size:.8125rem;font-weight:600;color:var(--gray-700)}
+.settings-input{padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;color:var(--gray-900);background:#fff;transition:border-color .2s;width:100%;box-sizing:border-box;font-family:var(--font-body)}
+.settings-input:focus{outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(10,61,98,.08)}
+.settings-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.875rem;border:1px solid var(--gray-200);border-radius:var(--radius-md);background:#fff;transition:border-color .2s,background .2s;margin-bottom:.625rem}
+.settings-toggle-row:hover{border-color:var(--primary-blue);background:rgba(10,61,98,.02)}
+.settings-toggle-label{font-size:.875rem;font-weight:600;color:var(--gray-900);margin:0 0 .125rem}
+.settings-toggle-desc{font-size:.75rem;color:var(--gray-500);margin:0;line-height:1.4}
+.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:var(--gray-300);border-radius:24px;transition:.3s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+input:checked + .toggle-slider{background:var(--primary-blue)}
+input:checked + .toggle-slider:before{transform:translateX(20px)}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/superadmin-sidebar', { activePage: 'settings' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">System Settings</h1>
+          <p class="page-subtitle">Institution-wide FaciTrack configuration — all CSPC departments</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header-action" onclick="showToast('success','Reset','Settings reset to defaults.')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+            Reset
+          </button>
+          <button class="btn-header-action primary" onclick="showToast('success','Saved','System settings updated successfully.')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+
+        <!-- General -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">General Configuration</h3></div>
+          <div class="card-body">
+            <% settings.slice(0,4).forEach(s => { %>
+            <div class="settings-field">
+              <label class="settings-label"><%= s.label %></label>
+              <input type="text" class="settings-input" value="<%= s.value %>">
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- BLE -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">BLE & Monitoring</h3></div>
+          <div class="card-body">
+            <% settings.slice(4,8).forEach(s => { %>
+            <div class="settings-field">
+              <label class="settings-label"><%= s.label %></label>
+              <input type="text" class="settings-input" value="<%= s.value %>">
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- Appointments -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Appointment Settings</h3></div>
+          <div class="card-body">
+            <% settings.slice(8).forEach(s => { %>
+            <div class="settings-field">
+              <label class="settings-label"><%= s.label %></label>
+              <input type="text" class="settings-input" value="<%= s.value %>">
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- Feature Toggles -->
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Feature Toggles</h3></div>
+          <div class="card-body">
+            <% toggles.forEach(t => { %>
+            <div class="settings-toggle-row">
+              <div>
+                <p class="settings-toggle-label"><%= t.label %></p>
+                <p class="settings-toggle-desc"><%= t.description %></p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" <%= t.enabled?'checked':'' %>>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Super Admin Security -->
+      <div class="content-card">
+        <div class="card-header"><h3 class="card-title">Super Admin Security</h3></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem">
+            <div class="settings-field">
+              <label class="settings-label">Current Password</label>
+              <input type="password" class="settings-input" id="saCurPw" placeholder="Current password">
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">New Password</label>
+              <input type="password" class="settings-input" id="saNewPw" placeholder="New password">
+            </div>
+            <div class="settings-field">
+              <label class="settings-label">Confirm Password</label>
+              <input type="password" class="settings-input" id="saConfPw" placeholder="Confirm new password">
+            </div>
+          </div>
+          <button class="btn-header-action primary" id="saChangePw" style="margin-top:.5rem">Update Password</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+function showToast(type,title,msg){
+  const c=document.getElementById('toastContainer'),t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML='<div class="toast-content"><p class="toast-title">'+title+'</p><p class="toast-message">'+msg+'</p></div>';
+  c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},4000);
+}
+
+let hasUnsavedChanges = false;
+
+document.getElementById('saChangePw').addEventListener('click',function(){
+  const cur=document.getElementById('saCurPw').value, nw=document.getElementById('saNewPw').value, conf=document.getElementById('saConfPw').value;
+  if(!cur||!nw||!conf){showToast('error','Missing Fields','Please fill in all password fields.');return;}
+  if(nw.length<8){showToast('error','Too Short','Password must be at least 8 characters.');return;}
+  if(nw!==conf){showToast('error','Mismatch','Passwords do not match.');return;}
+  ['saCurPw','saNewPw','saConfPw'].forEach(id=>document.getElementById(id).value='');
+  showToast('success','Updated','Super admin password changed.');
+  hasUnsavedChanges = false;
+  const banner = document.querySelector('.unsaved-warning-banner');
+  if (banner) banner.remove();
+});
+
+// Track changes in form inputs
+const formInputs = document.querySelectorAll('.settings-input, input[type="checkbox"]');
+formInputs.forEach(input => {
+  input.addEventListener('input', () => { hasUnsavedChanges = true; showUnsavedWarning(); });
+  input.addEventListener('change', () => { hasUnsavedChanges = true; showUnsavedWarning(); });
+});
+
+// Clear flag when save buttons are clicked
+document.querySelectorAll('.btn-header-action.primary').forEach(btn => {
+  btn.addEventListener('click', () => {
+    hasUnsavedChanges = false;
+    const banner = document.querySelector('.unsaved-warning-banner');
+    if (banner) banner.remove();
+  });
+});
+
+// Warning banner at top of page
+function showUnsavedWarning() {
+  const existingBanner = document.querySelector('.unsaved-warning-banner');
+  if (existingBanner) return;
+  const banner = document.createElement('div');
+  banner.className = 'unsaved-warning-banner';
+  banner.innerHTML = `
+    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.875rem 1.25rem; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; margin-bottom:1rem;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span style="flex:1; font-size:0.875rem; color:#92400e; font-weight:600;">You have unsaved changes on this page.</span>
+    </div>
+  `;
+  document.querySelector('.main-container').insertBefore(banner, document.querySelector('.page-header'));
+}
+
+// Before leaving page
+window.addEventListener('beforeunload', (e) => {
+  if (hasUnsavedChanges) {
+    e.preventDefault();
+    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+    return e.returnValue;
+  }
+});
+</script>

@@ -1,0 +1,438 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.emp-badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.emp-badge.regular    {background:rgba(22,163,74,.12);color:#15803d}
+.emp-badge.parttime   {background:rgba(234,88,12,.1);color:#c2410c}
+.emp-badge.contractual{background:rgba(124,58,237,.1);color:#7c3aed}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;visibility:hidden;transition:all .3s ease;padding:1rem}
+.modal-overlay.show{opacity:1;visibility:visible}
+.modal-content{background:#fff;border-radius:var(--radius-lg);box-shadow:0 25px 70px rgba(0,0,0,.35);max-width:560px;width:100%;transform:scale(.9);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.modal-overlay.show .modal-content{transform:scale(1)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--gray-200)}
+.modal-title{font-size:1.125rem;font-weight:700;color:var(--gray-900);margin:0}
+.modal-close{width:32px;height:32px;border:none;background:transparent;color:var(--gray-500);cursor:pointer;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:var(--gray-100);color:var(--gray-900)}
+.modal-body{padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.modal-footer{display:flex;justify-content:flex-end;gap:.75rem;padding:1rem 1.5rem;border-top:1px solid var(--gray-200);background:var(--gray-50)}
+.form-field{display:flex;flex-direction:column;gap:.375rem}
+.form-field label{font-size:.8125rem;font-weight:600;color:var(--gray-700)}
+.form-field input,.form-field select{padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;color:var(--gray-900);background:#fff;font-family:var(--font-body);transition:border-color .2s;width:100%;box-sizing:border-box}
+.form-field input:focus,.form-field select:focus{outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(10,61,98,.08)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.delete-confirm{background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius-md);padding:1rem;font-size:.875rem;color:#991b1b;line-height:1.5}
+.role-tabs{display:flex;gap:.5rem;margin-bottom:.25rem}
+.role-tab{padding:.5rem 1rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.8125rem;font-weight:600;cursor:pointer;background:#fff;color:var(--gray-600);transition:all .2s;font-family:var(--font-body)}
+.role-tab.active{background:var(--primary-blue);color:#fff;border-color:var(--primary-blue)}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/superadmin-sidebar', { activePage: 'users' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">User Management</h1>
+          <p class="page-subtitle">Institution-wide accounts across all CSPC departments</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Users</p>
+            <h2 class="stat-card-value"><%= users.length %></h2>
+            <p class="stat-card-sublabel">All registered accounts</p>
+          </div>
+        </div>
+        <div class="stat-card-large pending">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Instructors</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.role==='Instructor').length %></h2>
+            <p class="stat-card-sublabel">Faculty accounts</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Active</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.status==='active').length %></h2>
+            <p class="stat-card-sublabel">Enabled accounts</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Inactive</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.status==='inactive').length %></h2>
+            <p class="stat-card-sublabel">Disabled accounts</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">All Users (<span id="visCount"><%= users.length %></span>)</h3>
+          <button class="btn-header-action primary" id="btnAddUser" style="margin-left:auto">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add User
+          </button>
+        </div>
+        <%- include('../../partials/filter-bar', {
+          filterId: 'saUser',
+          searchPlaceholder: 'Search name or email…',
+          filterSections: [
+            { label: 'By Role', key: 'role', type: 'buttons',
+              items: [{ value:'', label:'All Roles' }, { value:'Admin', label:'Sub-Admin' },
+                      { value:'Dean', label:'Dean' }, { value:'Instructor', label:'Instructor' }] },
+            { label: 'By Department', key: 'dept', type: 'buttons',
+              items: [{ value:'', label:'All Departments' }].concat(departments.map(function(d){ return { value: d, label: d }; })) },
+            { label: 'By Status', key: 'status', type: 'buttons',
+              items: [{ value:'', label:'All Status' }, { value:'active', label:'Active' }, { value:'inactive', label:'Inactive' }] }
+          ]
+        }) %>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="data-table" id="saUsersTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Employment</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="saUsersBody">
+                <% users.forEach((u,i) => { %>
+                <tr data-role="<%= u.role %>" data-dept="<%= u.department %>" data-status="<%= u.status %>" data-name="<%= u.name.toLowerCase() %>" data-email="<%= u.email.toLowerCase() %>">
+                  <td style="color:var(--gray-400);font-size:.8125rem"><%= i+1 %></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:.625rem">
+                      <div class="apt-avatar-xs" style="width:34px;height:34px;font-size:.6875rem;flex-shrink:0"><%= u.name.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+                      <div>
+                        <p style="font-weight:600;font-size:.875rem;color:var(--gray-900);margin:0"><%= u.name %></p>
+                        <p style="font-size:.72rem;color:var(--gray-400);margin:0"><%= u.email %></p>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="table-badge <%= u.role==='Admin'?'workload':u.role==='Dean'?'pending':'confirmed' %>"><%= u.role === 'Admin' ? 'Sub-Admin' : u.role %></span></td>
+                  <td>
+                    <% var ec = u.employmentType==='Regular'?'regular':u.employmentType==='Part-time'?'parttime':'contractual'; %>
+                    <span class="emp-badge <%= ec %>"><%= u.employmentType %></span>
+                  </td>
+                  <td style="font-size:.8125rem;color:var(--gray-600);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<%= u.department %>"><%= u.department %></td>
+                  <td><span class="table-badge <%= u.status==='active'?'confirmed':'declined' %>"><%= u.status==='active'?'Active':'Inactive' %></span></td>
+                  <td style="font-size:.75rem;color:var(--gray-500);white-space:nowrap"><%= u.lastLogin %></td>
+                  <td>
+                    <div style="display:flex;gap:.375rem">
+                      <button class="btn-icon-action approve" title="Edit"
+                        data-idx="<%= i %>"
+                        data-name="<%= u.name %>"
+                        data-email="<%= u.email %>"
+                        data-role="<%= u.role %>"
+                        data-dept="<%= u.department %>"
+                        data-status="<%= u.status %>"
+                        data-emptype="<%= u.employmentType %>"
+                        onclick="openEditFromBtn(this)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="btn-icon-action decline" title="Delete"
+                        data-name="<%= u.name %>"
+                        data-role="<%= u.role %>"
+                        onclick="openDeleteFromBtn(this)"
+                        <%= u.role === 'Admin' && u.email === 'admin@cspc.edu.ph' ? 'disabled' : '' %>>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination-bar">
+            <span class="page-info" id="saPageInfo">—</span>
+            <div class="pagination-controls" id="saPgCtrl"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Add/Edit User Modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="userModalTitle">Add User</h3>
+      <button class="modal-close" onclick="closeUserModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="roleTabsWrap">
+        <p style="font-size:.8125rem;font-weight:600;color:var(--gray-700);margin:0 0 .5rem">Role</p>
+        <div class="role-tabs">
+          <button class="role-tab active" onclick="setRole('Admin',this)">Sub-Admin</button>
+          <button class="role-tab" onclick="setRole('Dean',this)">Dean</button>
+          <button class="role-tab" onclick="setRole('Instructor',this)">Instructor</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Full Name <span style="color:#e53e3e">*</span></label>
+          <input type="text" id="uName" placeholder="Full name">
+        </div>
+        <div class="form-field">
+          <label>Email Address <span style="color:#e53e3e">*</span></label>
+          <input type="email" id="uEmail" placeholder="name@cspc.edu.ph">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label>Department <span style="color:#e53e3e">*</span></label>
+          <select id="uDept">
+            <option value="">Select department...</option>
+            <% departments.forEach(d => { %>
+            <option value="<%= d %>"><%= d %></option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Employment Type <span style="color:#e53e3e">*</span></label>
+          <select id="uEmpType">
+            <option value="Regular">Regular</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Contractual">Contractual</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field" id="pwdWrap">
+          <label>Temporary Password <span style="color:#e53e3e">*</span></label>
+          <input type="password" id="uPassword" placeholder="Set initial password">
+        </div>
+        <div class="form-field">
+          <label>Status</label>
+          <select id="uStatus">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal btn-cancel" onclick="closeUserModal()">Cancel</button>
+      <button class="btn-modal btn-confirm" style="background:linear-gradient(135deg,var(--primary-blue),#1e88e5);color:#fff" onclick="saveUser()">Save User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal-overlay" id="deleteUserModal">
+  <div class="modal-content" style="max-width:420px">
+    <div class="modal-header">
+      <h3 class="modal-title">Remove Account</h3>
+      <button class="modal-close" onclick="closeDeleteModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-confirm">
+        <strong>Delete account for "<span id="delUserName"></span>"?</strong><br><br>
+        This will permanently remove the <span id="delUserRole"></span> account from the system. This action cannot be undone.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn-modal btn-confirm" onclick="confirmDelete()">Delete Account</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+(function(){
+  const ROWS=10; let page=1;
+  let editingIndex=null, selectedRole='Admin', deletingName=null, deletingRole=null;
+  let saUFRole='', saUFDept='', saUFStatus='', saUFSearch='';
+
+  function rows(){ return Array.from(document.querySelectorAll('#saUsersBody tr')); }
+  function visible(){
+    return rows().filter(tr=>{
+      const roleMatch = !saUFRole || (saUFRole==='Admin' ? tr.dataset.role==='Admin' : tr.dataset.role===saUFRole);
+      return roleMatch&&(!saUFDept||tr.dataset.dept===saUFDept)&&(!saUFStatus||tr.dataset.status===saUFStatus)
+          &&(!saUFSearch||tr.dataset.name.includes(saUFSearch)||tr.dataset.email.includes(saUFSearch));
+    });
+  }
+
+  document.addEventListener('fbChange',function(e){
+    if(e.detail.filterId!=='saUser') return;
+    if(e.detail.section==='role')   saUFRole=e.detail.value;
+    if(e.detail.section==='dept')   saUFDept=e.detail.value;
+    if(e.detail.section==='status') saUFStatus=e.detail.value;
+    page=1; render();
+  });
+  document.addEventListener('fbSearch',function(e){
+    if(e.detail.filterId!=='saUser') return;
+    saUFSearch=e.detail.value.toLowerCase();
+    page=1; render();
+  });
+  function render(){
+    const vis=visible(), total=vis.length, pages=Math.max(1,Math.ceil(total/ROWS));
+    if(page>pages) page=pages;
+    rows().forEach(r=>r.style.display='none');
+    vis.slice((page-1)*ROWS,page*ROWS).forEach(r=>r.style.display='');
+    document.getElementById('visCount').textContent=total;
+    const from=total?(page-1)*ROWS+1:0, to=Math.min(page*ROWS,total);
+    document.getElementById('saPageInfo').textContent=total?`Showing ${from}–${to} of ${total}`:'No results';
+    const ctrl=document.getElementById('saPgCtrl'); ctrl.innerHTML='';
+    if(pages<=1) return;
+    const prev=document.createElement('button'); prev.className='pg-btn pg-arrow'; prev.innerHTML='&#8592;'; prev.disabled=page===1;
+    prev.addEventListener('click',()=>{page--;render();}); ctrl.appendChild(prev);
+    let s=Math.max(1,page-2),e=Math.min(pages,s+4); s=Math.max(1,e-4);
+    for(let i=s;i<=e;i++){const b=document.createElement('button');b.className='pg-btn'+(i===page?' active':'');b.textContent=i;b.addEventListener('click',()=>{page=i;render();});ctrl.appendChild(b);}
+    const next=document.createElement('button'); next.className='pg-btn pg-arrow'; next.innerHTML='&#8594;'; next.disabled=page>=pages;
+    next.addEventListener('click',()=>{page++;render();}); ctrl.appendChild(next);
+  }
+  function applyF(){ page=1; render(); }
+  window.applyF=applyF;
+
+  function showToast(type,title,msg){
+    const c=document.getElementById('toastContainer'),t=document.createElement('div');
+    t.className='toast '+type;
+    t.innerHTML='<div class="toast-content"><p class="toast-title">'+title+'</p><p class="toast-message">'+msg+'</p></div>';
+    c.appendChild(t);
+    setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},4000);
+  }
+
+  function hasDepartmentRoleConflict(role, dept, excludeIndex){
+    if(!dept) return false;
+    return rows().some(function(tr, idx){
+      if(idx === excludeIndex) return false;
+      return tr.dataset.role === role && tr.dataset.dept === dept;
+    });
+  }
+
+  // Add
+  document.getElementById('btnAddUser').addEventListener('click',()=>{
+    editingIndex=null; selectedRole='Admin';
+    document.getElementById('userModalTitle').textContent='Add User';
+    document.getElementById('roleTabsWrap').style.display='';
+    document.getElementById('pwdWrap').style.display='';
+    document.querySelectorAll('.role-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+    ['uName','uEmail','uPassword'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('uDept').value='';
+    document.getElementById('uEmpType').value='Regular';
+    document.getElementById('uStatus').value='active';
+    document.getElementById('userModal').classList.add('show');
+  });
+
+  window.setRole=function(role,btn){
+    selectedRole=role;
+    document.querySelectorAll('.role-tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+  };
+
+  // Data-attribute helpers (avoids quote escaping issues in onclick)
+  window.openEditFromBtn=function(btn){
+    openEditModal(
+      parseInt(btn.dataset.idx),
+      btn.dataset.name,
+      btn.dataset.email,
+      btn.dataset.role,
+      btn.dataset.dept,
+      btn.dataset.status,
+      btn.dataset.emptype
+    );
+  };
+  window.openDeleteFromBtn=function(btn){
+    openDeleteModal(btn.dataset.name, btn.dataset.role);
+  };
+
+  // Edit
+  window.openEditModal=function(index,name,email,role,dept,status,empType){
+    editingIndex=index; selectedRole=role;
+    document.getElementById('userModalTitle').textContent='Edit User';
+    document.getElementById('roleTabsWrap').style.display='none';
+    document.getElementById('pwdWrap').style.display='none';
+    document.getElementById('uName').value=name;
+    document.getElementById('uEmail').value=email;
+    document.getElementById('uDept').value=dept;
+    document.getElementById('uEmpType').value=empType||'Regular';
+    document.getElementById('uStatus').value=status;
+    document.getElementById('uPassword').value='';
+    document.getElementById('userModal').classList.add('show');
+  };
+
+  window.closeUserModal=function(){
+    editingIndex=null;
+    document.getElementById('userModal').classList.remove('show');
+  };
+
+  window.saveUser=function(){
+    const name=document.getElementById('uName').value.trim();
+    const email=document.getElementById('uEmail').value.trim();
+    const dept=document.getElementById('uDept').value;
+    const empType=document.getElementById('uEmpType').value;
+    const status=document.getElementById('uStatus').value;
+    if(!name){showToast('error','Required','Full name is required.');return;}
+    if(!email){showToast('error','Required','Email address is required.');return;}
+    if(!dept){showToast('error','Required','Department is required.');return;}
+    if(selectedRole==='Dean' && hasDepartmentRoleConflict('Dean', dept, editingIndex)){
+      showToast('error','Dean limit reached','Each department can only have 1 dean.');
+      return;
+    }
+    if(selectedRole==='Admin' && hasDepartmentRoleConflict('Admin', dept, editingIndex)){
+      showToast('error','Sub-Admin limit reached','Each department can only have 1 sub-admin.');
+      return;
+    }
+    const action=editingIndex!==null?'updated':'added';
+    const roleLabel=selectedRole==='Admin'?'Sub-Admin':selectedRole;
+    if(editingIndex!==null){
+      const row=rows()[editingIndex];
+      if(row){
+        row.dataset.status=status;
+        const statusCell=row.cells[5];
+        if(statusCell) statusCell.innerHTML=`<span class="table-badge ${status==='active'?'confirmed':'declined'}">${status==='active'?'Active':'Inactive'}</span>`;
+        const empCell=row.cells[3];
+        if(empCell){
+          const cls=empType==='Regular'?'regular':empType==='Part-time'?'parttime':'contractual';
+          empCell.innerHTML=`<span class="emp-badge ${cls}">${empType}</span>`;
+        }
+      }
+    }
+    showToast('success',editingIndex!==null?'User Updated':'User Added',`${roleLabel} account for "${name}" has been ${action}.`);
+    closeUserModal();
+  };
+
+  // Delete
+  window.openDeleteModal=function(name,role){
+    deletingName=name; deletingRole=role;
+    document.getElementById('delUserName').textContent=name;
+    document.getElementById('delUserRole').textContent=role==='Admin'?'Sub-Admin':role;
+    document.getElementById('deleteUserModal').classList.add('show');
+  };
+  window.closeDeleteModal=function(){
+    deletingName=null;
+    document.getElementById('deleteUserModal').classList.remove('show');
+  };
+  window.confirmDelete=function(){
+    showToast('success','Account Deleted',`"${deletingName}" has been removed from the system.`);
+    closeDeleteModal();
+  };
+
+  render();
+}());
+</script>

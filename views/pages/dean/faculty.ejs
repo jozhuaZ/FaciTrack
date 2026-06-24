@@ -1,0 +1,829 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── View toggle ── */
+.view-toggle{display:flex;gap:.375rem;background:var(--gray-100);border-radius:var(--radius-md);padding:3px}
+.view-btn{padding:.375rem .875rem;border:none;border-radius:calc(var(--radius-md) - 2px);font-size:.8125rem;font-weight:600;cursor:pointer;font-family:var(--font-body);color:var(--gray-600);background:transparent;transition:all .18s;display:flex;align-items:center;gap:.375rem}
+.view-btn.active{background:#fff;color:var(--primary-blue);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+/* ── Card grid ── */
+.mon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
+.fac-card{background:#fff;border:1.5px solid var(--gray-200);border-radius:14px;padding:1.1rem 1.25rem;display:flex;align-items:center;gap:.875rem;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:all .2s;cursor:pointer}
+.fac-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.1);transform:translateY(-2px)}
+.fac-card.in-room{border-color:rgba(34,197,94,.35);background:linear-gradient(135deg,#fff,rgba(34,197,94,.03))}
+.fac-card.out-of-room{opacity:.78}
+.fac-avatar{width:44px;height:44px;border-radius:50%;background:var(--teal-gradient);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+.fac-card.out-of-room .fac-avatar{background:var(--gray-300)}
+.fac-info{flex:1;min-width:0}
+.fac-name{font-size:.9rem;font-weight:700;color:var(--gray-900);margin:0 0 .1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fac-pos{font-size:.75rem;color:var(--gray-500);margin:0 0 .3rem}
+.fac-room{display:flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--primary-blue);font-weight:600}
+.fac-card.out-of-room .fac-room{color:var(--gray-500)}
+.fac-time{font-size:.7rem;color:var(--gray-400);margin-top:.2rem}
+.status-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .65rem;border-radius:999px;font-size:.65rem;font-weight:700;flex-shrink:0}
+.status-pill.in{background:rgba(34,197,94,.12);color:#15803d}
+.status-pill.out{background:rgba(107,114,128,.12);color:#374151}
+.status-pill .dot{width:6px;height:6px;border-radius:50%}
+.status-pill.in .dot{background:#16a34a;animation:blink 1.5s infinite}
+.status-pill.out .dot{background:#9ca3af}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+/* ── Section divider ── */
+.sec-div{display:flex;align-items:center;gap:.5rem;font-size:.72rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.06em;margin:.25rem 0 .625rem}
+.sec-div::after{content:'';flex:1;height:1px;background:var(--gray-200)}
+.sec-count{background:var(--gray-100);color:var(--gray-600);border-radius:999px;padding:1px 8px;font-size:.65rem}
+/* ══════════════════════════════════════════
+   FULL-SCREEN FACULTY MONITORING BOARD
+   White bg · Blue=IN · Gray=OUT · TV style
+   ══════════════════════════════════════════ */
+.preview-overlay{display:none;position:fixed;inset:0;background:#f0f4f8;z-index:2000;flex-direction:column}
+.preview-overlay.open{display:flex}
+.preview-box{display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;background:#f0f4f8}
+
+/* ── Top header bar ── */
+.fs-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.9rem 1.75rem;background:#fff;
+  border-bottom:1px solid #e2e8f0;flex-shrink:0;
+}
+.fs-header-left{display:flex;align-items:center;gap:.875rem}
+.fs-board-title{font-size:1.65rem;font-weight:800;color:#1e293b;margin:0;letter-spacing:.01em}
+.fs-legend{display:flex;align-items:center;gap:1.5rem}
+.fs-legend-item{display:flex;align-items:center;gap:.5rem;font-size:1.15rem;font-weight:600;color:#475569}
+.fs-legend-dot{width:15px;height:15px;border-radius:50%}
+.fs-legend-dot.in{background:#2563eb}
+.fs-legend-dot.out{background:#ef4444}
+/* Clock */
+.fs-clock-wrap{text-align:right}
+.fs-clock{font-size:3.25rem;font-weight:800;color:#1e293b;font-variant-numeric:tabular-nums;line-height:1;letter-spacing:.02em}
+.fs-ampm{font-size:1.4rem;font-weight:700;color:#64748b;margin-left:.35rem}
+
+/* ── Floating close ── */
+.fs-close-btn{
+  position:fixed;top:.75rem;right:.75rem;z-index:2100;
+  width:34px;height:34px;border:1px solid #e2e8f0;border-radius:50%;
+  background:#fff;color:#64748b;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);
+  transition:opacity .4s ease,background .15s;opacity:1;
+}
+.fs-close-btn:hover{background:#f1f5f9;color:#1e293b}
+.fs-close-btn.faded{opacity:0;pointer-events:none}
+
+/* ── Scrollable body ── */
+.fs-body{flex:1;overflow-y:auto;padding:1rem 1.25rem 1rem;background:#f0f4f8}
+.fs-body::-webkit-scrollbar{width:5px}
+.fs-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+
+/* ── Faculty card grid — 8 per row ── */
+.fs-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:1rem}
+
+/* ── Individual card ── */
+.fs-card{
+  width:100%;flex-shrink:0;border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;
+  padding:.9rem .75rem .75rem;gap:.35rem;
+  border:1px solid transparent;
+  transition:transform .15s,box-shadow .15s;cursor:default;
+}
+.fs-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+
+/* IN = blue card */
+.fs-card.in{
+  background:#2563eb;border-color:#1d4ed8;
+  box-shadow:0 2px 8px rgba(37,99,235,.3);
+}
+/* OUT = white card */
+.fs-card.out{
+  background:#fff;border-color:#e2e8f0;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+}
+
+/* ── Photo circle ── */
+.fs-photo{
+  width:min(100px, 70%);height:0;padding-bottom:min(100px, 70%);
+  border-radius:50%;overflow:hidden;position:relative;
+  background:#dbeafe;border:3px solid rgba(255,255,255,.6);
+  flex-shrink:0;
+}
+.fs-card.out .fs-photo{background:#f1f5f9;border-color:#e2e8f0}
+.fs-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fs-photo svg{position:absolute;inset:0;margin:auto;width:50%;height:50%}
+.fs-card.in  .fs-photo svg{color:rgba(255,255,255,.7)}
+.fs-card.out .fs-photo svg{color:#94a3b8}
+
+/* ── Name, position, room, time ── */
+.fs-name{
+  font-size:.92rem;font-weight:700;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  width:100%;line-height:1.3;margin:0;
+}
+.fs-card.in  .fs-name{color:#fff}
+.fs-card.out .fs-name{color:#1e293b}
+
+.fs-pos{
+  font-size:.72rem;font-weight:500;text-align:center;margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;
+}
+.fs-card.in  .fs-pos{color:rgba(255,255,255,.75)}
+.fs-card.out .fs-pos{color:#64748b}
+
+.fs-room{
+  font-size:.7rem;font-weight:600;text-align:center;margin:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;
+}
+.fs-card.in  .fs-room{color:rgba(255,255,255,.7)}
+.fs-card.out .fs-room{color:#2563eb}
+
+.fs-time{
+  font-size:.75rem;font-weight:600;text-align:center;margin:0;
+}
+.fs-card.in  .fs-time{color:rgba(255,255,255,.9)}
+.fs-card.out .fs-time{color:#94a3b8}
+
+/* ── Section label ── */
+.fs-section-label{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:#64748b;
+  display:flex;align-items:center;gap:.4rem;
+  margin:0 0 .5rem;
+}
+.fs-section-label .sdot{width:8px;height:8px;border-radius:50%}
+.fs-section-label .sdot.in{background:#2563eb}
+.fs-section-label .sdot.out{background:#94a3b8}
+
+/* ── Bottom bar: In Travel + In Leave side by side ── */
+.fs-bottom-bar{
+  flex-shrink:0;display:flex;border-top:1px solid #e2e8f0;background:#fff;
+  min-height:80px;
+}
+.fs-bottom-panel{
+  flex:1;display:flex;flex-direction:column;
+  padding:.5rem 1.25rem .6rem;
+}
+.fs-bottom-panel:first-child{border-right:1px solid #e2e8f0}
+.fs-bottom-panel-hdr{
+  display:flex;align-items:center;gap:.5rem;
+  font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  margin-bottom:.4rem;
+}
+.fs-bottom-panel-hdr.travel{color:#ea580c}
+.fs-bottom-panel-hdr.leave {color:#dc2626}
+.fs-bottom-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.fs-bottom-dot.travel{background:#ea580c}
+.fs-bottom-dot.leave {background:#dc2626}
+.fs-bottom-empty{font-size:.8rem;color:#94a3b8;margin:0}
+.fs-bottom-grid{display:flex;flex-wrap:wrap;gap:.5rem}
+/* mini card inside bottom panels */
+.fs-mini-card{
+  display:flex;align-items:center;gap:.5rem;
+  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
+  padding:.35rem .6rem;
+}
+.fs-mini-card.travel{border-left:3px solid #ea580c}
+.fs-mini-card.leave {border-left:3px solid #dc2626}
+.fs-mini-photo{
+  width:32px;height:32px;border-radius:50%;overflow:hidden;
+  background:#f1f5f9;border:2px solid #e2e8f0;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fs-mini-photo svg{width:55%;height:55%;color:#94a3b8}
+.fs-mini-name{font-size:.75rem;font-weight:700;color:#1e293b;margin:0;white-space:nowrap}
+.fs-mini-sub {font-size:.65rem;color:#64748b;margin:0;white-space:nowrap}
+
+.fs-no-results{text-align:center;padding:2rem;color:#94a3b8;font-size:.875rem}
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:1rem;font-weight:700;color:var(--gray-900);margin:0}
+.modal-close-btn{width:32px;height:32px;border:none;background:var(--gray-100);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-500);transition:all .15s}
+.modal-close-btn:hover{background:var(--gray-200);color:var(--gray-800)}
+.modal-body{padding:1.25rem 1.5rem}
+.modal-footer{padding:1rem 1.5rem;border-top:1px solid var(--gray-100);display:flex;gap:.625rem;justify-content:flex-end}
+.modal-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:.875rem}
+.modal-form-grid .full{grid-column:1/-1}
+.modal-label{font-size:.75rem;font-weight:600;color:var(--gray-700);display:block;margin-bottom:.3rem}
+.modal-input,.modal-select{width:100%;padding:.5rem .75rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);color:var(--gray-900);background:#fff;outline:none;transition:border-color .15s;box-sizing:border-box}
+.modal-input:focus,.modal-select:focus{border-color:var(--primary-blue)}
+.btn-modal-primary{padding:.5rem 1.25rem;background:var(--teal-gradient);color:#fff;border:none;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;font-family:var(--font-body);cursor:pointer;transition:all .15s}
+.btn-modal-primary:hover{opacity:.9}
+.btn-modal-cancel{padding:.5rem 1.25rem;background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.875rem;font-weight:600;font-family:var(--font-body);cursor:pointer;transition:all .15s}
+.btn-modal-cancel:hover{border-color:var(--gray-400)}
+.btn-modal-danger{padding:.5rem 1.25rem;background:#dc2626;color:#fff;border:none;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;font-family:var(--font-body);cursor:pointer;transition:all .15s}
+.btn-modal-danger:hover{background:#b91c1c}
+/* ── Detail modal ── */
+.detail-header{display:flex;align-items:center;gap:1rem;padding:1.5rem;border-bottom:1px solid var(--gray-100)}
+.detail-avatar{width:60px;height:60px;border-radius:50%;background:var(--teal-gradient);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.25rem;flex-shrink:0}
+.detail-name{font-size:1.0625rem;font-weight:700;color:var(--gray-900);margin:0 0 .2rem}
+.detail-pos{font-size:.8125rem;color:var(--gray-500);margin:0}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.875rem;padding:1.25rem 1.5rem}
+.detail-item label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);display:block;margin-bottom:.2rem}
+.detail-item p{font-size:.875rem;color:var(--gray-900);font-weight:600;margin:0}
+.detail-item.full{grid-column:1/-1}
+/* ── Table action buttons ── */
+.tbl-btn{padding:.3rem .625rem;border:1.5px solid var(--gray-200);border-radius:6px;background:#fff;font-size:.72rem;font-weight:600;cursor:pointer;font-family:var(--font-body);color:var(--gray-600);transition:all .15s;display:inline-flex;align-items:center;gap:.3rem}
+.tbl-btn:hover{border-color:var(--primary-blue);color:var(--primary-blue)}
+.tbl-btn.danger:hover{border-color:#dc2626;color:#dc2626}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/dean-sidebar', { activePage: 'faculty' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Faculty</h1>
+          <p class="page-subtitle">Real-time BLE presence — College of Computer Studies</p>
+        </div>
+        <div class="header-actions">
+          <div class="view-toggle" id="viewToggle">
+            <button class="view-btn active" data-view="cards" id="btnCards">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Cards
+            </button>
+            <button class="view-btn" data-view="table" id="btnTable">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Table
+            </button>
+          </div>
+          <select id="filterStatus" style="padding:.5rem .875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer">
+            <option value="all">All Faculty</option>
+            <option value="in-room">In Room Only</option>
+            <option value="out-of-room">Out of Room Only</option>
+          </select>
+          <button class="btn-header-action primary" id="btnFullPreview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Full Screen
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Currently In Room</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></h2>
+            <p class="stat-card-sublabel">of <%= faculty.length %> total faculty</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Out of Room</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.bleStatus==='out-of-room').length %></h2>
+            <p class="stat-card-sublabel">Not detected</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Faculty</p>
+            <h2 class="stat-card-value"><%= faculty.length %></h2>
+            <p class="stat-card-sublabel">Registered in system</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CARD VIEW ── -->
+      <div id="cardView">
+        <div id="inRoomSection">
+          <div class="sec-div">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Currently In Room
+            <span class="sec-count" id="inRoomCount"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></span>
+          </div>
+          <div class="mon-grid" id="inRoomGrid">
+            <% faculty.filter(f=>f.bleStatus==='in-room').forEach(f => { %>
+            <div class="fac-card in-room" data-status="in-room" data-id="<%= f.id %>" onclick="openDetail(<%= JSON.stringify(f) %>)">
+              <div class="fac-avatar"><%= f.name.split(' ').map(n=>n[0]).join('') %></div>
+              <div class="fac-info">
+                <p class="fac-name"><%= f.name %></p>
+                <p class="fac-pos"><%= f.position %></p>
+                <div class="fac-room">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <%= f.officeRoom %>
+                </div>
+                <p class="fac-time">Detected <%= f.bleLastDetected %></p>
+              </div>
+              <span class="status-pill in"><span class="dot"></span>In Room</span>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <div id="outRoomSection" style="margin-top:.5rem">
+          <div class="sec-div">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Out of Room
+            <span class="sec-count" id="outRoomCount"><%= faculty.filter(f=>f.bleStatus==='out-of-room').length %></span>
+          </div>
+          <div class="mon-grid" id="outRoomGrid">
+            <% faculty.filter(f=>f.bleStatus==='out-of-room').forEach(f => { %>
+            <div class="fac-card out-of-room" data-status="out-of-room" data-id="<%= f.id %>" onclick="openDetail(<%= JSON.stringify(f) %>)">
+              <div class="fac-avatar"><%= f.name.split(' ').map(n=>n[0]).join('') %></div>
+              <div class="fac-info">
+                <p class="fac-name"><%= f.name %></p>
+                <p class="fac-pos"><%= f.position %></p>
+                <div class="fac-room">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <%= f.officeRoom %>
+                </div>
+                <p class="fac-time">Last seen <%= f.bleLastDetected %></p>
+              </div>
+              <span class="status-pill out"><span class="dot"></span>Out</span>
+            </div>
+            <% }); %>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TABLE VIEW ── -->
+      <div id="tableView" style="display:none">
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title">Faculty Directory</h3>
+          </div>
+          <div class="card-body" style="padding:0">
+            <table class="data-table" id="facultyTable">
+              <thead>
+                <tr>
+                  <th>Faculty</th>
+                  <th>Position</th>
+                  <th>Office / Room</th>
+                  <th>BLE Status</th>
+                  <th>Last Detected</th>
+                  <th>Consultations (Month)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="facultyTbody">
+                <% faculty.forEach(f => { %>
+                <tr data-status="<%= f.bleStatus %>" data-id="<%= f.id %>">
+                  <td>
+                    <div style="display:flex;align-items:center;gap:.75rem">
+                      <div class="apt-avatar-xs"><%= f.name.split(' ').map(n=>n[0]).join('') %></div>
+                      <p style="font-weight:600;font-size:.875rem;color:var(--gray-900);margin:0"><%= f.name %></p>
+                    </div>
+                  </td>
+                  <td style="font-size:.8125rem;color:var(--gray-600)"><%= f.position %></td>
+                  <td style="font-size:.8125rem"><%= f.officeRoom %></td>
+                  <td>
+                    <span class="table-badge <%= f.bleStatus==='in-room'?'confirmed':'declined' %>">
+                      <%= f.bleStatus==='in-room'?'In Room':'Out of Room' %>
+                    </span>
+                  </td>
+                  <td style="font-size:.8125rem;color:var(--gray-500)"><%= f.bleLastDetected %></td>
+                  <td style="font-size:.875rem;font-weight:600;color:var(--gray-900)"><%= f.consultationsThisMonth %></td>
+                  <td>
+                    <div style="display:flex;gap:.375rem">
+                      <button class="tbl-btn" onclick="openDetail(<%= JSON.stringify(f) %>)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        View
+                      </button>
+                      <button class="tbl-btn danger" onclick="confirmDelete(<%= f.id %>, '<%= f.name.replace(/'/g, "\\'") %>')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FULL-SCREEN FACULTY MONITORING BOARD
+     Matches the TV display board in the image
+     ══════════════════════════════════════════ -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-box">
+
+    <!-- Floating close button -->
+    <button class="fs-close-btn" id="previewClose" title="Exit (Esc)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+
+    <!-- Top header: title left · legend + clock right -->
+    <div class="fs-header">
+      <div class="fs-header-left">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <h2 class="fs-board-title">Faculty Monitoring</h2>
+      </div>
+      <div style="display:flex;align-items:center;gap:1.5rem">
+        <!-- Legend -->
+        <div class="fs-legend">
+          <div class="fs-legend-item"><span class="fs-legend-dot in"></span> In</div>
+          <div class="fs-legend-item"><span class="fs-legend-dot out"></span> Out</div>
+        </div>
+        <!-- Clock -->
+        <div class="fs-clock-wrap">
+          <span class="fs-clock" id="fsClock">--:--</span><span class="fs-ampm" id="fsAmpm"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scrollable board body — faculty cards only, ON TRAVEL is outside/below -->
+    <div class="fs-body" id="fsBody">
+
+      <%
+        const inRoomFac  = faculty.filter(f => f.bleStatus === 'in-room');
+        const outRoomFac = faculty.filter(f => f.bleStatus === 'out-of-room');
+      %>
+
+      <!-- All faculty in one dense wrap grid: IN cards first (blue), then OUT (white) -->
+      <div class="fs-grid" id="fsGrid">
+
+        <!-- IN cards -->
+        <% inRoomFac.forEach(function(f){ %>
+        <div class="fs-card in" data-name="<%= f.name.toLowerCase() %>">
+          <div class="fs-photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <p class="fs-name"><%= f.name %></p>
+          <p class="fs-pos"><%= f.position %></p>
+          <p class="fs-room"><%= f.officeRoom %></p>
+          <p class="fs-time"><%= f.bleLastDetected %></p>
+        </div>
+        <% }); %>
+
+        <!-- OUT cards -->
+        <% outRoomFac.forEach(function(f){ %>
+        <div class="fs-card out" data-name="<%= f.name.toLowerCase() %>">
+          <div class="fs-photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <p class="fs-name"><%= f.name %></p>
+          <p class="fs-pos"><%= f.position %></p>
+          <p class="fs-room"><%= f.officeRoom %></p>
+          <p class="fs-time">No Logs</p>
+        </div>
+        <% }); %>
+
+      </div>
+
+      <p class="fs-no-results" id="fsNoResults" style="display:none">No instructor found.</p>
+
+    </div>
+
+    <!-- Bottom bar: In Travel (orange) | In Leave (red) — always pinned at very bottom -->
+    <div class="fs-bottom-bar">
+
+      <!-- In Travel — left half -->
+      <div class="fs-bottom-panel">
+        <div class="fs-bottom-panel-hdr travel">
+          <span class="fs-bottom-dot travel"></span>
+          In Travel
+        </div>
+        <div class="fs-bottom-grid" id="fsTravelGrid">
+          <p class="fs-bottom-empty">No employees on travel</p>
+        </div>
+      </div>
+
+      <!-- In Leave — right half -->
+      <div class="fs-bottom-panel">
+        <div class="fs-bottom-panel-hdr leave">
+          <span class="fs-bottom-dot leave"></span>
+          In Leave
+        </div>
+        <div class="fs-bottom-grid" id="fsLeaveGrid">
+          <p class="fs-bottom-empty">No employees on leave</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Detail Modal ── -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal-box">
+    <div class="detail-header">
+      <div class="detail-avatar" id="detailAvatar"></div>
+      <div>
+        <p class="detail-name" id="detailName"></p>
+        <p class="detail-pos" id="detailPos"></p>
+      </div>
+      <button class="modal-close-btn" style="margin-left:auto" onclick="closeModal('detailModal')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <label>Department</label>
+        <p id="detailDept"></p>
+      </div>
+      <div class="detail-item">
+        <label>BLE Status</label>
+        <p id="detailBle"></p>
+      </div>
+      <div class="detail-item full">
+        <label>Office / Room</label>
+        <p id="detailRoom"></p>
+      </div>
+      <div class="detail-item">
+        <label>Last Detected</label>
+        <p id="detailLastSeen"></p>
+      </div>
+      <div class="detail-item">
+        <label>Hours This Month</label>
+        <p id="detailHours"></p>
+      </div>
+      <div class="detail-item">
+        <label>Consultations (Month)</label>
+        <p id="detailConsult"></p>
+      </div>
+      <div class="detail-item">
+        <label>Avg. Duration</label>
+        <p id="detailAvg"></p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-danger" id="detailDeleteBtn">Delete Instructor</button>
+      <button class="btn-modal-cancel" onclick="closeModal('detailModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete Confirm Modal ── -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-header">
+      <h3 class="modal-title">Remove Instructor</h3>
+      <button class="modal-close-btn" onclick="closeModal('deleteModal')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.9rem;color:var(--gray-700);margin:0">Are you sure you want to remove <strong id="deleteTargetName"></strong> from the faculty list? This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn-modal-danger" id="btnConfirmDelete">Remove</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+
+<script>
+(function(){
+  'use strict';
+
+  // ── In-memory faculty store (seeded from server) ──
+  var facultyData = <%- JSON.stringify(faculty) %>;
+  var nextId = facultyData.length ? Math.max.apply(null, facultyData.map(function(f){ return f.id; })) + 1 : 1;
+  var pendingDeleteId = null;
+  var currentView = 'cards';
+
+  // ── Toast ──
+  function toast(type, title, msg){
+    var c = document.getElementById('toastContainer');
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.innerHTML = '<div class="toast-content"><p class="toast-title">' + title + '</p><p class="toast-message">' + msg + '</p></div>';
+    c.appendChild(t);
+    setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 300); }, 4000);
+  }
+
+  // ── Modal helpers ──
+  window.closeModal = function(id){
+    document.getElementById(id).classList.remove('open');
+  };
+  function openModal(id){
+    document.getElementById(id).classList.add('open');
+  }
+
+  // ── Initials ──
+  function initials(name){
+    return name.split(' ').map(function(n){ return n[0]; }).join('').slice(0, 2).toUpperCase();
+  }
+
+  // ── Render faculty lists ──
+  function render(){
+    var filterVal = document.getElementById('filterStatus').value;
+    var inRoom  = facultyData.filter(function(f){ return f.bleStatus === 'in-room'; });
+    var outRoom = facultyData.filter(function(f){ return f.bleStatus === 'out-of-room'; });
+
+    // Update counts
+    document.getElementById('inRoomCount').textContent  = inRoom.length;
+    document.getElementById('outRoomCount').textContent = outRoom.length;
+
+    // Card view
+    renderCardSection('inRoomGrid',  inRoom,  'in-room');
+    renderCardSection('outRoomGrid', outRoom, 'out-of-room');
+
+    // Section visibility
+    document.getElementById('inRoomSection').style.display  = (filterVal === 'all' || filterVal === 'in-room')    ? '' : 'none';
+    document.getElementById('outRoomSection').style.display = (filterVal === 'all' || filterVal === 'out-of-room') ? '' : 'none';
+
+    // Table view
+    renderTable(filterVal);
+  }
+
+  function renderCardSection(gridId, list, statusClass){
+    var grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    list.forEach(function(f){
+      var card = document.createElement('div');
+      card.className = 'fac-card ' + statusClass;
+      card.dataset.status = statusClass;
+      card.dataset.id = f.id;
+      var pillClass = statusClass === 'in-room' ? 'in' : 'out';
+      var pillLabel = statusClass === 'in-room' ? 'In Room' : 'Out';
+      var timeLabel = statusClass === 'in-room' ? 'Detected ' : 'Last seen ';
+      card.innerHTML =
+        '<div class="fac-avatar">' + initials(f.name) + '</div>' +
+        '<div class="fac-info">' +
+          '<p class="fac-name">' + esc(f.name) + '</p>' +
+          '<p class="fac-pos">' + esc(f.position) + '</p>' +
+          '<div class="fac-room"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + esc(f.officeRoom) + '</div>' +
+          '<p class="fac-time">' + timeLabel + esc(f.bleLastDetected) + '</p>' +
+        '</div>' +
+        '<span class="status-pill ' + pillClass + '"><span class="dot"></span>' + pillLabel + '</span>';
+      card.addEventListener('click', function(){ openDetail(f); });
+      grid.appendChild(card);
+    });
+  }
+
+  function renderTable(filterVal){
+    var tbody = document.getElementById('facultyTbody');
+    tbody.innerHTML = '';
+    var list = filterVal === 'all' ? facultyData : facultyData.filter(function(f){ return f.bleStatus === filterVal; });
+    list.forEach(function(f){
+      var tr = document.createElement('tr');
+      tr.dataset.status = f.bleStatus;
+      tr.dataset.id = f.id;
+      var badgeClass = f.bleStatus === 'in-room' ? 'confirmed' : 'declined';
+      var badgeLabel = f.bleStatus === 'in-room' ? 'In Room' : 'Out of Room';
+      tr.innerHTML =
+        '<td><div style="display:flex;align-items:center;gap:.75rem"><div class="apt-avatar-xs">' + initials(f.name) + '</div><p style="font-weight:600;font-size:.875rem;color:var(--gray-900);margin:0">' + esc(f.name) + '</p></div></td>' +
+        '<td style="font-size:.8125rem;color:var(--gray-600)">' + esc(f.position) + '</td>' +
+        '<td style="font-size:.8125rem">' + esc(f.officeRoom) + '</td>' +
+        '<td><span class="table-badge ' + badgeClass + '">' + badgeLabel + '</span></td>' +
+        '<td style="font-size:.8125rem;color:var(--gray-500)">' + esc(f.bleLastDetected) + '</td>' +
+        '<td style="font-size:.875rem;font-weight:600;color:var(--gray-900)">' + f.consultationsThisMonth + '</td>' +
+        '<td><div style="display:flex;gap:.375rem">' +
+          '<button class="tbl-btn" data-view-id="' + f.id + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> View</button>' +
+          '<button class="tbl-btn danger" data-del-id="' + f.id + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg> Delete</button>' +
+        '</div></td>';
+      tbody.appendChild(tr);
+    });
+
+    // Bind table buttons
+    tbody.querySelectorAll('[data-view-id]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var f = facultyData.find(function(x){ return x.id == btn.dataset.viewId; });
+        if(f) openDetail(f);
+      });
+    });
+    tbody.querySelectorAll('[data-del-id]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var f = facultyData.find(function(x){ return x.id == btn.dataset.delId; });
+        if(f) confirmDelete(f.id, f.name);
+      });
+    });
+  }
+
+  function esc(s){
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Detail modal ──
+  window.openDetail = function(f){
+    document.getElementById('detailAvatar').textContent = initials(f.name);
+    document.getElementById('detailName').textContent   = f.name;
+    document.getElementById('detailPos').textContent    = f.position;
+    document.getElementById('detailDept').textContent   = f.department;
+    document.getElementById('detailRoom').textContent   = f.officeRoom;
+    document.getElementById('detailLastSeen').textContent = f.bleLastDetected;
+    document.getElementById('detailHours').textContent  = f.hoursThisMonth + 'h';
+    document.getElementById('detailConsult').textContent = f.consultationsThisMonth;
+    document.getElementById('detailAvg').textContent    = f.avgDuration || '—';
+    var bleEl = document.getElementById('detailBle');
+    bleEl.innerHTML = f.bleStatus === 'in-room'
+      ? '<span class="table-badge confirmed">In Room</span>'
+      : '<span class="table-badge declined">Out of Room</span>';
+    document.getElementById('detailDeleteBtn').onclick = function(){
+      closeModal('detailModal');
+      confirmDelete(f.id, f.name);
+    };
+    openModal('detailModal');
+  };
+
+  // ── Delete ──
+  window.confirmDelete = function(id, name){
+    pendingDeleteId = id;
+    document.getElementById('deleteTargetName').textContent = name;
+    openModal('deleteModal');
+  };
+
+  document.getElementById('btnConfirmDelete').addEventListener('click', function(){
+    if(pendingDeleteId === null) return;
+    facultyData = facultyData.filter(function(f){ return f.id !== pendingDeleteId; });
+    pendingDeleteId = null;
+    closeModal('deleteModal');
+    render();
+    toast('success', 'Removed', 'Instructor removed from the faculty list.');
+  });
+
+  // ── View toggle ──
+  document.getElementById('btnCards').addEventListener('click', function(){
+    currentView = 'cards';
+    document.getElementById('cardView').style.display = '';
+    document.getElementById('tableView').style.display = 'none';
+    document.getElementById('btnCards').classList.add('active');
+    document.getElementById('btnTable').classList.remove('active');
+  });
+  document.getElementById('btnTable').addEventListener('click', function(){
+    currentView = 'table';
+    document.getElementById('cardView').style.display = 'none';
+    document.getElementById('tableView').style.display = '';
+    document.getElementById('btnTable').classList.add('active');
+    document.getElementById('btnCards').classList.remove('active');
+    render();
+  });
+
+  // ── Status filter ──
+  document.getElementById('filterStatus').addEventListener('change', function(){ render(); });
+
+  // ── Full screen ──
+  var fadeTimer = null;
+  var closeBtn = document.getElementById('previewClose');
+
+  function showCloseBtn(){
+    closeBtn.classList.remove('faded');
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(function(){ closeBtn.classList.add('faded'); }, 3000);
+  }
+
+  // Live clock — 12-hour format with AM/PM like the image
+  function updateBoardClock(){
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes().toString().padStart(2,'0');
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var clockEl = document.getElementById('fsClock');
+    var ampmEl  = document.getElementById('fsAmpm');
+    if(clockEl) clockEl.textContent = h.toString().padStart(2,'0') + ':' + m;
+    if(ampmEl)  ampmEl.textContent  = ampm;
+  }
+  var clockInterval = null;
+
+  function openPreview(){
+    document.getElementById('previewOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showCloseBtn();
+    updateBoardClock();
+    clockInterval = setInterval(updateBoardClock, 1000);
+  }
+  function closePreview(){
+    document.getElementById('previewOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+    clearTimeout(fadeTimer);
+    if(clockInterval){ clearInterval(clockInterval); clockInterval = null; }
+  }
+
+  // Show close button on mouse move inside overlay
+  document.getElementById('previewOverlay').addEventListener('mousemove', showCloseBtn);
+  document.getElementById('previewOverlay').addEventListener('touchstart', showCloseBtn);
+
+  // Search — filter cards in the single grid
+  document.getElementById('fsSearch') && document.getElementById('fsSearch').addEventListener('input', function(){
+    var q = this.value.toLowerCase().trim();
+    var cards = document.querySelectorAll('#fsGrid .fs-card');
+    var visible = 0;
+    cards.forEach(function(card){
+      var match = card.dataset.name.includes(q);
+      card.style.display = match ? '' : 'none';
+      if(match) visible++;
+    });
+    document.getElementById('fsNoResults').style.display = visible === 0 ? 'block' : 'none';
+  });
+
+  document.getElementById('btnFullPreview').addEventListener('click', openPreview);
+  document.getElementById('previewClose').addEventListener('click', closePreview);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape'){ closePreview(); closeModal('detailModal'); closeModal('deleteModal'); } });
+
+  // Close modals on overlay click
+  ['detailModal','deleteModal'].forEach(function(id){
+    document.getElementById(id).addEventListener('click', function(e){ if(e.target === this) closeModal(id); });
+  });
+
+  // Initial render
+  render();
+}());
+</script>

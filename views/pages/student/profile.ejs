@@ -1,0 +1,587 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
+<style>
+/* ── Consultation Calendar ── */
+.consult-calendar-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+.cal-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid var(--gray-100); background:linear-gradient(135deg,rgba(10,61,98,.04),rgba(30,136,229,.05)); }
+.cal-title { font-size:1rem; font-weight:700; color:var(--gray-900); }
+.cal-nav { display:flex; gap:.375rem; }
+.cal-nav-btn { width:30px; height:30px; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gray-600); transition:all .2s; }
+.cal-nav-btn:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+.cal-day-label { text-align:center; font-size:.6875rem; font-weight:700; color:var(--gray-500); text-transform:uppercase; padding:.5rem .25rem; border-bottom:1px solid var(--gray-100); }
+.cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:.8125rem; color:var(--gray-400); cursor:default; position:relative; border-radius:var(--radius-sm); margin:2px; }
+.cal-cell.other-month { color:var(--gray-300); }
+/* Today: highlighted box instead of dot */
+.cal-cell.today { font-weight:700; color:var(--primary-blue); background:rgba(10,61,98,.1); border:2px solid var(--primary-blue); border-radius:var(--radius-md); }
+.cal-cell.available { background:rgba(34,197,94,.12); color:#15803d; font-weight:700; cursor:pointer; border-radius:var(--radius-md); transition:all .18s; }
+.cal-cell.available:hover { background:rgba(34,197,94,.28); transform:scale(1.1); box-shadow:0 2px 8px rgba(22,163,74,.25); }
+.cal-cell.available.today { background:rgba(34,197,94,.2); border:2px solid #16a34a; color:#15803d; }
+.cal-cell.available.selected { background:#16a34a; color:#fff; box-shadow:0 2px 8px rgba(22,163,74,.35); border:none; }
+.cal-cell.past { opacity:0.35; cursor:not-allowed; pointer-events:none; }
+/* JS tooltip — single floating div, no pseudo-elements */
+#calTooltip {
+    position: fixed;
+    background: rgba(15,40,70,.93);
+    color: #fff;
+    font-size: .6875rem;
+    font-weight: 600;
+    padding: .375rem .75rem;
+    border-radius: 6px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity .15s;
+    max-width: 220px;
+    text-align: center;
+    line-height: 1.5;
+}
+#calTooltip.visible { opacity: 1; }
+#calTooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(15,40,70,.93);
+}
+.cal-legend { display:flex; gap:1rem; padding:.75rem 1.25rem; border-top:1px solid var(--gray-100); font-size:.75rem; color:var(--gray-500); flex-wrap:wrap; }
+.cal-legend-item { display:flex; align-items:center; gap:.375rem; }
+.cal-legend-dot { width:10px; height:10px; border-radius:3px; }
+.cal-legend-dot.available { background:rgba(34,197,94,.5); }
+.cal-legend-dot.today { background:var(--primary-blue); border-radius:3px; border:2px solid var(--primary-blue); }
+/* Slot detail panel */
+.slot-detail-panel { margin-top:.75rem; padding:1rem 1.25rem; background:rgba(34,197,94,.06); border:1.5px solid rgba(34,197,94,.25); border-radius:var(--radius-md); display:none; }
+.slot-detail-panel.show { display:block; }
+.no-schedule-panel { margin-top:.75rem; padding:1rem 1.25rem; background:#f8fafc; border:1px solid var(--gray-200); border-radius:var(--radius-md); }
+.no-schedule-title { font-size:.9rem; font-weight:700; color:var(--gray-800); margin:0 0 .35rem; }
+.no-schedule-text { font-size:.82rem; color:var(--gray-600); margin:0; }
+.slot-detail-title { font-size:.875rem; font-weight:700; color:#15803d; margin:0 0 .75rem; }
+.slot-detail-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.5rem; }
+.slot-detail-list li { font-size:.8125rem; color:var(--gray-700); display:flex; align-items:center; gap:.5rem; }
+/* Selectable slot items */
+.slot-select-btn { display:flex; align-items:center; gap:.625rem; width:100%; padding:.625rem .875rem; background:#fff; border:1.5px solid rgba(34,197,94,.3); border-radius:var(--radius-md); cursor:pointer; transition:all .18s; font-family:var(--font-body); font-size:.8125rem; color:var(--gray-800); text-align:left; }
+.slot-select-btn:hover { border-color:#16a34a; background:rgba(34,197,94,.06); }
+.slot-select-btn.selected { border-color:#16a34a; background:rgba(34,197,94,.12); font-weight:700; color:#15803d; }
+.slot-select-btn.full { opacity:.5; cursor:not-allowed; background:var(--gray-50); border-color:var(--gray-200); color:var(--gray-400); }
+.slot-num-badge { width:20px; height:20px; border-radius:50%; background:rgba(34,197,94,.2); color:#15803d; font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.slot-select-btn.selected .slot-num-badge { background:#16a34a; color:#fff; }
+.slot-avail-tag { margin-left:auto; font-size:.6875rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; flex-shrink:0; }
+.slot-avail-tag.full { background:var(--gray-100); color:var(--gray-400); border-color:var(--gray-200); }
+/* Book button with slot selected */
+.btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
+.btn-book-slot:hover { background:var(--primary-dark); }
+.btn-book-slot.disabled { background:var(--gray-300); cursor:not-allowed; pointer-events:none; }
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <!-- Breadcrumb -->
+            <div class="page-header" style="margin-bottom:1rem;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+                        <a href="/student/dashboard" style="font-size:0.8125rem;color:var(--gray-500);text-decoration:none;display:flex;align-items:center;gap:0.25rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                            Faculty Directory
+                        </a>
+                        <span style="color:var(--gray-300);font-size:0.8125rem;">/</span>
+                        <span style="font-size:0.8125rem;color:var(--gray-700);font-weight:600;">Faculty Profile</span>
+                    </div>
+                    <h1 class="page-title"><%= faculty.name %></h1>
+                    <p class="page-subtitle"><%= faculty.position %> — <%= faculty.department %></p>
+                </div>
+                <div class="header-actions">
+                </div>
+            </div>
+
+            <!-- Session expired modal overlay (shown when 5-min hold expired) -->
+            <div id="expiredBanner" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;align-items:center;justify-content:center;padding:1rem;">
+                <div style="background:#fff;border-radius:var(--radius-xl);padding:2.5rem 2rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center;">
+                    <div style="width:72px;height:72px;background:#fffbeb;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#92400e;margin:0 0 .625rem;">Session Expired</h3>
+                    <p style="font-size:.9rem;color:var(--gray-600);margin:0 0 1.75rem;line-height:1.6;">Your slot reservation timed out after 5 minutes. Please select a slot again.</p>
+                    <button type="button" id="expiredOkBtn" style="width:100%;padding:.75rem;background:var(--primary-blue);color:#fff;border:none;border-radius:var(--radius-md);font-size:.9375rem;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:background .2s;">OK</button>
+                </div>
+            </div>
+
+            <div class="prof-scroll">
+                <div class="prof-layout">
+
+                    <!-- Faculty Info Sidebar -->
+                    <aside class="prof-sidebar">
+                        <div class="sidebar-avatar"><%= faculty.name.split(' ').map(n => n[0]).join('') %></div>
+                        <h2 class="sidebar-name"><%= faculty.name %></h2>
+                        <p class="sidebar-position"><%= faculty.position %></p>
+                        <div class="sidebar-divider"></div>
+                        <ul class="sidebar-meta">
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                <span><%= faculty.department %></span>
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M16 9v6"/><path d="M8 9v6"/><path d="M12 9v6"/></svg>
+                                <span><%= faculty.officeRoom || 'Faculty Lounge' %></span>
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                <span><%= faculty.specialization %></span>
+                            </li>
+                            <li>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <span><%= faculty.email %></span>
+                            </li>
+                        </ul>
+                        <div class="sidebar-divider"></div>
+                        <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);border:1px solid var(--gray-200);width:100%;">
+                            <p style="font-size:0.75rem;color:var(--gray-500);margin-bottom:0.25rem;">Next Available</p>
+                            <p style="font-size:0.875rem;font-weight:600;color:var(--primary-blue);"><%= faculty.nextAvailable %></p>
+                        </div>
+                    </aside>
+
+                    <!-- Consultation Schedule Calendar -->
+                    <div class="prof-content">
+                        <div class="consult-calendar-wrap">
+                            <div class="cal-header">
+                                <h3 class="cal-title" id="calMonthLabel"></h3>
+                                <div class="cal-nav">
+                                    <button class="cal-nav-btn" id="calPrev" title="Previous month">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                                    </button>
+                                    <button class="cal-nav-btn" id="calNext" title="Next month">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="cal-grid" id="calGrid"></div>                            <div class="cal-legend">
+                                <div class="cal-legend-item"><div class="cal-legend-dot available"></div> Available consultation day</div>
+                                <div class="cal-legend-item"><div class="cal-legend-dot today" style="width:14px;height:14px;border-radius:4px;background:rgba(10,61,98,.1);border:2px solid var(--primary-blue);"></div> Today</div>
+                            </div>
+                        </div>
+
+                        <!-- Floating tooltip rendered by JS -->
+                        <div id="calTooltip"></div>
+
+                        <% const hasAnySlots = faculty.consultationSlots.length > 0; %>
+                        <% const hasOpen = faculty.consultationSlots.some(s => s.status === 'open'); %>
+
+                        <% if (!hasAnySlots) { %>
+                        <div class="no-schedule-panel">
+                            <p class="no-schedule-title">No consultation schedule set yet</p>
+                            <p class="no-schedule-text">This instructor has not posted consultation date/time in the Consultation Schedule yet.</p>
+                        </div>
+                        <% } %>
+
+                        <!-- Slot detail panel shown when a date is clicked -->
+                        <div class="slot-detail-panel" id="slotDetailPanel">
+                            <p class="slot-detail-title" id="slotDetailTitle"></p>
+                            <div id="slotDetailList" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+                        </div>
+
+                        <!-- Book Action -->
+                        <div class="slots-card" style="margin-top:.75rem;">
+                            <div class="book-action">
+                                <% if (faculty.manualStatus !== 'in-leave' && hasOpen) { %>
+                                <a href="#" id="btnBookAppointment" class="btn-book-slot disabled">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    Book Appointment
+                                </a>
+                                <p class="book-helper-text" id="bookHelperText">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    Click a highlighted date, then select a time slot to continue
+                                </p>
+                                <% } else { %>
+                                <span class="btn-book disabled">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    <%= hasAnySlots ? 'No Available Slots' : 'No Consultation Schedule Yet' %>
+                                </span>
+                                <p class="book-note"><%= hasAnySlots ? `Next available: ${faculty.nextAvailable}` : 'Please check again once instructor posts schedule.' %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+const slots = <%- JSON.stringify(faculty.consultationSlots) %>;
+const facultyId = <%= faculty.id %>;
+const takenSlots = <%- JSON.stringify(typeof takenSlots !== 'undefined' ? takenSlots : {}) %>;
+const WINDOW_START = new Date('<%- windowStart %>');
+const WINDOW_END   = new Date('<%- windowEnd %>');
+const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// Map day name -> slot info (open only and not fully booked)
+const availableByDay = {};
+slots.forEach(s => {
+    if (s.status !== 'open') return;
+    const slotText = s.time;
+    const dayTaken = takenSlots[s.day] || [];
+    if (dayTaken.includes(slotText)) return;
+    availableByDay[s.day] = availableByDay[s.day] || [];
+    availableByDay[s.day].push(s);
+});
+
+// Parse "2:00 PM" → minutes
+function parseTime(str) {
+    const [time, period] = str.trim().split(' ');
+    let [h, m] = time.split(':').map(Number);
+    if (period === 'PM' && h !== 12) h += 12;
+    if (period === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+}
+function formatTime(mins) {
+    let h = Math.floor(mins / 60), m = mins % 60;
+    const p = h >= 12 ? 'PM' : 'AM';
+    if (h > 12) h -= 12;
+    if (h === 0) h = 12;
+    return `${h}:${m.toString().padStart(2,'0')} ${p}`;
+}
+
+function chopSlot(slotObj) {
+    const parts = (slotObj.time || '').split('–').map(s => s.trim());
+    if (parts.length < 2) return [slotObj.time];
+    const startMins = parseTime(parts[0]);
+    const endMins   = parseTime(parts[1]);
+    const cap = Math.max(1, parseInt(slotObj.maxCapacity, 10) || 1);
+    const slotMins = Math.floor((endMins - startMins) / cap);
+    const result = [];
+    for (let i = 0; i < cap; i++) {
+        const s = startMins + i * slotMins;
+        const e = i === cap - 1 ? endMins : s + slotMins;
+        result.push(`${formatTime(s)} – ${formatTime(e)}`);
+    }
+    return result;
+}
+
+let viewYear, viewMonth;
+const today = new Date();
+viewYear = today.getFullYear();
+viewMonth = today.getMonth();
+
+let selectedSlotText = null;
+let selectedDate = null;
+
+function renderCalendar() {
+    document.getElementById('calMonthLabel').textContent = monthNames[viewMonth] + ' ' + viewYear;
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
+        const lbl = document.createElement('div');
+        lbl.className = 'cal-day-label';
+        lbl.textContent = d;
+        grid.appendChild(lbl);
+    });
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell other-month';
+        cell.textContent = daysInPrev - i;
+        grid.appendChild(cell);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(viewYear, viewMonth, d);
+        const dayName = dayNames[date.getDay()];
+        const cell = document.createElement('div');
+        cell.textContent = d;
+        cell.className = 'cal-cell';
+
+        const isToday = (d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear());
+        if (isToday) cell.classList.add('today');
+
+        // Past days — dim and disable
+        const isPast = new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (isPast) {
+            cell.classList.add('past');
+            grid.appendChild(cell);
+            continue;
+        }
+
+        // Outside 2-week window — dim and disable
+        const cellDate = new Date(viewYear, viewMonth, d);
+        cellDate.setHours(0,0,0,0);
+        const ws = new Date(WINDOW_START); ws.setHours(0,0,0,0);
+        const we = new Date(WINDOW_END);   we.setHours(0,0,0,0);
+        if (cellDate < ws || cellDate > we) {
+            cell.classList.add('past');
+            grid.appendChild(cell);
+            continue;
+        }
+
+        if (availableByDay[dayName]) {
+            cell.classList.add('available');
+            // Tooltip: show generic availability message (schedule times are private)
+            const daySlots = availableByDay[dayName];
+            const tooltipText = 'Available for consultation';
+
+            // Mouse hover (web)
+            cell.addEventListener('mouseenter', function(e) {
+                showTooltip(this, tooltipText);
+            });
+            cell.addEventListener('mouseleave', hideTooltip);
+            cell.addEventListener('mousemove', function(e) {
+                positionTooltip(e.clientX, e.clientY);
+            });
+
+            // Touch hold (mobile) — show on touchstart, hide on touchend/move
+            let touchTimer = null;
+            cell.addEventListener('touchstart', function(e) {
+                touchTimer = setTimeout(() => {
+                    const t = e.touches[0];
+                    showTooltip(this, tooltipText);
+                    positionTooltip(t.clientX, t.clientY);
+                }, 400);
+            }, { passive: true });
+            cell.addEventListener('touchend', () => { clearTimeout(touchTimer); hideTooltip(); });
+            cell.addEventListener('touchmove', () => { clearTimeout(touchTimer); hideTooltip(); });
+
+            cell.addEventListener('click', function() {
+                hideTooltip();
+                document.querySelectorAll('.cal-cell.available').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedDate = `${dayName}, ${monthNames[viewMonth]} ${d}, ${viewYear}`;
+                selectedSlotText = null;
+                updateBookButton();
+                showSlotDetail(dayName, d, daySlots);
+                // Auto-scroll to the slot panel
+                setTimeout(() => {
+                    const panel = document.getElementById('slotDetailPanel');
+                    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+            });
+        }
+
+        grid.appendChild(cell);
+    }
+
+    const totalCells = firstDay + daysInMonth;
+    const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let i = 1; i <= remaining; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell other-month';
+        cell.textContent = i;
+        grid.appendChild(cell);
+    }
+}
+
+// ── Slot reservation state ──
+let reservationToken = null;
+let reservationTimer = null;
+const RESERVATION_MS = 5 * 60 * 1000;
+
+function clearReservation() {
+    if (reservationToken) {
+        navigator.sendBeacon('/student/slot/release', JSON.stringify({ token: reservationToken }));
+        reservationToken = null;
+    }
+    if (reservationTimer) { clearTimeout(reservationTimer); reservationTimer = null; }
+}
+
+// Release reservation when leaving the page
+window.addEventListener('beforeunload', clearReservation);
+window.addEventListener('pagehide',     clearReservation);
+
+function showSlotDetail(dayName, dayNum, daySlots) {
+    const panel = document.getElementById('slotDetailPanel');
+    document.getElementById('slotDetailTitle').textContent =
+        `${dayName}, ${monthNames[viewMonth]} ${dayNum}, ${viewYear} — Select a Slot`;
+
+    const container = document.getElementById('slotDetailList');
+    container.innerHTML = '';
+
+    // Fully booked slots for this day (from server)
+    const takenForDay = (takenSlots[dayName] || []).map(t => t.trim());
+
+    let slotIndex = 0;
+    daySlots.forEach(s => {
+        const subSlots = chopSlot(s);
+        subSlots.forEach((timeStr, subIdx) => {
+            slotIndex++;
+            const isTaken = takenForDay.includes(timeStr.trim());
+            const btn = document.createElement('button');
+            btn.className = 'slot-select-btn' + (isTaken ? ' full' : '');
+            btn.disabled = isTaken;
+            btn.innerHTML = `
+                <span class="slot-num-badge">${slotIndex}</span>
+                <span style="flex:1;">${timeStr}</span>
+                <span class="slot-avail-tag${isTaken ? ' full' : ''}">${isTaken ? 'Not Available' : 'Available'}</span>`;
+            if (!isTaken) {
+                btn.addEventListener('click', async function() {
+                    // Clear any previous reservation
+                    clearReservation();
+
+                    // Mark button as loading
+                    btn.disabled = true;
+                    const tag = btn.querySelector('.slot-avail-tag');
+                    if (tag) tag.textContent = 'Checking...';
+
+                    try {
+                        const resp = await fetch('/student/slot/reserve', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ facultyId, day: dayName, slotTime: timeStr })
+                        });
+                        const data = await resp.json();
+
+                        if (!data.available) {
+                            // Slot taken or reserved by someone else
+                            btn.classList.add('full');
+                            if (tag) tag.textContent = 'Not Available';
+                            if (!takenForDay.includes(timeStr.trim())) takenForDay.push(timeStr.trim());
+                            selectedSlotText = null;
+                            updateBookButton();
+                            return;
+                        }
+
+                        // Reserved successfully
+                        reservationToken = data.token;
+                        btn.disabled = false;
+                        if (tag) tag.textContent = 'Reserved (5 min)';
+
+                        container.querySelectorAll('.slot-select-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        selectedSlotText = timeStr;
+                        updateBookButton();
+
+                        // Auto-release after 5 minutes → redirect back to profile
+                        reservationTimer = setTimeout(() => {
+                            clearReservation();
+                            selectedSlotText = null;
+                            updateBookButton();
+                            // Redirect back to profile with expired flag
+                            window.location.href = `/student/faculty/${facultyId}?expired=1`;
+                        }, RESERVATION_MS);
+
+                    } catch (err) {
+                            btn.disabled = false;
+                            if (tag) tag.textContent = 'Available';
+                            console.error('Reservation error:', err);
+                        }
+                    });
+                }
+                container.appendChild(btn);
+            });
+        });
+
+    panel.classList.add('show');
+}
+
+function updateBookButton() {
+    const btn = document.getElementById('btnBookAppointment');
+    const helper = document.getElementById('bookHelperText');
+    if (!btn) return;
+    if (selectedSlotText && selectedDate && reservationToken) {
+        btn.classList.remove('disabled');
+        btn.href = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}`;
+        if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Slot selected: <strong>${selectedSlotText}</strong> — <span style="color:#b45309;">5 min hold</span>`;
+    } else {
+        btn.classList.add('disabled');
+        btn.href = '#';
+        if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Click a highlighted date, then select a time slot to continue`;
+    }
+}
+
+document.getElementById('calPrev').addEventListener('click', () => {
+    viewMonth--;
+    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCalendar();
+    document.getElementById('slotDetailPanel').classList.remove('show');
+    selectedSlotText = null; selectedDate = null; updateBookButton();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+    viewMonth++;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+    document.getElementById('slotDetailPanel').classList.remove('show');
+    selectedSlotText = null; selectedDate = null; updateBookButton();
+});
+
+// ── Floating tooltip helpers ──
+const calTooltip = document.getElementById('calTooltip');
+let tooltipVisible = false;
+
+function showTooltip(cell, text) {
+    calTooltip.textContent = text;
+    calTooltip.classList.add('visible');
+    tooltipVisible = true;
+    const rect = cell.getBoundingClientRect();
+    positionTooltip(rect.left + rect.width / 2, rect.top);
+}
+
+function positionTooltip(cx, cy) {
+    if (!tooltipVisible) return;
+    const tw = calTooltip.offsetWidth;
+    const th = calTooltip.offsetHeight;
+    const margin = 8;
+    const arrowH = 6;
+    let left = cx - tw / 2;
+    let top  = cy - th - arrowH - margin;
+    // Flip below if not enough room above
+    if (top < margin) top = cy + arrowH + margin + 20;
+    // Clamp horizontally
+    left = Math.max(margin, Math.min(left, window.innerWidth - tw - margin));
+    calTooltip.style.left = left + 'px';
+    calTooltip.style.top  = top  + 'px';
+}
+
+function hideTooltip() {
+    calTooltip.classList.remove('visible');
+    tooltipVisible = false;
+}
+
+// Show expired modal if redirected back after timeout
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('expired') === '1') {
+        const modal = document.getElementById('expiredBanner');
+        if (modal) {
+            modal.style.display = 'flex';
+
+            // Dismiss modal and reset calendar so student can pick a new slot
+            const resetAndClose = function() {
+                modal.style.display = 'none';
+                // Clean up URL
+                window.history.replaceState({}, '', window.location.pathname);
+                // Reset calendar state
+                clearReservation();
+                selectedSlotText = null;
+                selectedDate = null;
+                updateBookButton();
+                // Deselect all calendar cells
+                document.querySelectorAll('.cal-cell.selected').forEach(cell => cell.classList.remove('selected'));
+                // Hide slot detail panel
+                const panel = document.getElementById('slotDetailPanel');
+                if (panel) panel.classList.remove('show');
+            };
+
+            // OK button dismisses modal and lets student pick a new slot
+            const okBtn = document.getElementById('expiredOkBtn');
+            if (okBtn) okBtn.addEventListener('click', resetAndClose);
+        }
+    }
+})();
+
+renderCalendar();
+</script>

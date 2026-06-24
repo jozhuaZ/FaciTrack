@@ -1,0 +1,161 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+@media(max-width:900px){ .two-col { grid-template-columns:1fr; } }
+.dept-badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:999px; font-size:.65rem; font-weight:700; }
+.dept-badge.ble-active  { background:rgba(22,163,74,.12); color:#15803d; }
+.dept-badge.ble-pending { background:rgba(234,179,8,.12);  color:#92400e; }
+.dept-dot { width:5px; height:5px; border-radius:50%; }
+.dept-dot.g { background:#16a34a; animation:blink 1.5s infinite; }
+.dept-dot.y { background:#d97706; }
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.bar-track { height:6px; background:var(--gray-100); border-radius:999px; overflow:hidden; margin-top:.375rem; }
+.bar-fill  { height:100%; border-radius:999px; transition:width .4s; }
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/superadmin-sidebar', { activePage: 'dashboard' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Super Admin Dashboard</h1>
+          <p class="page-subtitle">Institution-wide oversight — Camarines Sur Polytechnic Colleges</p>
+        </div>
+        <div class="header-actions">
+          <span style="font-size:.8125rem;color:var(--gray-500);padding:.5rem .875rem;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-weight:500">
+            <%= new Date().toLocaleDateString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric'}) %>
+          </span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Departments</p>
+            <h2 class="stat-card-value"><%= deptData.length %></h2>
+            <p class="stat-card-sublabel">All CSPC colleges</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Users</p>
+            <h2 class="stat-card-value"><%= users.length %></h2>
+            <p class="stat-card-sublabel">All roles combined</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 6s4-2 11-2 11 2 11 2v12s-4 2-11 2S1 18 1 18V6z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Sub-Admins</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.role==='Admin').length %></h2>
+            <p class="stat-card-sublabel">Assigned to departments</p>
+          </div>
+        </div>
+        <div class="stat-card-large pending">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Deans</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.role==='Dean').length %></h2>
+            <p class="stat-card-sublabel">Assigned to departments</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Departments overview -->
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title">Departments Overview</h3>
+            <a href="/superadmin/departments" class="card-link">View all →</a>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead><tr><th>College</th><th>Faculty</th><th>Dean</th><th>Sub-Admin</th></tr></thead>
+                <tbody>
+                  <% deptData.forEach(d => {
+                    const deptAdmin = users.find(u => u.role === 'Admin' && u.department === d.name);
+                  %>
+                  <tr>
+                    <td style="font-weight:600"><%= d.name %></td>
+                    <td><%= d.facultyCount %></td>
+                    <td style="font-size:.78rem;color:var(--gray-500)"><%= d.dean.split(' ').slice(-1)[0] %></td>
+                    <td style="font-size:.78rem;color:var(--gray-500)"><%= deptAdmin ? deptAdmin.name.split(' ').slice(-1)[0] : '—' %></td>
+                  </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- User breakdown -->
+        <div class="content-card">
+          <div class="card-header">
+            <h3 class="card-title">User Breakdown</h3>
+            <a href="/superadmin/users" class="card-link">View all →</a>
+          </div>
+          <div class="card-body">
+            <%
+              const roles = ['Instructor','Dean','Admin'];
+              const roleColors = ['var(--primary-blue)','#7c3aed','#ea580c'];
+              const roleCounts = roles.map(r => users.filter(u=>u.role===r).length);
+              const total = users.length || 1;
+            %>
+            <% roles.forEach((r,i) => { %>
+            <div style="margin-bottom:1rem">
+              <div style="display:flex;justify-content:space-between;margin-bottom:.25rem">
+                <span style="font-size:.8125rem;font-weight:600;color:var(--gray-800)"><%= r %></span>
+                <span style="font-size:.8125rem;color:var(--gray-500)"><%= roleCounts[i] %></span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:<%= Math.round(roleCounts[i]/total*100) %>%;background:<%= roleColors[i] %>"></div>
+              </div>
+            </div>
+            <% }); %>
+            <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:.8125rem;color:var(--gray-500)">Active accounts</span>
+              <span class="table-badge confirmed"><%= users.filter(u=>u.status==='active').length %> / <%= users.length %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent audit logs -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Recent System Activity</h3>
+          <a href="/superadmin/logs" class="card-link">View all →</a>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>User</th><th>Role</th><th>Action</th><th>IP</th><th>Timestamp</th></tr></thead>
+              <tbody>
+                <% logs.slice(0,8).forEach(l => { %>
+                <tr>
+                  <td style="font-weight:600;font-size:.875rem"><%= l.user %></td>
+                  <td><span class="table-badge <%= l.role==='Admin'?'workload':l.role==='Dean'?'pending':'confirmed' %>"><%= l.role %></span></td>
+                  <td style="font-size:.8125rem;color:var(--gray-700)"><%= l.action %></td>
+                  <td style="font-size:.78rem;color:var(--gray-400)"><%= l.ip %></td>
+                  <td style="font-size:.78rem;color:var(--gray-500);white-space:nowrap"><%= l.timestamp %></td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>

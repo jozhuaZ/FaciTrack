@@ -1,0 +1,607 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.pres-filter-bar{display:flex;flex-wrap:wrap;gap:.625rem;align-items:flex-end}
+.pres-filter-group{display:flex;flex-direction:column;gap:.25rem}
+.pres-filter-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400)}
+.pres-select{padding:.45rem .875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.8125rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer;transition:border-color .15s;min-width:150px}
+.pres-select:focus{border-color:var(--primary-blue)}
+.period-tabs{display:flex;gap:.375rem;flex-wrap:wrap}
+.period-tab{padding:.375rem .875rem;border:1.5px solid var(--gray-200);border-radius:999px;background:#fff;font-size:.78rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .18s;font-family:var(--font-body)}
+.period-tab:hover{border-color:var(--primary-blue);color:var(--primary-blue)}
+.period-tab.active{background:var(--primary-blue);border-color:var(--primary-blue);color:#fff}
+.pres-date-input{padding:.45rem .875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.8125rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;transition:border-color .15s}
+.pres-date-input:focus{border-color:var(--primary-blue)}
+.filter-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .625rem;background:rgba(10,61,98,.08);color:var(--primary-blue);border-radius:999px;font-size:.72rem;font-weight:600}
+.filter-chip button{background:none;border:none;cursor:pointer;color:var(--primary-blue);font-size:.8rem;line-height:1;padding:0;display:flex;align-items:center}
+.active-filters{display:flex;flex-wrap:wrap;gap:.375rem;margin-top:.5rem}
+.event-cell{display:flex;align-items:center;gap:.5rem}
+.event-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.event-icon.entered{background:rgba(34,197,94,.12);color:#16a34a}
+.event-icon.exited{background:rgba(107,114,128,.12);color:#6b7280}
+.result-count{font-size:.78rem;color:var(--gray-500);font-weight:600}
+.no-results{text-align:center;padding:3rem 1rem;color:var(--gray-400)}
+.no-results p{font-size:.875rem;margin:.5rem 0 0}
+/* Full-screen overlay */
+.fs-overlay{display:none;position:fixed;inset:0;background:#0a1628;z-index:2000;flex-direction:column}
+.fs-overlay.open{display:flex}
+.fs-box{display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden}
+.fs-hdr{padding:1rem 1.5rem;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:space-between;background:#0d1f3c;flex-shrink:0}
+.fs-hdr-title{font-size:1.05rem;font-weight:800;color:#fff;margin:0}
+.fs-close{width:36px;height:36px;border:none;background:rgba(255,255,255,.1);border-radius:8px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.fs-close:hover{background:rgba(255,255,255,.2)}
+.fs-stats-bar{display:flex;gap:1.5rem;padding:.75rem 1.5rem;background:#0d1f3c;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;flex-wrap:wrap}
+.fs-stat{display:flex;align-items:center;gap:.5rem}
+.fs-stat-val{font-size:1.2rem;font-weight:800;color:#fff}
+.fs-stat-lbl{font-size:.7rem;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.05em}
+.fs-body{flex:1;overflow-y:auto;padding:1.5rem;background:#0a1628}
+.fs-table{width:100%;border-collapse:collapse;font-size:.8125rem}
+.fs-table th{padding:.625rem 1rem;text-align:left;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.4);border-bottom:1px solid rgba(255,255,255,.08)}
+.fs-table td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.05);color:rgba(255,255,255,.85)}
+.fs-table tr:hover td{background:rgba(255,255,255,.03)}
+.fs-badge-in{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(34,197,94,.18);color:#4ade80}
+.fs-badge-out{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:999px;font-size:.65rem;font-weight:700;background:rgba(107,114,128,.18);color:#9ca3af}
+.fs-dot{width:5px;height:5px;border-radius:50%}
+.fs-dot.g{background:#4ade80;animation:blink 1.5s infinite}
+.fs-dot.gr{background:#6b7280}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/admin-sidebar', { activePage: 'monitoring' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Monitoring Logs</h1>
+          <p class="page-subtitle">BLE presence detection history — College of Computer Studies</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header-action" id="btnExportLogs">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Logs
+          </button>
+          <button class="btn-header-action primary" id="btnFullScreen">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Full Screen
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Entries</p>
+            <h2 class="stat-card-value" id="statEntries"><%= presenceLogs.filter(l=>l.status==='entered').length %></h2>
+            <p class="stat-card-sublabel">BLE detections</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Events</p>
+            <h2 class="stat-card-value" id="statEvents"><%= presenceLogs.length %></h2>
+            <p class="stat-card-sublabel">Entries + exits</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Faculty Monitored</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.pilotDept).length %></h2>
+            <p class="stat-card-sublabel">CCS faculty</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Card -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Filter Logs</h3>
+          <button class="btn-text-action" id="btnClearFilters">Clear all</button>
+        </div>
+        <div class="card-body" style="padding:1rem 1.25rem">
+          <div style="margin-bottom:.875rem">
+            <div class="pres-filter-label" style="margin-bottom:.375rem">Period</div>
+            <div class="period-tabs">
+              <button class="period-tab active" data-period="all">All Time</button>
+              <button class="period-tab" data-period="today">Today</button>
+              <button class="period-tab" data-period="week">This Week</button>
+              <button class="period-tab" data-period="month">This Month</button>
+              <button class="period-tab" data-period="custom">Custom Date</button>
+              <input type="date" id="customDate" class="pres-date-input" style="display:none" aria-label="Custom date">
+            </div>
+          </div>
+          <div class="pres-filter-bar">
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Faculty</span>
+              <select class="pres-select" id="filterFaculty">
+                <option value="all">All Faculty</option>
+                <% faculty.filter(f=>f.pilotDept).forEach(f => { %>
+                <option value="<%= f.name %>"><%= f.name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Room</span>
+              <select class="pres-select" id="filterRoom">
+                <option value="all">All Rooms</option>
+                <% [...new Set(presenceLogs.map(l=>l.location))].forEach(room => { %>
+                <option value="<%= room %>"><%= room %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Event Type</span>
+              <select class="pres-select" id="filterEvent">
+                <option value="all">All Events</option>
+                <option value="entered">Entries Only</option>
+                <option value="exited">Exits Only</option>
+              </select>
+            </div>
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Time Range</span>
+              <select class="pres-select" id="filterTime">
+                <option value="all">Any Time</option>
+                <option value="morning">Morning (6AM–12PM)</option>
+                <option value="afternoon">Afternoon (12PM–6PM)</option>
+                <option value="evening">Evening (6PM–10PM)</option>
+              </select>
+            </div>
+          </div>
+          <div class="active-filters" id="activeFilters"></div>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Detection History</h3>
+          <span class="result-count" id="resultCount">— results</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="data-table" id="monTable">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Faculty</th>
+                  <th>Room</th>
+                  <th>Timestamp</th>
+                  <th>Duration</th>
+                  <th>Method</th>
+                </tr>
+              </thead>
+              <tbody id="monBody">
+                <% presenceLogs.forEach(log => { %>
+                <tr data-event="<%= log.status %>" data-faculty="<%= log.facultyName %>" data-room="<%= log.location %>" data-ts="<%= log.timestamp %>">
+                  <td>
+                    <div class="event-cell">
+                      <span class="event-icon <%= log.status %>">
+                        <% if(log.status==='entered'){ %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        <% } else { %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <% } %>
+                      </span>
+                      <span style="font-weight:600;font-size:.8125rem;color:<%= log.status==='entered'?'#15803d':'#374151' %>"><%= log.status==='entered'?'Entered':'Exited' %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:.5rem">
+                      <div class="apt-avatar-xs" style="font-size:.65rem;width:30px;height:30px"><%= log.facultyName.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+                      <span style="font-size:.8125rem;font-weight:600;color:var(--gray-900)"><%= log.facultyName %></span>
+                    </div>
+                  </td>
+                  <td style="font-size:.8125rem"><%= log.location %></td>
+                  <td style="font-size:.8125rem;white-space:nowrap"><%= log.timestamp %></td>
+                  <td><%= log.duration||'—' %></td>
+                  <td><span class="table-badge confirmed" style="font-size:.65rem">BLE SmartTag</span></td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+          <div class="no-results" id="noResults" style="display:none">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <p>No logs match the selected filters.</p>
+          </div>
+          <div class="pagination-bar" id="paginationBar">
+            <span class="page-info" id="pageInfo">—</span>
+            <div class="pagination-controls" id="paginationControls"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Full Screen Overlay -->
+<div class="fs-overlay" id="fsOverlay">
+  <div class="fs-box">
+    <div class="fs-hdr">
+      <div style="display:flex;align-items:center;gap:.875rem">
+        <img src="/images/CSPC-logo.png" alt="CSPC" style="width:30px;height:30px;object-fit:contain;opacity:.8" onerror="this.style.display='none'">
+        <div>
+          <h3 class="fs-hdr-title">BLE Monitoring — CCS Pilot Department</h3>
+          <p style="font-size:.7rem;color:rgba(255,255,255,.4);margin:.1rem 0 0">College of Computer Studies · Real-time detection log</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <span id="fsClock" style="font-size:.72rem;color:rgba(255,255,255,.35)"></span>
+        <button class="fs-close" id="fsClose" title="Exit (Esc)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="fs-stats-bar">
+      <div class="fs-stat">
+        <span class="fs-stat-val"><%= presenceLogs.filter(l=>l.status==='entered').length %></span>
+        <span class="fs-stat-lbl">Entries</span>
+      </div>
+      <div class="fs-stat">
+        <span class="fs-stat-val"><%= presenceLogs.filter(l=>l.status==='exited').length %></span>
+        <span class="fs-stat-lbl">Exits</span>
+      </div>
+      <div class="fs-stat">
+        <span class="fs-stat-val"><%= presenceLogs.length %></span>
+        <span class="fs-stat-lbl">Total Events</span>
+      </div>
+      <div class="fs-stat">
+        <span class="fs-stat-val"><%= faculty.filter(f=>f.pilotDept&&f.bleStatus==='in-room').length %></span>
+        <span class="fs-stat-lbl">Currently In Room</span>
+      </div>
+    </div>
+    <div class="fs-body">
+      <table class="fs-table">
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Faculty</th>
+            <th>Room</th>
+            <th>Timestamp</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% presenceLogs.forEach(log => { %>
+          <tr>
+            <td>
+              <span class="<%= log.status==='entered'?'fs-badge-in':'fs-badge-out' %>">
+                <span class="fs-dot <%= log.status==='entered'?'g':'gr' %>"></span>
+                <%= log.status==='entered'?'Entered':'Exited' %>
+              </span>
+            </td>
+            <td style="font-weight:600"><%= log.facultyName %></td>
+            <td style="color:rgba(255,255,255,.6)"><%= log.location %></td>
+            <td style="color:rgba(255,255,255,.5);white-space:nowrap"><%= log.timestamp %></td>
+            <td style="color:rgba(255,255,255,.5)"><%= log.duration||'—' %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+(function(){
+  'use strict';
+  const ROWS=10;
+  let page=1, activePeriod='all', customDateVal='';
+
+  const filterFaculty=document.getElementById('filterFaculty');
+  const filterRoom=document.getElementById('filterRoom');
+  const filterEvent=document.getElementById('filterEvent');
+  const filterTime=document.getElementById('filterTime');
+  const customDate=document.getElementById('customDate');
+  const periodTabs=document.querySelectorAll('.period-tab');
+  const noResults=document.getElementById('noResults');
+  const resultCount=document.getElementById('resultCount');
+  const pageInfo=document.getElementById('pageInfo');
+  const pgCtrl=document.getElementById('paginationControls');
+  const activeFilters=document.getElementById('activeFilters');
+
+  function allRows(){ return Array.from(document.querySelectorAll('#monTable tbody tr')); }
+  function parseTs(ts){ try{ return new Date(ts); }catch(e){ return null; } }
+
+  function inPeriod(ts){
+    const d=parseTs(ts); if(!d) return true;
+    const now=new Date();
+    if(activePeriod==='today') return d.toDateString()===now.toDateString();
+    if(activePeriod==='week'){ const s=new Date(now); s.setDate(now.getDate()-now.getDay()); const e=new Date(s); e.setDate(s.getDate()+6); return d>=s&&d<=e; }
+    if(activePeriod==='month') return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    if(activePeriod==='custom'&&customDateVal){ const t=new Date(customDateVal); return d.toDateString()===t.toDateString(); }
+    return true;
+  }
+
+  function inTimeRange(ts){
+    const d=parseTs(ts); if(!d) return true;
+    const h=d.getHours(), tv=filterTime.value;
+    if(tv==='morning') return h>=6&&h<12;
+    if(tv==='afternoon') return h>=12&&h<18;
+    if(tv==='evening') return h>=18&&h<22;
+    return true;
+  }
+
+  function getVisible(){
+    const fac=filterFaculty.value, room=filterRoom.value, evt=filterEvent.value;
+    return allRows().filter(r=>{
+      return (fac==='all'||r.dataset.faculty===fac)
+          && (room==='all'||r.dataset.room===room)
+          && (evt==='all'||r.dataset.event===evt)
+          && inPeriod(r.dataset.ts)
+          && inTimeRange(r.dataset.ts);
+    });
+  }
+
+  function renderPage(){
+    const visible=getVisible(), total=visible.length;
+    const pages=Math.max(1,Math.ceil(total/ROWS));
+    if(page>pages) page=pages;
+    allRows().forEach(r=>r.style.display='none');
+    visible.slice((page-1)*ROWS,page*ROWS).forEach(r=>r.style.display='');
+    noResults.style.display=total===0?'block':'none';
+    resultCount.textContent=total+' result'+(total!==1?'s':'');
+    const from=total?(page-1)*ROWS+1:0, to=Math.min(page*ROWS,total);
+    pageInfo.textContent=total?`Showing ${from}–${to} of ${total}`:'No results';
+    pgCtrl.innerHTML='';
+    if(pages<=1) return;
+    const prev=document.createElement('button');
+    prev.className='pg-btn pg-arrow'; prev.innerHTML='&#8592;'; prev.disabled=page===1;
+    prev.addEventListener('click',()=>{page--;renderPage();});
+    pgCtrl.appendChild(prev);
+    let s=Math.max(1,page-2),e=Math.min(pages,s+4); s=Math.max(1,e-4);
+    for(let i=s;i<=e;i++){
+      const b=document.createElement('button');
+      b.className='pg-btn'+(i===page?' active':'');
+      b.textContent=i;
+      b.addEventListener('click',()=>{page=i;renderPage();});
+      pgCtrl.appendChild(b);
+    }
+    const next=document.createElement('button');
+    next.className='pg-btn pg-arrow'; next.innerHTML='&#8594;'; next.disabled=page>=pages;
+    next.addEventListener('click',()=>{page++;renderPage();});
+    pgCtrl.appendChild(next);
+  }
+
+  function updateChips(){
+    activeFilters.innerHTML='';
+    const chips=[];
+    if(activePeriod!=='all') chips.push({label:'Period: '+{today:'Today',week:'This Week',month:'This Month',custom:customDateVal||'Custom'}[activePeriod],clear:()=>{activePeriod='all';customDateVal='';customDate.style.display='none';customDate.value='';periodTabs.forEach(t=>t.classList.toggle('active',t.dataset.period==='all'));}});
+    if(filterFaculty.value!=='all') chips.push({label:'Faculty: '+filterFaculty.options[filterFaculty.selectedIndex].text,clear:()=>{filterFaculty.value='all';}});
+    if(filterRoom.value!=='all') chips.push({label:'Room: '+filterRoom.options[filterRoom.selectedIndex].text,clear:()=>{filterRoom.value='all';}});
+    if(filterEvent.value!=='all') chips.push({label:'Event: '+filterEvent.options[filterEvent.selectedIndex].text,clear:()=>{filterEvent.value='all';}});
+    if(filterTime.value!=='all') chips.push({label:'Time: '+filterTime.options[filterTime.selectedIndex].text,clear:()=>{filterTime.value='all';}});
+    chips.forEach(c=>{
+      const chip=document.createElement('div');
+      chip.className='filter-chip';
+      chip.innerHTML=`<span>${c.label}</span><button aria-label="Remove">×</button>`;
+      chip.querySelector('button').addEventListener('click',()=>{c.clear();page=1;updateChips();renderPage();});
+      activeFilters.appendChild(chip);
+    });
+  }
+
+  function onChange(){ page=1; updateChips(); renderPage(); }
+
+  periodTabs.forEach(tab=>{
+    tab.addEventListener('click',function(){
+      periodTabs.forEach(t=>t.classList.remove('active'));
+      this.classList.add('active');
+      activePeriod=this.dataset.period;
+      customDate.style.display=activePeriod==='custom'?'inline-block':'none';
+      if(activePeriod!=='custom') customDateVal='';
+      onChange();
+    });
+  });
+  customDate.addEventListener('change',function(){ customDateVal=this.value; onChange(); });
+  filterFaculty.addEventListener('change',onChange);
+  filterRoom.addEventListener('change',onChange);
+  filterEvent.addEventListener('change',onChange);
+  filterTime.addEventListener('change',onChange);
+
+  document.getElementById('btnClearFilters').addEventListener('click',()=>{
+    activePeriod='all'; customDateVal=''; customDate.value=''; customDate.style.display='none';
+    periodTabs.forEach(t=>t.classList.toggle('active',t.dataset.period==='all'));
+    filterFaculty.value='all'; filterRoom.value='all'; filterEvent.value='all'; filterTime.value='all';
+    page=1; updateChips(); renderPage();
+  });
+
+  // Full screen
+  function openFs(){ document.getElementById('fsOverlay').classList.add('open'); document.body.style.overflow='hidden'; updateClock(); }
+  function closeFs(){ document.getElementById('fsOverlay').classList.remove('open'); document.body.style.overflow=''; }
+  function updateClock(){ const el=document.getElementById('fsClock'); if(el) el.textContent=new Date().toLocaleString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+  setInterval(()=>{ if(document.getElementById('fsOverlay').classList.contains('open')) updateClock(); },1000);
+  document.getElementById('btnFullScreen').addEventListener('click',openFs);
+  document.getElementById('fsClose').addEventListener('click',closeFs);
+  document.getElementById('fsOverlay').addEventListener('click',function(e){ if(e.target===this) closeFs(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeFs(); });
+
+  // Create export modal for monitoring
+  function createMonExportModal() {
+    if(document.getElementById('monExportModal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'monExportModal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:1rem';
+    modal.innerHTML = `
+        <div style="background:#fff;border-radius:16px;width:100%;max-width:900px;height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 70px rgba(0,0,0,.3);overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--gray-100);background:var(--gray-50);flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h3 style="font-size:1rem;font-weight:700;color:var(--gray-900);margin:0">Export Preview</h3>
+                    <div style="font-size:.875rem;margin:0.75rem 0 0;display:flex;align-items:center;gap:.75rem">
+                        <span>Destination:</span>
+                        <div style="position:relative;display:inline-block;min-width:220px">
+                            <button id="monExportDestBtn" style="padding:.625rem .875rem;border:1px solid #e2e8f0;border-radius:6px;font-size:.875rem;background:#fff;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:#1f2937;width:100%">
+                                <span id="monExportDestText">Save as PDF</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </button>
+                            <div id="monExportDestDropdown" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;margin-top:.25rem;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100;display:none;min-width:220px">
+                                <button class="mon-export-item" data-value="pdf" style="display:block;width:100%;text-align:left;padding:.75rem 1rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:#1f2937;transition:background .15s;border-bottom:1px solid #f3f4f6">Save as PDF</button>
+                                <button class="mon-export-item" data-value="docx" style="display:block;width:100%;text-align:left;padding:.75rem 1rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:#1f2937;transition:background .15s;border-bottom:1px solid #f3f4f6">Save as DOCX</button>
+                                <button class="mon-export-item" data-value="xlsx" style="display:block;width:100%;text-align:left;padding:.75rem 1rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:#1f2937;transition:background .15s">Save as XLSX</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+                    <button id="monExportCancel" class="btn-page" style="height:36px;padding:0 1rem">Cancel</button>
+                    <button id="monExportSave" class="btn-header-action primary" style="height:36px;padding:0 1rem;font-size:.75rem">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:.4rem"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        Export
+                    </button>
+                </div>
+            </div>
+            <div id="monExportScroll" style="flex:1;overflow-y:auto;padding:3rem;background:var(--gray-200);display:flex;justify-content:center">
+                <div id="monExportArea" style="background:#fff;width:210mm;min-height:297mm;padding:20mm;box-shadow:0 0 20px rgba(0,0,0,.1);font-family:Arial,sans-serif;color:#000">
+                    <!-- Dynamic content injected here -->
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  let monLastExportFormat = 'pdf';
+  let monLastExportData = null;
+
+  function downloadMonExport(format, title, columns, rows) {
+    if(format === 'pdf'){
+      window.print();
+    } else if(format === 'docx' || format === 'xlsx'){
+      const payload = { title: title, columns: columns, rows: rows };
+      fetch('/export/' + format, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function(res){
+        if(!res.ok) throw new Error('Export failed');
+        var dispo = res.headers.get('content-disposition') || '';
+        var match = dispo.match(/filename="([^"]+)"/);
+        var filename = match ? match[1] : title.replace(/[^\w\-]+/g,'_') + '.' + format;
+        return res.blob().then(function(blob){
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 2500);
+          document.getElementById('monExportModal').style.display = 'none';
+        });
+      }).catch(function(e){
+        alert('Export failed: ' + e.message);
+      });
+    }
+  }
+
+  function showMonExportModal(title, columns, rows) {
+    createMonExportModal();
+    monLastExportData = { title, columns, rows };
+    
+    const modal = document.getElementById('monExportModal');
+    const area = document.getElementById('monExportArea');
+    const now = new Date().toLocaleString();
+    
+    let tableHtml = '<table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:10pt">' +
+        '<thead><tr style="background:#f3f4f6">' +
+        columns.map(c => '<th style="border:1px solid #d1d5db;padding:8px;text-align:left">' + c + '</th>').join('') +
+        '</tr></thead><tbody>';
+    
+    if(!rows.length){
+      tableHtml += '<tr><td colspan="' + columns.length + '" style="border:1px solid #d1d5db;padding:20px;text-align:center;color:#6b7280">No data available for this report.</td></tr>';
+    } else {
+      rows.forEach(r => {
+        tableHtml += '<tr>' + r.map(cell => '<td style="border:1px solid #d1d5db;padding:8px">' + cell + '</td>').join('') + '</tr>';
+      });
+    }
+    tableHtml += '</tbody></table>';
+    
+    area.innerHTML = 
+        '<div style="text-align:center;margin-bottom:30px;border-bottom:2px solid #000;padding-bottom:20px">' +
+            '<div style="display:flex;align-items:center;justify-content:center;gap:15px;margin-bottom:10px">' +
+                '<img src="/images/CSPC-logo.png" style="width:60px;height:60px" onerror="this.style.display=\'none\'">' +
+                '<div style="text-align:left">' +
+                    '<p style="margin:0;font-size:14pt;font-weight:700;text-transform:uppercase">Camarines Sur Polytechnic Colleges</p>' +
+                    '<p style="margin:0;font-size:11pt">College of Computer Studies</p>' +
+                    '<p style="margin:0;font-size:9pt;color:#4b5563">Nabua, Camarines Sur</p>' +
+                '</div>' +
+            '</div>' +
+            '<h2 style="margin:20px 0 5px;font-size:16pt;text-decoration:underline">' + title + '</h2>' +
+            '<p style="margin:0;font-size:10pt;color:#374151">Generated: ' + now + '</p>' +
+        '</div>' +
+        tableHtml +
+        '<div style="margin-top:40px;display:flex;justify-content:space-between;font-size:10pt">' +
+            '<div><p style="margin:0">System: FaciTrack v1.0</p></div>' +
+        '</div>';
+    
+    modal.style.display = 'flex';
+  }
+
+  // Initialize modal handlers
+  document.addEventListener('DOMContentLoaded', function(){
+    createMonExportModal();
+    
+    const destBtn = document.getElementById('monExportDestBtn');
+    const destDropdown = document.getElementById('monExportDestDropdown');
+    const cancelBtn = document.getElementById('monExportCancel');
+    const exportBtn = document.getElementById('monExportSave');
+    
+    if(destBtn && destDropdown) {
+      destBtn.addEventListener('click', e => {
+        e.preventDefault();
+        destDropdown.style.display = destDropdown.style.display === 'none' ? 'block' : 'none';
+      });
+      
+      document.querySelectorAll('.mon-export-item').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.preventDefault();
+          const format = e.target.dataset.value;
+          const labels = { pdf: 'Save as PDF', docx: 'Save as DOCX', xlsx: 'Save as XLSX' };
+          monLastExportFormat = format;
+          document.getElementById('monExportDestText').textContent = labels[format];
+          destDropdown.style.display = 'none';
+        });
+      });
+      
+      document.addEventListener('click', e => {
+        if(destBtn && destDropdown && !destBtn.contains(e.target) && !destDropdown.contains(e.target)){
+          destDropdown.style.display = 'none';
+        }
+      });
+    }
+    
+    if(cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        document.getElementById('monExportModal').style.display = 'none';
+      });
+    }
+    
+    if(exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        if(!monLastExportData) return;
+        downloadMonExport(monLastExportFormat, monLastExportData.title, monLastExportData.columns, monLastExportData.rows);
+      });
+    }
+  });
+
+  document.getElementById('btnExportLogs').addEventListener('click',()=>{
+    const rows = Array.from(document.querySelectorAll('#monTable tbody tr')).filter(r => r.style.display !== 'none');
+    const columns = Array.from(document.querySelectorAll('#monTable thead th')).map(th => th.textContent.trim());
+    const exportRows = rows.map(r => {
+      return Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim());
+    });
+    showMonExportModal('Monitoring Logs Report', columns, exportRows);
+  });
+
+  updateChips();
+  renderPage();
+}());
+</script>

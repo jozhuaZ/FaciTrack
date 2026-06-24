@@ -1,0 +1,411 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* Status Selector Styles */
+.status-selector-wrap{position:relative;margin-right:.75rem}
+.status-selector-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1rem;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);cursor:pointer;transition:all .2s;font-family:var(--font-body);font-size:.875rem;color:var(--gray-700);font-weight:500}
+.status-selector-btn:hover{border-color:var(--gray-300);background:var(--gray-50)}
+.status-selector-btn svg{transition:transform .2s}
+.status-selector-btn.open svg{transform:rotate(180deg)}
+.status-indicator{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-indicator.available{background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.2)}
+.status-indicator.dnd{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.2)}
+.status-indicator.meeting{background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.2)}
+.status-indicator.leave{background:#6b7280;box-shadow:0 0 0 2px rgba(107,114,128,.2)}
+.status-indicator.ot{background:#8b5cf6;box-shadow:0 0 0 2px rgba(139,92,246,.2)}
+.status-text{font-weight:600}
+.status-dropdown{position:absolute;top:calc(100% + .5rem);right:0;width:280px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);box-shadow:0 10px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);opacity:0;visibility:hidden;transform:translateY(-10px);transition:all .2s;z-index:1000;overflow:hidden}
+.status-dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
+.status-option{display:flex;align-items:center;gap:.75rem;padding:.875rem 1rem;cursor:pointer;transition:all .15s;border-bottom:1px solid var(--gray-100)}
+.status-option:last-child{border-bottom:none}
+.status-option:hover{background:var(--gray-50)}
+.status-option.active{background:rgba(10,61,98,.05)}
+.status-option-content{flex:1}
+.status-option-label{display:block;font-size:.875rem;font-weight:600;color:var(--gray-900);margin-bottom:.125rem}
+.status-option-desc{display:block;font-size:.75rem;color:var(--gray-500)}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/instructor-sidebar', { activePage: 'dashboard' }) %>
+
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle">Welcome back, <%= instructor.name %> · <%= instructor.department %></p>
+        </div>
+        <div class="header-actions">
+          <!-- Faculty Status Selector -->
+          <div class="status-selector-wrap">
+            <button class="status-selector-btn" id="statusSelectorBtn">
+              <span class="status-indicator available"></span>
+              <span class="status-text">Available</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="status-dropdown" id="statusDropdown">
+              <div class="status-option" data-status="available">
+                <span class="status-indicator available"></span>
+                <div class="status-option-content">
+                  <span class="status-option-label">Available</span>
+                  <span class="status-option-desc">Ready for consultations</span>
+                </div>
+              </div>
+              <div class="status-option" data-status="dnd">
+                <span class="status-indicator dnd"></span>
+                <div class="status-option-content">
+                  <span class="status-option-label">Do Not Disturb</span>
+                  <span class="status-option-desc">Busy, avoid interruptions</span>
+                </div>
+              </div>
+              <div class="status-option" data-status="meeting">
+                <span class="status-indicator meeting"></span>
+                <div class="status-option-content">
+                  <span class="status-option-label">In Meeting</span>
+                  <span class="status-option-desc">Currently in a meeting</span>
+                </div>
+              </div>
+              <div class="status-option" data-status="leave">
+                <span class="status-indicator leave"></span>
+                <div class="status-option-content">
+                  <span class="status-option-label">On Leave</span>
+                  <span class="status-option-desc">Out of office</span>
+                </div>
+              </div>
+              <div class="status-option" data-status="ot">
+                <span class="status-indicator ot"></span>
+                <div class="status-option-content">
+                  <span class="status-option-label">Official Travel</span>
+                  <span class="status-option-desc">On official business trip</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <a href="/instructor/consultations" class="btn-header-action">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Appointments
+          </a>
+          <a href="/instructor/workload" class="btn-header-action primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            My Workload
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-overview">
+        <div class="stat-card-large pending">
+          <div class="stat-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Pending Requests</p>
+            <h2 class="stat-card-value"><%= appointments.filter(a => a.status === 'pending').length %></h2>
+            <p class="stat-card-sublabel">Awaiting your response</p>
+          </div>
+        </div>
+
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Confirmed</p>
+            <h2 class="stat-card-value"><%= appointments.filter(a => a.status === 'confirmed').length %></h2>
+            <p class="stat-card-sublabel">Total confirmed bookings</p>
+          </div>
+        </div>
+
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Teaching Hours/Week</p>
+            <h2 class="stat-card-value"><%= workloadStats.thisWeek.hoursLogged %>h</h2>
+            <p class="stat-card-sublabel"><%= workloadStats.thisWeek.consultationsCompleted %> consultations done</p>
+          </div>
+        </div>
+
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">BLE Status</p>
+            <h2 class="stat-card-value ble-val <%= instructor.bleStatus %>"><%= instructor.bleStatus === 'in-room' ? 'In Room' : 'Out' %></h2>
+            <p class="stat-card-sublabel">Last seen <%= instructor.bleLastDetected %></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Grid -->
+      <div class="dashboard-content-grid">
+
+        <!-- Pending Requests — most actionable -->
+        <div class="content-card span-1">
+          <div class="card-header">
+            <h3 class="card-title">Pending Requests</h3>
+            <a href="/instructor/consultations" class="card-link">View All →</a>
+          </div>
+          <div class="card-body">
+            <% const pending = appointments.filter(a => a.status === 'pending'); %>
+            <% if (pending.length === 0) { %>
+            <div class="empty-state-card">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <p class="empty-title">All caught up!</p>
+              <p class="empty-text">No pending consultation requests</p>
+            </div>
+            <% } else { %>
+            <div class="appointments-list-dashboard">
+              <% pending.slice(0, 4).forEach(apt => { %>
+              <div class="appointment-row">
+                <div class="apt-row-info">
+                  <h4 class="apt-row-name"><%= apt.studentName %></h4>
+                  <p class="apt-row-details">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <%= apt.date %> · <%= apt.time %>
+                    <% if (apt.topic) { %> · <em><%= apt.topic %></em><% } %>
+                  </p>
+                </div>
+                <div class="apt-row-actions">
+                  <button class="btn-icon-action approve" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Approve">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  </button>
+                  <button class="btn-icon-action decline" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Decline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+              </div>
+              <% }); %>
+              <% if (pending.length > 4) { %>
+              <a href="/instructor/consultations?status=pending" class="view-more-link">+<%= pending.length - 4 %> more pending →</a>
+              <% } %>
+            </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Consultation Schedule -->
+        <div class="content-card span-1">
+          <div class="card-header">
+            <h3 class="card-title">Consultation Schedule</h3>
+            <a href="/instructor/schedule" class="card-link">Manage →</a>
+          </div>
+          <div class="card-body">
+            <% if (consultationSlots.length === 0) { %>
+            <div class="empty-state-card">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <p class="empty-title">No slots set</p>
+              <p class="empty-text"><a href="/instructor/schedule" style="color:var(--primary-blue)">Set up your consultation hours</a></p>
+            </div>
+            <% } else { %>
+            <div class="schedule-list-dashboard">
+              <% consultationSlots.forEach(slot => { %>
+              <div class="schedule-row">
+                <div class="schedule-day-pill"><%= slot.day.substring(0,3).toUpperCase() %></div>
+                <div class="schedule-row-time">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <%= slot.time %>
+                </div>
+                <div class="schedule-row-capacity"><%= slot.bookedCount %>/<%= slot.maxCapacity %> booked</div>
+                <span class="schedule-row-badge <%= slot.status %>"><%= slot.status === 'open' ? 'Open' : 'Full' %></span>
+              </div>
+              <% }); %>
+            </div>
+            <% } %>
+
+            <!-- Quick stats below slots -->
+            <div class="schedule-quick-stats">
+              <div class="sqs-item">
+                <span class="sqs-val"><%= appointments.filter(a => a.status === 'confirmed').length %></span>
+                <span class="sqs-lbl">Confirmed</span>
+              </div>
+              <div class="sqs-divider"></div>
+              <div class="sqs-item">
+                <span class="sqs-val"><%= appointments.filter(a => a.status === 'declined').length %></span>
+                <span class="sqs-lbl">Declined</span>
+              </div>
+              <div class="sqs-divider"></div>
+              <div class="sqs-item">
+                <span class="sqs-val"><%= appointments.length %></span>
+                <span class="sqs-lbl">Total</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workload Snapshot -->
+        <div class="content-card span-1">
+          <div class="card-header">
+            <h3 class="card-title">Workload Snapshot</h3>
+            <a href="/instructor/workload" class="card-link">Full Timetable →</a>
+          </div>
+          <div class="card-body">
+            <div class="workload-snapshot" id="workloadSnapshot">
+              <div class="wl-loading">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                Loading timetable...
+              </div>
+            </div>
+            <div class="workload-mini-stats">
+              <div class="wms-item blue">
+                <span class="wms-val" id="wmsBlocks">—</span>
+                <span class="wms-lbl">Blocks</span>
+              </div>
+              <div class="wms-item green">
+                <span class="wms-val" id="wmsHours">—</span>
+                <span class="wms-lbl">Hours/Week</span>
+              </div>
+              <div class="wms-item purple">
+                <span class="wms-val" id="wmsSubjects">—</span>
+                <span class="wms-lbl">Subjects</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Presence + Notifications -->
+        <div class="content-card span-1">
+          <div class="card-header">
+            <h3 class="card-title">Activity Feed</h3>
+            <a href="/instructor/presence" class="card-link">Presence Logs →</a>
+          </div>
+          <div class="card-body" style="padding:0">
+
+            <!-- Presence section -->
+            <div class="feed-section-label">Recent Presence</div>
+            <div class="presence-list-dashboard">
+              <% presenceLogs.slice(0, 3).forEach(log => { %>
+              <div class="presence-row">
+                <div class="presence-row-icon <%= log.status %>">
+                  <% if (log.status === 'entered') { %>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                  <% } else { %>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  <% } %>
+                </div>
+                <div class="presence-row-info">
+                  <p class="presence-row-action"><%= log.status === 'entered' ? 'Entered' : 'Exited' %> <%= log.location %></p>
+                  <p class="presence-row-time"><%= log.timestamp %><% if (log.duration) { %> · <%= log.duration %><% } %></p>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /dashboard-content-grid -->
+    </div>
+  </main>
+</div>
+
+<!-- Decline Modal -->
+<div class="modal-overlay" id="declineModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Decline Appointment</h3>
+      <button class="modal-close" id="closeModal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-description">Provide a reason for declining <strong id="declineStudentName"></strong>'s request. They'll be notified.</p>
+      <label class="modal-label">Reason</label>
+      <textarea id="declineReason" class="modal-textarea" placeholder="e.g. Schedule conflict, already fully booked..." rows="4"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal btn-cancel" id="cancelDecline">Cancel</button>
+      <button class="btn-modal btn-confirm" id="confirmDecline">Decline & Notify</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<%- include('../../partials/script') %>
+<script src="/js/instructor-dashboard.js?v=<%= Date.now() %>"></script>
+
+<script>
+// Status Selector Functionality
+const statusSelector = document.getElementById('statusSelectorBtn');
+const statusDropdown = document.getElementById('statusDropdown');
+const statusOptions = document.querySelectorAll('.status-option');
+
+let currentStatus = 'available';
+
+// Toggle dropdown
+statusSelector.addEventListener('click', function(e) {
+    e.stopPropagation();
+    statusDropdown.classList.toggle('show');
+    this.classList.toggle('open');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function() {
+    statusDropdown.classList.remove('show');
+    statusSelector.classList.remove('open');
+});
+
+statusDropdown.addEventListener('click', function(e) {
+    e.stopPropagation();
+});
+
+// Status option selection
+statusOptions.forEach(option => {
+    option.addEventListener('click', function() {
+        const newStatus = this.dataset.status;
+        
+        // Update current status
+        currentStatus = newStatus;
+        
+        // Update active state
+        statusOptions.forEach(opt => opt.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Update button display
+        const statusText = this.querySelector('.status-option-label').textContent;
+        statusSelector.querySelector('.status-text').textContent = statusText;
+        
+        // Update indicator color
+        const btnIndicator = statusSelector.querySelector('.status-indicator');
+        btnIndicator.className = 'status-indicator ' + newStatus;
+        
+        // Close dropdown
+        statusDropdown.classList.remove('show');
+        statusSelector.classList.remove('open');
+        
+        // Show toast notification
+        showToast('success', 'Status Updated', `Your status is now: ${statusText}`);
+        
+        // In production, this would send to backend
+        // fetch('/instructor/status', { method: 'POST', body: JSON.stringify({ status: newStatus }) })
+    });
+});
+
+function showToast(type, title, message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <p class="toast-title">${title}</p>
+            <p class="toast-message">${message}</p>
+        </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Set initial active state
+document.querySelector(`.status-option[data-status="${currentStatus}"]`).classList.add('active');
+</script>
+
+<%- include('../../partials/footer') %>

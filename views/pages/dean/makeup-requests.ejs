@@ -1,0 +1,429 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── Consultation-style cards (matching instructor appointments) ── */
+.consultations-list{display:flex;flex-direction:column;gap:.875rem}
+.consultation-card{display:flex;align-items:flex-start;gap:1rem;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:1.25rem;transition:all .2s ease;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.consultation-card:hover{border-color:var(--gray-300);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+/* Circular profile avatar */
+.consult-card-avatar{width:44px;height:44px;border-radius:50%;background:var(--teal-gradient,linear-gradient(135deg,#0a3d62,#1e88e5));color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8125rem;font-weight:700;flex-shrink:0;box-shadow:0 2px 8px rgba(10,61,98,.2)}
+.consult-card-body{flex:1;min-width:0}
+.consult-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.375rem}
+.consult-student-name{font-size:.9375rem;font-weight:700;color:var(--gray-900);margin:0 0 .125rem}
+.consult-student-id{font-size:.75rem;color:var(--gray-500);margin:0}
+.consult-topic{font-size:.875rem;color:var(--gray-700);margin:.375rem 0;line-height:1.4}
+.consult-meta{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.5rem}
+.consult-meta span{display:flex;align-items:center;gap:.3rem;font-size:.75rem;color:var(--gray-500)}
+.consult-meta svg{color:var(--primary-blue,#0a3d62);flex-shrink:0}
+.consult-requested{font-size:.6875rem !important;color:var(--gray-400) !important;font-style:italic}
+.consult-status-badge{padding:.25rem .75rem;border-radius:var(--radius-full,9999px);font-size:.6875rem;font-weight:600;white-space:nowrap;flex-shrink:0}
+.consult-status-badge.pending{background:rgba(251,146,60,.12);color:#c2410c}
+.consult-status-badge.approved{background:rgba(16,185,129,.12);color:#065f46}
+.consult-status-badge.declined{background:rgba(239,68,68,.12);color:#b91c1c}
+.consult-card-actions{display:flex;flex-direction:column;gap:.5rem;flex-shrink:0;width:110px}
+.btn-approve-full,.btn-decline-full,.btn-view-full{display:flex;align-items:center;justify-content:center;gap:.375rem;padding:.5rem .875rem;border:none;border-radius:var(--radius-md,8px);font-size:.8125rem;font-weight:600;cursor:pointer;transition:all .2s ease;white-space:nowrap;font-family:inherit;text-decoration:none;width:100%;box-sizing:border-box}
+.btn-view-full{background:rgba(107,114,128,.1);color:#374151}
+.btn-view-full:hover{background:#6b7280;color:#fff}
+.btn-approve-full{background:rgba(16,185,129,.1);color:#065f46}
+.btn-approve-full:hover{background:#10b981;color:#fff}
+.btn-decline-full{background:rgba(239,68,68,.1);color:#b91c1c}
+.btn-decline-full:hover{background:#dc2626;color:#fff}
+.btn-approve-full:disabled,.btn-decline-full:disabled{opacity:.5;cursor:not-allowed}
+/* Empty state */
+.empty-state{text-align:center;padding:3rem 1rem;color:#9ca3af}
+.empty-state svg{margin-bottom:.75rem;opacity:.4}
+.empty-state p{font-size:.9rem;font-weight:600;margin:0 0 .35rem}
+.empty-state span{font-size:.8rem}
+/* Decline modal */
+.mo{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(3px)}
+.mo.open{display:flex}
+.mo-box{background:#fff;border-radius:16px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:moIn .2s;overflow:hidden}
+@keyframes moIn{from{opacity:0;transform:scale(.93) translateY(10px)}to{opacity:1;transform:none}}
+.mo-head{padding:1.25rem 1.5rem 1rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:1rem}
+.mo-head h3{font-size:1.05rem;font-weight:800;margin:0 0 .2rem;color:#0f172a}
+.mo-meta{font-size:.78rem;color:#64748b;margin:0}
+.mo-close{width:30px;height:30px;border:none;background:#f1f5f9;border-radius:8px;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.mo-close:hover{background:#e2e8f0}
+.mo-body{padding:1.25rem 1.5rem}
+.mo-field label{display:block;font-size:.71rem;font-weight:700;color:#475569;margin-bottom:.3rem;text-transform:uppercase}
+.mo-field textarea{width:100%;padding:.55rem .85rem;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.84rem;color:#0f172a;font-family:inherit;resize:vertical;min-height:80px;outline:none;box-sizing:border-box}
+.mo-field textarea:focus{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1)}
+.mo-foot{padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:.5rem;justify-content:flex-end;background:#fafafa}
+.btn-ghost{padding:.5rem 1.15rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:#f1f5f9;color:#475569}
+.btn-danger{padding:.5rem 1.15rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+/* Toast */
+.toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:99999;display:flex;flex-direction:column;gap:.4rem}
+.toast{background:#0f172a;color:#fff;padding:.65rem 1.1rem;border-radius:10px;font-size:.8rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:toastIn .22s}
+.toast.success{background:linear-gradient(135deg,#16a34a,#15803d)}
+.toast.error{background:linear-gradient(135deg,#dc2626,#b91c1c)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* Search & filter bar */
+.search-filter-bar{display:flex;gap:1rem;padding:1.25rem;background:#fff;border-radius:12px;margin-bottom:1.5rem;border:1px solid #e5e7eb;align-items:center;flex-wrap:wrap}
+.search-input-wrap{flex:1;min-width:200px;display:flex;align-items:center;gap:.5rem;border:1.5px solid #e5e7eb;border-radius:10px;padding:0 .875rem;background:#fff}
+.search-input-wrap svg{color:#94a3b8;flex-shrink:0;width:16px;height:16px}
+.search-input-wrap input{flex:1;border:none;padding:.625rem 0;font-size:.9125rem;background:transparent;outline:none;color:#0f172a}
+.search-input-wrap input::placeholder{color:#cbd5e1}
+.filter-dropdown-wrap{display:flex;align-items:center}
+.filter-dropdown{border:1.5px solid #e5e7eb;border-radius:10px;padding:.625rem 1rem;background:#fff;color:#374151;font-size:.9125rem;font-weight:500;cursor:pointer;font-family:inherit;min-width:160px;transition:all .2s}
+.filter-dropdown:hover{border-color:#3b82f6;color:#3b82f6}
+.pagination-btn{padding:.5rem .75rem;border:1.5px solid #d1d5db;border-radius:6px;font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s ease;background:#f1f5f9;color:#374151;font-family:inherit}
+.pagination-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.pagination-btn:hover{border-color:#3b82f6;background:#eff6ff}
+.pagination-btn.active:hover{background:#2563eb}
+@media(max-width:640px){.consultation-card{flex-wrap:wrap}.consult-card-actions{flex-direction:row;width:100%;margin-top:.5rem}.btn-approve-full,.btn-decline-full,.btn-view-full{flex:1;justify-content:center}}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/dean-sidebar', { activePage: 'makeup', pendingMakeupCount: pendingMakeupCount }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Make-Up Class Requests</h1>
+          <p class="page-subtitle">Review and action pending make-up class requests from instructors</p>
+        </div>
+      </div>
+
+      <!-- Search & Filter Bar -->
+      <div class="search-filter-bar">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="makeupSearch" placeholder="Search name or subject..." autocomplete="off">
+        </div>
+        <div class="filter-dropdown-wrap">
+          <select class="filter-dropdown" id="makeupStatusFilter">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Proceeded</option>
+            <option value="declined">Declined</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="content-card" style="padding:0;">
+        <% const allRequests = pending.concat(approved).concat(declined); %>
+        <% if (allRequests.length === 0) { %>
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <p>No requests yet</p>
+          <span>Instructor make-up class requests will appear here.</span>
+        </div>
+        <% } else { %>
+          <div class="consultations-list" id="requestsList" style="padding:.75rem;">
+            <% allRequests.forEach((r, idx) => {
+              const nameParts = r.instructorName.trim().split(' ');
+              const initials = (nameParts[0][0] + (nameParts[nameParts.length - 1][0] || '')).toUpperCase();
+            %>
+            <div class="consultation-card" id="row-<%= r.id %>" data-status="<%= r.status %>" data-name="<%= r.instructorName.toLowerCase() %>" data-subject="<%= r.subjectName.toLowerCase() %>" data-page="<%= Math.floor(idx / 10) %>" style="<%= idx >= 10 ? 'display:none' : '' %>">
+              <!-- Circular profile avatar -->
+              <div class="consult-card-avatar"><%= initials %></div>
+
+              <!-- Card body -->
+              <div class="consult-card-body">
+                <div class="consult-card-top">
+                  <div>
+                    <h4 class="consult-student-name"><%= r.instructorName %></h4>
+                    <p class="consult-student-id"><%= r.id || 'N/A' %></p>
+                  </div>
+                  <span class="consult-status-badge <%= r.status %>">
+                    <%= r.status === 'approved' ? 'Proceeded' : r.status.charAt(0).toUpperCase() + r.status.slice(1) %>
+                  </span>
+                </div>
+                <p class="consult-topic"><%= r.subjectName %> · <%= r.section %></p>
+                <div class="consult-meta">
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <%= r.day %>
+                  </span>
+                  <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <%= slotToLabel(r.startSlot) %> – <%= slotToLabel(r.endSlot) %>
+                  </span>
+                  <% if (r.deliveryMode) { %>
+                  <span>
+                    <% if (r.deliveryMode === 'online') { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    Online
+                    <% } else { %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    In-Campus<% if (r.room) { %> · <%= r.room %><% } %>
+                    <% } %>
+                  </span>
+                  <% } %>
+                  <span class="consult-requested">
+                    Submitted <%= new Date(r.submittedAt).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' }) %>
+                  </span>
+                </div>
+
+              </div>
+
+              <!-- Actions -->
+              <div class="consult-card-actions">
+                <button class="btn-view-full" onclick="viewDocument('<%= r.id %>')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  View
+                </button>
+                <% if (r.status === 'pending') { %>
+                <button class="btn-approve-full" onclick="openProceedModal('<%= r.id %>', '<%= r.instructorName.replace(/'/g, "\\'") %>', '<%= r.subjectName.replace(/'/g, "\\'") %>', '<%= r.day %>', '<%= slotToLabel(r.startSlot) %> – <%= slotToLabel(r.endSlot) %>')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Proceed
+                </button>
+                <button class="btn-decline-full" onclick="openDeclineModal('<%= r.id %>', '<%= r.subjectName.replace(/'/g, "\\'") %>')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Decline
+                </button>
+                <% } %>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+          <% if (allRequests.length > 10) { %>
+          <div class="pagination-wrapper" style="padding:1.25rem;border-top:1px solid #e5e7eb;display:flex;justify-content:center;gap:.5rem;flex-wrap:wrap">
+            <% const totalPages = Math.ceil(allRequests.length / 10); %>
+            <% for (let p = 0; p < totalPages; p++) { %>
+            <button class="pagination-btn <%= p === 0 ? 'active' : '' %>" onclick="goToPage(<%= p %>)" style="<%= p === 0 ? 'background:#3b82f6;color:#fff' : 'background:#f1f5f9;color:#374151' %>">
+              <%= p + 1 %>
+            </button>
+            <% } %>
+          </div>
+          <% } %>
+        <% } %>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Proceed Modal -->
+<div class="mo" id="proceedModal">
+  <div class="mo-box" style="max-width:480px">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3 style="color:#065f46">Approve Request</h3>
+        <p class="mo-meta" id="proceedModalMeta"></p>
+      </div>
+      <button class="mo-close" onclick="closeProceedModal()">×</button>
+    </div>
+    <div class="mo-body">
+      <!-- Request summary -->
+      <div id="proceedSummary" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:.875rem 1rem;margin-bottom:1rem;font-size:.82rem;color:#065f46;display:flex;flex-direction:column;gap:.3rem">
+        <div style="font-weight:700;font-size:.875rem;color:#064e3b" id="proceedSummaryTitle"></div>
+        <div id="proceedSummaryDetails" style="color:#047857"></div>
+      </div>
+      <!-- Dean's statement -->
+      <div class="mo-field">
+        <label>Dean's Statement <span style="color:#ef4444">*</span>
+          <span style="font-weight:400;color:#94a3b8;text-transform:none;font-size:.7rem;margin-left:.25rem">— your official remarks on this request</span>
+        </label>
+        <textarea id="proceedStatementInput" placeholder="e.g., This make-up class is hereby approved. The instructor is authorized to conduct the session as scheduled. Please coordinate with the registrar for proper documentation…" style="min-height:110px;border-color:#bbf7d0"></textarea>
+        <div id="proceedStatementError" style="color:#dc2626;font-size:.78rem;margin-top:.3rem;display:none">Please enter your statement before proceeding.</div>
+      </div>
+    </div>
+    <div class="mo-foot" style="justify-content:space-between;align-items:center">
+      <button class="btn-ghost" onclick="closeProceedModal()">Cancel</button>
+      <button id="btnConfirmProceed" style="padding:.5rem 1.25rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;gap:.4rem" onclick="confirmProceed()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Approve
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Decline Modal -->
+<div class="mo" id="declineModal">
+  <div class="mo-box">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3>Decline Request</h3>
+        <p class="mo-meta" id="declineModalMeta">Provide a reason for declining</p>
+      </div>
+      <button class="mo-close" onclick="closeDeclineModal()">×</button>
+    </div>
+    <div class="mo-body">
+      <div class="mo-field">
+        <label>Reason for Declining <span style="color:#ef4444">*</span></label>
+        <textarea id="declineReasonInput" placeholder="Explain why this request is being declined…"></textarea>
+        <div id="declineReasonError" style="color:#dc2626;font-size:.78rem;margin-top:.3rem;display:none">Please enter a reason.</div>
+      </div>
+    </div>
+    <div class="mo-foot">
+      <button class="btn-ghost" onclick="closeDeclineModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmDecline()">Decline Request</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+(function(){
+  let pendingDeclineId = null;
+  let pendingProceedId = null;
+  let currentPage = 0;
+
+  // ── Search & Filter ──
+  const searchInput = document.getElementById('makeupSearch');
+  const statusFilter = document.getElementById('makeupStatusFilter');
+
+  function filterCards() {
+    currentPage = 0;
+    updatePagination();
+  }
+
+  function updatePagination() {
+    const q = searchInput.value.toLowerCase().trim();
+    const status = statusFilter.value;
+    const cards = document.querySelectorAll('.consultation-card');
+    let visibleCards = 0;
+
+    cards.forEach((card, idx) => {
+      const matchName = card.dataset.name.includes(q);
+      const matchSubject = card.dataset.subject.includes(q);
+      const matchStatus = status === 'all' || card.dataset.status === status;
+      const isVisible = (matchName || matchSubject) && matchStatus;
+
+      if (isVisible) {
+        const pageForCard = Math.floor(visibleCards / 10);
+        card.style.display = pageForCard === currentPage ? 'flex' : 'none';
+        visibleCards++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    // Update pagination buttons
+    document.querySelectorAll('.pagination-btn').forEach((btn, idx) => {
+      btn.classList.toggle('active', idx === currentPage);
+      btn.style.background = idx === currentPage ? '#3b82f6' : '#f1f5f9';
+      btn.style.color = idx === currentPage ? '#fff' : '#374151';
+    });
+  }
+
+  window.goToPage = function(page) {
+    currentPage = page;
+    updatePagination();
+  };
+
+  if (searchInput) searchInput.addEventListener('input', filterCards);
+  if (statusFilter) statusFilter.addEventListener('change', filterCards);
+
+  // ── View Document ──
+  window.viewDocument = function(id) {
+    window.open('/dean/makeup/' + id + '/document', '_blank');
+  };
+
+  // ── Proceed Modal ──
+  window.openProceedModal = function(id, instructor, subject, day, time) {
+    pendingProceedId = id;
+    document.getElementById('proceedModalMeta').textContent = instructor + ' — ' + subject;
+    document.getElementById('proceedSummaryTitle').textContent = subject;
+    document.getElementById('proceedSummaryDetails').textContent = day + '  ·  ' + time;
+    document.getElementById('proceedStatementInput').value = '';
+    document.getElementById('proceedStatementError').style.display = 'none';
+    document.getElementById('proceedModal').classList.add('open');
+    setTimeout(() => document.getElementById('proceedStatementInput').focus(), 80);
+  };
+
+  window.closeProceedModal = function() {
+    document.getElementById('proceedModal').classList.remove('open');
+    pendingProceedId = null;
+  };
+
+  window.confirmProceed = async function() {
+    const statement = document.getElementById('proceedStatementInput').value.trim();
+    if (!statement) {
+      document.getElementById('proceedStatementError').style.display = 'block';
+      return;
+    }
+    document.getElementById('proceedStatementError').style.display = 'none';
+
+    const btn = document.getElementById('btnConfirmProceed');
+    btn.disabled = true;
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Processing…';
+    try {
+      const r = await fetch('/dean/makeup/' + pendingProceedId + '/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmed: true, statement })
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Failed');
+      closeProceedModal();
+      toast('Request approved — make-up class added to workload.', 'success');
+      setTimeout(() => location.reload(), 1200);
+    } catch(e) {
+      toast(e.message || 'Could not proceed. Please try again.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Approve';
+    }
+  };
+
+  document.getElementById('proceedModal').addEventListener('click', function(e) {
+    if (e.target === this) closeProceedModal();
+  });
+
+  // ── Decline Modal ──
+  window.openDeclineModal = function(id, subject) {
+    pendingDeclineId = id;
+    document.getElementById('declineModalMeta').textContent = 'Declining: ' + subject;
+    document.getElementById('declineReasonInput').value = '';
+    document.getElementById('declineReasonError').style.display = 'none';
+    document.getElementById('declineModal').classList.add('open');
+    setTimeout(() => document.getElementById('declineReasonInput').focus(), 80);
+  };
+
+  window.closeDeclineModal = function() {
+    document.getElementById('declineModal').classList.remove('open');
+    pendingDeclineId = null;
+  };
+
+  window.confirmDecline = async function() {
+    const reason = document.getElementById('declineReasonInput').value.trim();
+    if (!reason) {
+      document.getElementById('declineReasonError').style.display = 'block';
+      return;
+    }
+    document.getElementById('declineReasonError').style.display = 'none';
+
+    try {
+      const r = await fetch('/dean/makeup/' + pendingDeclineId + '/decline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error || 'Failed');
+      closeDeclineModal();
+      toast('Request declined.', 'success');
+      setTimeout(() => location.reload(), 1200);
+    } catch(e) {
+      toast(e.message || 'Decline failed.', 'error');
+    }
+  };
+
+  document.getElementById('declineModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeclineModal();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeProceedModal(); closeDeclineModal(); }
+  });
+
+  function toast(msg, type) {
+    const wrap = document.getElementById('toastWrap');
+    if (!wrap) return;
+    const el = document.createElement('div');
+    el.className = 'toast ' + (type || 'info');
+    el.textContent = msg;
+    wrap.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+})();
+</script>
+
+<%- include('../../partials/script') %>
+<%- include('../../partials/footer') %>

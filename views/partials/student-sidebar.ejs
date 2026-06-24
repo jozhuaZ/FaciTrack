@@ -1,0 +1,55 @@
+<aside class="student-sidebar">
+    <div class="sidebar-header">
+        <div class="student-profile-mini">
+            <div class="profile-avatar-mini cspc-logo-avatar">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Camarines_Sur_Polytechnic_Colleges_Logo.png" alt="CSPC Logo" class="cspc-logo-img">
+            </div>
+            <div class="profile-info-mini">
+                <h3 class="profile-name-mini">Welcome Student!</h3>
+                <p class="profile-role-mini">CSPC Student</p>
+            </div>
+        </div>
+        <!-- Mobile hamburger toggle -->
+        <button class="sidebar-mobile-toggle" id="sidebarToggle" aria-label="Toggle navigation" aria-expanded="false">
+            <svg class="icon-menu" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            <svg class="icon-close" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/student/dashboard" class="nav-item <%= activePage === 'dashboard' ? 'active' : '' %>">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Faculty Directory</span>
+        </a>
+        <a href="/student/appointments" class="nav-item <%= activePage === 'appointments' ? 'active' : '' %>">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>My Appointments</span>
+            <% if (typeof appointmentCount !== 'undefined' && appointmentCount > 0) { %>
+            <span class="nav-badge"><%= appointmentCount %></span>
+            <% } %>
+        </a>
+        <a href="/student/availability" class="nav-item <%= activePage === 'availability' ? 'active' : '' %>">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Faculty Availability</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <a href="/" class="btn-logout-sidebar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            <span>Back to Home</span>
+        </a>
+    </div>
+</aside>

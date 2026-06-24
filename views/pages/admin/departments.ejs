@@ -1,0 +1,311 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s ease;padding:1rem; }
+    .modal-overlay.show { opacity:1;visibility:visible; }
+    .modal-content { background:white;border-radius:var(--radius-lg);box-shadow:0 25px 70px rgba(0,0,0,0.35);max-width:540px;width:100%;transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+    .modal-overlay.show .modal-content { transform:scale(1); }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--gray-200); }
+    .modal-title { font-size:1.125rem;font-weight:700;color:var(--gray-900);margin:0; }
+    .modal-close { width:32px;height:32px;border:none;background:transparent;color:var(--gray-500);cursor:pointer;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
+    .modal-close:hover { background:var(--gray-100);color:var(--gray-900); }
+    .modal-body { padding:1.5rem;display:flex;flex-direction:column;gap:1rem; }
+    .modal-footer { display:flex;justify-content:flex-end;gap:0.75rem;padding:1rem 1.5rem;border-top:1px solid var(--gray-200);background:var(--gray-50); }
+    .form-field { display:flex;flex-direction:column;gap:0.375rem; }
+    .form-field label { font-size:0.8125rem;font-weight:600;color:var(--gray-700); }
+    .form-field input, .form-field select, .form-field textarea { padding:0.625rem 0.875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:0.875rem;color:var(--gray-900);background:white;font-family:var(--font-body);transition:border-color 0.2s;width:100%;box-sizing:border-box; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(10,61,98,0.08); }
+    .form-row { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .delete-confirm { background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius-md);padding:1rem;font-size:0.875rem;color:#991b1b;line-height:1.5; }
+    .pilot-badge { display:inline-flex;align-items:center;gap:0.375rem;padding:0.25rem 0.625rem;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:var(--radius-full);font-size:0.6875rem;font-weight:700; }
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/admin-sidebar', { activePage: 'departments' }) %>
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Departments</h1>
+                    <p class="page-subtitle">Manage the College of Computer Studies department configuration</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-header-action primary" id="btnAddDept">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Department
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-overview">
+                <div class="stat-card-large confirmed">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Total Departments</p>
+                        <h2 class="stat-card-value"><%= departments.length %></h2>
+                        <p class="stat-card-sublabel">CSPC colleges</p>
+                    </div>
+                </div>
+                <div class="stat-card-large pending">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Active</p>
+                        <h2 class="stat-card-value"><%= deptData.filter(d => d.status === 'active').length %></h2>
+                        <p class="stat-card-sublabel">Enabled departments</p>
+                    </div>
+                </div>
+                <div class="stat-card-large workload">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">BLE Deployed</p>
+                        <h2 class="stat-card-value"><%= deptData.filter(d => d.bleDeployed).length %></h2>
+                        <p class="stat-card-sublabel">Monitoring active</p>
+                    </div>
+                </div>
+                <div class="stat-card-large presence">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Total Faculty</p>
+                        <h2 class="stat-card-value"><%= deptData.reduce((s,d) => s + d.facultyCount, 0) %></h2>
+                        <p class="stat-card-sublabel">CCS faculty</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h3 class="card-title">All Departments (<%= deptData.length %>)</h3>
+                </div>
+                <%- include('../../partials/filter-bar', {
+                  filterId: 'dept',
+                  searchPlaceholder: 'Search department…',
+                  showFilter: false
+                }) %>
+                <div class="card-body" style="padding:0;">
+                    <table class="data-table" id="deptTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Department Name</th>
+                                <th>Building</th>
+                                <th>Dean Assigned</th>
+                                <th>Faculty</th>
+                                <th>Rooms</th>
+                                <th>BLE</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deptTableBody">
+                            <% deptData.forEach((dept, i) => { %>
+                            <tr data-name="<%= dept.name.toLowerCase() %>">
+                                <td style="color:var(--gray-400);font-size:0.8125rem;"><%= i + 1 %></td>
+                                <td>
+                                    <div>
+                                        <p style="font-weight:700;font-size:0.875rem;color:var(--gray-900);margin:0;"><%= dept.name %></p>
+                                    </div>
+                                </td>
+                                <td style="font-size:0.8125rem;color:var(--gray-700);"><%= dept.building %></td>
+                                <td style="font-size:0.8125rem;color:var(--gray-700);"><%= dept.dean %></td>
+                                <td style="font-size:0.875rem;font-weight:600;color:var(--gray-900);"><%= dept.facultyCount %></td>
+                                <td style="font-size:0.875rem;font-weight:600;color:var(--gray-900);"><%= dept.roomCount %></td>
+                                <td>
+                                    <% if (dept.bleDeployed) { %>
+                                    <span class="table-badge confirmed">Active</span>
+                                    <% } else { %>
+                                    <span class="table-badge workload">Pending</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <span class="table-badge <%= dept.status === 'active' ? 'confirmed' : 'declined' %>">
+                                        <%= dept.status === 'active' ? 'Active' : 'Inactive' %>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display:flex;gap:0.375rem;">
+                                        <button class="btn-icon-action approve" title="Edit department"
+                                            onclick="openEditDept(<%= i %>)"
+                                            data-index="<%= i %>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        </button>
+                                        <button class="btn-icon-action decline" title="Delete department"
+                                            onclick="openDeleteDept('<%= dept.name %>')"
+                                            <% if (dept.bleDeployed) { %>disabled title="Cannot delete pilot department"<% } %>>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Add/Edit Department Modal -->
+<div class="modal-overlay" id="deptModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="deptModalTitle">Add Department</h3>
+            <button class="modal-close" onclick="closeDeptModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="form-field">
+                <label>Department Name <span style="color:#e53e3e;">*</span></label>
+                <input type="text" id="deptName" placeholder="College of Computer Studies">
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Building</label>
+                    <input type="text" id="deptBuilding" placeholder="CCS Building">
+                </div>
+                <div class="form-field">
+                    <label>Dean Assigned</label>
+                    <input type="text" id="deptDean" placeholder="Dr. Lourdes Reyes">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Status</label>
+                    <select id="deptStatus">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>BLE Monitoring</label>
+                    <select id="deptBle">
+                        <option value="false">Not Deployed</option>
+                        <option value="true">Deployed / Active</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeDeptModal()">Cancel</button>
+            <button class="btn-modal btn-confirm" style="background:linear-gradient(135deg,var(--primary-blue),#1e88e5);color:white;" onclick="saveDept()">Save Department</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteDeptModal">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Delete Department</h3>
+            <button class="modal-close" onclick="closeDeleteDeptModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-confirm">
+                <strong>Are you sure you want to delete "<span id="deleteDeptName"></span>"?</strong><br><br>
+                This will remove the department and all associated room assignments from the system. Faculty and Dean accounts linked to this department will need to be reassigned. This action cannot be undone.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeDeleteDeptModal()">Cancel</button>
+            <button class="btn-modal btn-confirm" onclick="confirmDeleteDept()">Delete Department</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+const deptData = <%- JSON.stringify(deptData) %>;
+let editingIndex = null;
+let deletingName = null;
+
+function filterDepts() {
+    const q = deptFSearch;
+    document.querySelectorAll('#deptTableBody tr').forEach(row => {
+        row.style.display = (!q || row.dataset.name.includes(q)) ? '' : 'none';
+    });
+}
+
+let deptFSearch = '';
+document.addEventListener('fbSearch', function(e) {
+    if (e.detail.filterId !== 'dept') return;
+    deptFSearch = e.detail.value.toLowerCase();
+    filterDepts();
+});
+
+function openEditDept(index) {
+    const d = deptData[index];
+    editingIndex = index;
+    document.getElementById('deptModalTitle').textContent = 'Edit Department';
+    document.getElementById('deptName').value = d.name;
+    document.getElementById('deptBuilding').value = d.building;
+    document.getElementById('deptDean').value = d.dean;
+    document.getElementById('deptStatus').value = d.status;
+    document.getElementById('deptBle').value = String(d.bleDeployed);
+    document.getElementById('deptModal').classList.add('show');
+}
+
+function closeDeptModal() {
+    editingIndex = null;
+    document.getElementById('deptModal').classList.remove('show');
+    document.getElementById('deptModalTitle').textContent = 'Add Department';
+    ['deptName','deptBuilding','deptDean'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('deptStatus').value = 'active';
+    document.getElementById('deptBle').value = 'false';
+}
+
+function saveDept() {
+    const name = document.getElementById('deptName').value.trim();
+    if (!name) { showToast('error', 'Required', 'Department name is required.'); return; }
+    const action = editingIndex !== null ? 'updated' : 'added';
+    showToast('success', editingIndex !== null ? 'Department Updated' : 'Department Added', `"${name}" has been ${action} successfully.`);
+    closeDeptModal();
+}
+
+function openDeleteDept(name) {
+    deletingName = name;
+    document.getElementById('deleteDeptName').textContent = name;
+    document.getElementById('deleteDeptModal').classList.add('show');
+}
+
+function closeDeleteDeptModal() {
+    deletingName = null;
+    document.getElementById('deleteDeptModal').classList.remove('show');
+}
+
+function confirmDeleteDept() {
+    showToast('success', 'Department Deleted', `"${deletingName}" has been removed from the system.`);
+    closeDeleteDeptModal();
+}
+
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+document.getElementById('btnAddDept').addEventListener('click', () => {
+    editingIndex = null;
+    document.getElementById('deptModalTitle').textContent = 'Add Department';
+    document.getElementById('deptModal').classList.add('show');
+});
+</script>

@@ -1,0 +1,639 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+    .emp-badge { display:inline-block; padding:.2rem .6rem; border-radius:999px; font-size:.7rem; font-weight:700; white-space:nowrap; }
+    .emp-badge.job-order {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.emp-badge.cos {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.emp-badge.casual {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.emp-badge.permanent {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.emp-badge.co-terminus {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+.emp-badge.temporary {
+    background: #fef9c3;
+    color: #713f12;
+}
+
+.emp-badge.unknown {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+    .data-table th, .data-table td { padding:.625rem .75rem; }
+    .data-table th { font-size:.7rem; }
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;visibility:hidden;transition:all 0.3s ease;padding:1rem; }
+    .modal-overlay.show { opacity:1;visibility:visible; }
+    .modal-content { background:white;border-radius:var(--radius-lg);box-shadow:0 25px 70px rgba(0,0,0,0.35);max-width:560px;width:100%;transform:scale(0.9);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+    .modal-overlay.show .modal-content { transform:scale(1); }
+    .modal-header { display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--gray-200); }
+    .modal-title { font-size:1.125rem;font-weight:700;color:var(--gray-900);margin:0; }
+    .modal-close { width:32px;height:32px;border:none;background:transparent;color:var(--gray-500);cursor:pointer;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
+    .modal-close:hover { background:var(--gray-100);color:var(--gray-900); }
+    .modal-body { padding:1.5rem;display:flex;flex-direction:column;gap:1rem; }
+    .modal-footer { display:flex;justify-content:flex-end;gap:0.75rem;padding:1rem 1.5rem;border-top:1px solid var(--gray-200);background:var(--gray-50); }
+    .form-field { display:flex;flex-direction:column;gap:0.375rem; }
+    .form-field label { font-size:0.8125rem;font-weight:600;color:var(--gray-700); }
+    .form-field input, .form-field select { padding:0.625rem 0.875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:0.875rem;color:var(--gray-900);background:white;font-family:var(--font-body);transition:border-color 0.2s;width:100%;box-sizing:border-box; }
+    .form-field input:focus, .form-field select:focus { outline:none;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(10,61,98,0.08); }
+    .form-row { display:grid;grid-template-columns:1fr 1fr;gap:1rem; }
+    .delete-confirm { background:#fef2f2;border:1px solid #fecaca;border-radius:var(--radius-md);padding:1rem;font-size:0.875rem;color:#991b1b;line-height:1.5; }
+    .role-tabs { display:flex;gap:0.5rem;margin-bottom:0.25rem; }
+    .role-tab { padding:0.5rem 1rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.8125rem;font-weight:600;cursor:pointer;background:white;color:var(--gray-600);transition:all 0.2s; }
+    .role-tab.active { background:var(--primary-blue);color:white;border-color:var(--primary-blue); }
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/admin-sidebar', { activePage: 'users' }) %>
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Faculty Management</h1>
+                    <p class="page-subtitle">Manage faculty and dean accounts within the College of Computer Studies.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-header-action primary" id="btnAddUser">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add Faculty
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-overview">
+                <div class="stat-card-large confirmed">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Total Faculty</p>
+                        <h2 class="stat-card-value"><%= users?.length %></h2>
+                        <p class="stat-card-sublabel">All registered accounts</p>
+                    </div>
+                </div>
+                <div class="stat-card-large pending">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Instructors</p>
+                        <h2 class="stat-card-value"><%= users?.filter(u => u.role === 'Instructor').length %></h2>
+                        <p class="stat-card-sublabel">Faculty accounts</p>
+                    </div>
+                </div>
+                <div class="stat-card-large workload">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Active</p>
+                        <h2 class="stat-card-value"><%= users?.filter(u => u.status === 'Active').length %></h2>
+                        <p class="stat-card-sublabel">Enabled accounts</p>
+                    </div>
+                </div>
+                <div class="stat-card-large presence">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Inactive</p>
+                        <h2 class="stat-card-value"><%= users?.filter(u => u.status === 'Inactive').length %></h2>
+                        <p class="stat-card-sublabel">Disabled accounts</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h3 class="card-title">Faculty Registry (<span id="visibleCount"><%= users?.length %></span>)</h3>
+                </div>
+                <%- include('../../partials/filter-bar', {
+                  filterId: 'user',
+                  searchPlaceholder: 'Search name or email…',
+                  filterSections: [
+                    { label: 'By Role', key: 'role', type: 'buttons',
+                      items: [{ value:'', label:'All Roles' }, { value:'Instructor', label:'Instructor' }, { value:'Dean', label:'Dean' }] },
+                    { label: 'By Employment', key: 'empType', type: 'buttons',
+                      items: [{ value:'', label:'All Employment' }, { value:'Job Order', label:'Job Order' },
+                              { value:'Permanent', label:'Permanent' }, { value:'COS', label:'COS' }, { value:'Casual', label:'Casual'},
+                              { value:'Co-Terminus', label:'Co-Terminus'} ,{ value:'Temporary', label:'Temporary'}] },
+                    { label: 'By Status', key: 'status', type: 'buttons',
+                      items: [{ value:'', label:'All Status' }, { value:'active', label:'Active' }, { value:'inactive', label:'Inactive' }] }
+                  ]
+                }) %>
+                <div class="card-body" style="padding:0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Employment</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <% users?.forEach((u, i) => { %>
+                            <tr data-publicid="<%= u.id %>" data-role="<%= u.role %>" data-status="<%= u.status %>" data-name="<%= u?.last_name.toLowerCase() %><%= u?.first_name.toLowerCase() %>" data-email="<%= u.email?.toLowerCase() %>" data-dept="<%= u.department_name %>" data-emptype="<%= u.employment_type %>">
+                                <td style="color:var(--gray-400);font-size:0.8125rem;"><%= i + 1 %></td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:0.625rem;">
+                                        <div class="apt-avatar-xs" style="width:34px;height:34px;font-size:0.6875rem;flex-shrink:0;"><%= u.first_name[0] %><%= u.last_name[0] %></div>
+                                        <div>
+                                            <p style="font-weight:600;font-size:0.875rem;color:var(--gray-900);margin:0;"><%= u?.last_name %>, <%= u?.first_name %><%= u?.middle_name ? ' ' + u.middle_name : '' %></p>
+                                            <p style="font-size:0.72rem;color:var(--gray-400);margin:0;"><%= u.email %></p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="table-badge <%= u.role === 'Admin' ? 'workload' : u.role === 'Dean' ? 'pending' : 'confirmed' %>"><%= u.role %></span></td>
+                                <td>
+                                    <%
+                                      const employmentTypeMap = {
+                                        'Job_Order': 'job-order',
+                                        'COS': 'cos',
+                                        'Casual': 'casual',
+                                        'Permanent': 'permanent',
+                                        'Co_Terminus': 'co-terminus',
+                                        'Temporary': 'temporary'
+                                    };
+                                    var empClass = employmentTypeMap[u.employmentType] || 'unknown';
+                                    %>
+                                    <span class="emp-badge <%= empClass %>"><%= u.employment_type %></span>
+                                </td>
+                                <td style="color:var(--gray-600);font-size:0.8125rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<%= u.department_name %>"><%= u.department_name %></td>
+                                <td><span class="table-badge <%= u.status === 'Active' ? 'confirmed' : 'declined' %>"><%= u.status === 'Active' ? 'Active' : 'Inactive' %></span></td>
+                                <td style="color:var(--gray-500);font-size:0.75rem;white-space:nowrap"><%= u.last_login ? u.last_login : 'No data found.' %></td>
+                                <td>
+                                    <div style="display:flex;gap:0.375rem;">
+                                        <button class="btn-icon-action approve btn-edit-user" title="Edit"
+                                            data-index="<%= i %>"
+                                            data-publicid="<%= u.id %>"
+                                            data-firstname="<%= u.first_name %>"
+                                            data-middlename="<%= u.middle_name || null %>"
+                                            data-lastname="<%= u.last_name %>"
+                                            data-email="<%= u.email %>"
+                                            data-role="<%= u.role %>"
+                                            data-departmentid="<%= u.department_id %>"
+                                            data-departmentname="<%= u.department_name || '' %>"
+                                            data-status="<%= u.status %>"
+                                            data-emptype="<%= u.employment_type %>"
+                                            data-position="<%= u.position || '' %>">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        </button>
+                                        <button class="btn-icon-action decline btn-delete-user" title="Delete"
+                                            onclick="openDeleteUserModal('<%= u.id %>', '<%= u.last_name + ', ' + u.first_name %>', '<%= u.role %>')"
+                                            <% if (u.role === 'Admin') { %>disabled<% } %>>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                    <div class="pagination-bar">
+                        <span class="page-info" id="paginationInfo"></span>
+                        <div class="pagination-controls" id="usersPgCtrl"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Add/Edit User Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="userModalTitle">Add User</h3>
+            <button class="modal-close" onclick="closeUserModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Role selector (only shown on Add) -->
+            <div id="roleTabsWrap">
+                <p style="font-size:0.8125rem;font-weight:600;color:var(--gray-700);margin:0 0 0.5rem;">Role</p>
+                <div class="role-tabs">
+                    <button class="role-tab active" onclick="setRole('Instructor', this)">Instructor</button>
+                    <button class="role-tab" onclick="setRole('Dean', this)">Dean</button>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>First Name <span style="color:#e53e3e;">*</span></label>
+                    <input type="text" id="userFirstName" placeholder="Enter First Name">
+                </div>
+                <div class="form-field">
+                    <label>Last Name <span style="color:#e53e3e;">*</span></label>
+                    <input type="text" id="userLastName" placeholder="Enter Last Name">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Middle Name <span style="color:#e53e3e;">*</span></label>
+                    <input type="text" id="userMiddleName" placeholder="Enter Middle Name">
+                </div>
+                <div class="form-field">
+                    <label>Email Address <span style="color:#e53e3e;">*</span></label>
+                    <input type="email" id="userEmail" placeholder="sampleEmail@cspc.edu.ph">
+                </div>
+            </div>
+            <div class="form-row" id="positionDeptRow">
+                <div class="form-field">
+                    <label id="positionLabel">Position / Title<span style="color:#e53e3e;">*</span></label>
+                    <input type="text" id="userPosition" placeholder="Instructor I">
+                </div>
+                <div class="form-field">
+                    <label>Department <span style="color:#e53e3e;">*</span></label>
+                    <select id="userDept">
+                        <option value="">Select department...</option>
+                        <% departments.forEach(d => { %>
+                        <option value="<%= d.id %>"><%= d.full_name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Temporary Password <span style="color:#e53e3e;" id="pwdRequired">*</span></label>
+                    <input type="password" id="userPassword" placeholder="Minimum of 8 characters">
+                </div>
+                <div class="form-field">
+                    <label>Status</label>
+                    <select id="userStatus">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Employment Type <span style="color:#e53e3e;">*</span></label>
+                    <select id="userEmploymentType">
+                        <option value="Job Order">Job Order</option>
+                        <option value="Permanent">Permanent</option>
+                        <option value="COS">COS</option>
+                        <option value="Co-Terminus">Co-Terminus</option>
+                        <option value="Temporary">Temporary</option>
+                        <option value="Casual">Casual</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeUserModal()">Cancel</button>
+            <button class="btn-modal btn-confirm" style="background:linear-gradient(135deg,var(--primary-blue),#1e88e5);color:white;" onclick="saveUser()">Save User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal-overlay" id="deleteUserModal">
+    <div class="modal-content" style="max-width:420px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Remove Faculty Account</h3>
+            <button class="modal-close" onclick="closeDeleteUserModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-confirm">
+                <strong>Delete account for "<span id="deleteUserName"></span>"?</strong><br><br>
+                This will permanently remove the <span id="deleteUserRole"></span> account from the system. All associated appointments and presence logs will be retained for records. This action cannot be undone.
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeDeleteUserModal()">Cancel</button>
+            <button class="btn-modal btn-confirm" onclick="confirmDeleteUser()">Delete Account</button>
+        </div>
+    </div>
+</div>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+let currentPage = 1;
+const rowsPerPage = 10;
+let editingUserIndex = null;
+let selectedRole = 'Instructor';
+let deletingUserName = null;
+let deletingUserRole = null;
+let userFRole = '', userFStatus = '', userFEmpType = '', userFSearch = '';
+
+function getAllRows() {
+    return Array.from(document.querySelectorAll('#usersTableBody tr'));
+}
+
+function applyFilters() {
+    getAllRows().forEach(r => {
+        const matchRole    = !userFRole    || r.dataset.role === userFRole;
+        const matchStatus  = !userFStatus  || r.dataset.status === userFStatus;
+        const matchEmpType = !userFEmpType || r.dataset.emptype === userFEmpType;
+        const matchSearch  = !userFSearch  || r.dataset.name.includes(userFSearch) || r.dataset.email.includes(userFSearch);
+        r.dataset.filtered = (matchRole && matchStatus && matchEmpType && matchSearch) ? 'show' : 'hide';
+        r.style.display = 'none';
+    });
+    currentPage = 1;
+    renderPage();
+}
+
+document.addEventListener('fbChange', function(e) {
+    if (e.detail.filterId !== 'user') return;
+    if (e.detail.section === 'role')    userFRole    = e.detail.value;
+    if (e.detail.section === 'empType') userFEmpType = e.detail.value;
+    if (e.detail.section === 'status')  userFStatus  = e.detail.value;
+    applyFilters();
+});
+document.addEventListener('fbSearch', function(e) {
+    if (e.detail.filterId !== 'user') return;
+    userFSearch = e.detail.value.toLowerCase();
+    applyFilters();
+});
+
+function getVisibleRows() {
+    return getAllRows().filter(r => r.dataset.filtered !== 'hide');
+}
+
+function updateRoleUI(role) {
+    const posLabel = document.getElementById('positionLabel');
+    const posRow = document.getElementById('positionDeptRow');
+    if (role === 'Dean') {
+        posLabel.textContent = 'Title / Position';
+        document.getElementById('userPosition').placeholder = 'e.g. Dean';
+        posRow.style.display = '';
+    } else {
+        posLabel.textContent = 'Position / Title';
+        document.getElementById('userPosition').placeholder = 'e.g. Professor';
+        posRow.style.display = '';
+    }
+}
+
+function renderPage() {
+    const rows = getVisibleRows();
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    rows.forEach((r, i) => r.style.display = (i >= start && i < end) ? '' : 'none');
+    document.getElementById('paginationInfo').textContent = total === 0 ? 'No results found' : `Showing ${Math.min(start+1,total)}–${Math.min(end,total)} of ${total}`;
+    const ctrl = document.getElementById('usersPgCtrl');
+    ctrl.innerHTML = '';
+    if (totalPages > 1) {
+        const prev = document.createElement('button');
+        prev.className = 'pg-btn pg-arrow';
+        prev.innerHTML = '&#8592;';
+        prev.disabled = currentPage === 1;
+        prev.addEventListener('click', () => { currentPage--; renderPage(); });
+        ctrl.appendChild(prev);
+
+        let s = Math.max(1, currentPage - 2);
+        let e = Math.min(totalPages, s + 4);
+        s = Math.max(1, e - 4);
+        for (let i = s; i <= e; i++) {
+            const b = document.createElement('button');
+            b.className = `pg-btn${i === currentPage ? ' active' : ''}`;
+            b.textContent = i;
+            b.addEventListener('click', () => { currentPage = i; renderPage(); });
+            ctrl.appendChild(b);
+        }
+
+        const next = document.createElement('button');
+        next.className = 'pg-btn pg-arrow';
+        next.innerHTML = '&#8594;';
+        next.disabled = currentPage >= totalPages;
+        next.addEventListener('click', () => { currentPage++; renderPage(); });
+        ctrl.appendChild(next);
+    }
+    document.getElementById('visibleCount').textContent = total;
+}
+
+// Add User
+function openAddUserModal() {
+    editingUserIndex = null;
+    selectedRole = 'Instructor';
+    document.getElementById('userModalTitle').textContent = 'Add User';
+    document.getElementById('roleTabsWrap').style.display = '';
+    document.getElementById('pwdRequired').style.display = '';
+    document.querySelectorAll('.role-tab').forEach((t,i) => t.classList.toggle('active', i === 0));
+    ['userFirstName', 'userMiddleName', 'userLastName', 'userEmail','userPosition','userPassword'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('userDept').value = '';
+    document.getElementById('userStatus').value = 'Active';
+    document.getElementById('userEmploymentType').value = 'Permanent';
+    document.getElementById('userModal').classList.add('show');
+}
+
+// Edit User
+function openEditUserModal(index, publicId, firstName, middleName, lastName, email, role, departmentId, departmentName, status, empType, position) {
+    editingUserIndex = index;
+    selectedRole = role;
+    document.getElementById('userModalTitle').textContent = 'Edit User';
+    document.getElementById('roleTabsWrap').style.display = 'none';
+    document.getElementById('pwdRequired').style.display = 'none';
+    document.getElementById('userFirstName').value  = firstName;
+    document.getElementById('userMiddleName').value = middleName;
+    document.getElementById('userLastName').value   = lastName;
+    document.getElementById('userEmail').value      = email;
+    document.getElementById('userDept').value       = departmentId;
+    document.getElementById('userStatus').value     = status;
+    document.getElementById('userEmploymentType').value = empType;
+    document.getElementById('userPosition').value = position;
+    document.getElementById('userPassword').value   = '';
+    updateRoleUI(role);
+    document.getElementById('userModal').classList.add('show');
+}
+
+function setRole(role, btn) {
+    selectedRole = role;
+    document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    updateRoleUI(role);
+}
+
+function closeUserModal() {
+    editingUserIndex = null;
+    document.getElementById('userModal').classList.remove('show');
+}
+
+async function saveUser() {
+    const firstName = document.getElementById('userFirstName').value.trim();
+    const middleName = document.getElementById('userMiddleName').value.trim();
+    const lastName = document.getElementById('userLastName').value.trim();
+    const email = document.getElementById('userEmail').value.trim();
+    const empType = document.getElementById('userEmploymentType').value;
+    const dept = document.getElementById('userDept').value;
+    const position = document.getElementById('userPosition').value.trim();
+    const status = document.getElementById('userStatus').value;
+    const password = document.getElementById('userPassword').value.trim();
+    const action = editingUserIndex !== null ? 'updated' : 'added';
+    const role = selectedRole;
+
+    const isEditing = editingUserIndex !== null;
+
+    if (!firstName) { showToast('error', 'Required', 'Full name is required.'); return; }
+    if (!lastName) { showToast('error', 'Required', 'Last name is required.'); return; }
+    if (!email) { showToast('error', 'Required', 'Email address is required.'); return; }
+    if (!empType) { showToast('error', 'Required', 'Employee Type is required.'); return; }
+    if (!position) { showToast('error', 'Required', 'Position/Title is required.'); return; }
+    if (!dept) { showToast('error', 'Required', 'Department is required.'); return; }
+    if (!isEditing && !password) { showToast('error', 'Required', 'Password is required.'); return; }
+
+    // Update the row in the table to reflect new status/employment type
+    if (editingUserIndex !== null) {
+        const rows = getAllRows();
+        const row = rows[editingUserIndex];
+        if (row) {
+            const newStatus = document.getElementById('userStatus').value;
+            row.dataset.status = newStatus;
+            row.dataset.emptype = empType;
+            // Update status badge cell (index 5)
+            const statusCell = row.cells[5];
+            if (statusCell) statusCell.innerHTML = `<span class="table-badge ${newStatus==='active'?'confirmed':'declined'}">${newStatus==='active'?'Active':'Inactive'}</span>`;
+            // Update employment badge cell (index 3 — email column removed)
+            const empCell = row.cells[3];
+            if (empCell) {
+                const employmentTypeMap = {
+                    'Job Order': 'job-order',
+                    'COS': 'cos',
+                    'Casual': 'casual',
+                    'Permanent': 'permanent',
+                    'Co Terminus': 'co-terminus',
+                    'Temporary': 'temporary'
+                };
+                empCell.innerHTML = `<span class="emp-badge ${empType}">${empType}</span>`;
+            }
+        }
+    }
+
+    const payload   = { firstName, middleName, lastName, email, role, departmentId: dept, status, employmentType: empType, position, password };
+    
+    try {
+        let res, data;
+
+        if (isEditing) {
+            const rowId = getAllRows()[editingUserIndex]?.dataset.publicid;
+            res  = await fetch(`/admin/users/${rowId}`, {
+                method:  'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload),
+            });
+        } else {
+            res  = await fetch('/admin/users', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload),
+            });
+        }
+
+        data = await res.json();
+
+        if (!res.ok || !data.success) {
+            // Show first server-side validation error if present
+            const firstError = data.errors ? Object.values(data.errors)[0] : data.error;
+            showToast('error', 'Failed', firstError || 'Something went wrong.');
+            return;
+        }
+
+        showToast('success', isEditing ? 'User Updated' : 'User Added', data.message);
+        closeUserModal();
+
+        // Reload the table to reflect changes
+        // window.location.reload();
+
+    } catch (err) {
+        console.error('[saveUser]', err);
+        showToast('error', 'Error', 'Could not reach the server.');
+    }
+}
+
+// Delete User
+function openDeleteUserModal(publicId, name, role) {
+    deletingUserName = name;
+    deletingUserRole = role;
+    document.getElementById('deleteUserName').textContent = name;
+    document.getElementById('deleteUserRole').textContent = role;
+    document.getElementById('deleteUserModal').classList.add('show');
+}
+
+function closeDeleteUserModal() {
+    deletingUserName = null;
+    document.getElementById('deleteUserModal').classList.remove('show');
+}
+
+function confirmDeleteUser() {
+    showToast('success', 'Account Deleted', `"${deletingUserName}" has been removed from the system.`);
+    closeDeleteUserModal();
+}
+
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+document.getElementById('btnAddUser').addEventListener('click', () => openAddUserModal());
+// initialize values when clicking edit user
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-edit-user');
+    if (!btn) return;
+
+    const d = btn.dataset;
+    openEditUserModal(
+        d.index,
+        d.publicid,
+        d.firstname,
+        d.middlename,
+        d.lastname,
+        d.email,
+        d.role,
+        d.departmentid,
+        d.departmentname,
+        d.status,
+        d.emptype,
+        d.position
+    );
+});
+
+document.addEventListener('click', async e => {
+    const btm = e.target.closest('.btn-delete-user');
+    if (!btn) return;
+
+    const publicId = btn.dataset.publicid;
+    const name = `${btn.dataset.lastname}, ${bt.dataset.firstname}`;
+
+    // if (!confi)
+})
+
+// init
+getAllRows().forEach(r => r.dataset.filtered = 'show');
+renderPage();
+</script>

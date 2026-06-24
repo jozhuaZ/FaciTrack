@@ -1,0 +1,426 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── Filter bar ── */
+.pres-filter-bar { display:flex; flex-wrap:wrap; gap:.625rem; align-items:center; }
+.pres-filter-group { display:flex; flex-direction:column; gap:.25rem; }
+.pres-filter-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--gray-400); }
+.pres-select { padding:.45rem .875rem; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); font-size:.8125rem; font-family:var(--font-body); background:#fff; color:var(--gray-800); outline:none; cursor:pointer; transition:border-color .15s; min-width:160px; }
+.pres-select:focus { border-color:var(--primary-blue); }
+.pres-date-input { padding:.45rem .875rem; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); font-size:.8125rem; font-family:var(--font-body); background:#fff; color:var(--gray-800); outline:none; transition:border-color .15s; }
+.pres-date-input:focus { border-color:var(--primary-blue); }
+
+/* ── Period pill tabs ── */
+.period-tabs { display:flex; gap:.375rem; flex-wrap:wrap; }
+.period-tab { padding:.375rem .875rem; border:1.5px solid var(--gray-200); border-radius:999px; background:#fff; font-size:.78rem; font-weight:600; color:var(--gray-600); cursor:pointer; transition:all .18s; font-family:var(--font-body); }
+.period-tab:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
+.period-tab.active { background:var(--primary-blue); border-color:var(--primary-blue); color:#fff; }
+
+/* ── Filter divider ── */
+.filter-divider { width:1px; height:36px; background:var(--gray-200); align-self:flex-end; margin:0 .25rem; }
+
+/* ── Active filter chips ── */
+.active-filters { display:flex; flex-wrap:wrap; gap:.375rem; margin-top:.5rem; }
+.filter-chip { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .625rem; background:rgba(10,61,98,.08); color:var(--primary-blue); border-radius:999px; font-size:.72rem; font-weight:600; }
+.filter-chip button { background:none; border:none; cursor:pointer; color:var(--primary-blue); font-size:.8rem; line-height:1; padding:0; display:flex; align-items:center; }
+
+/* ── Table event cell ── */
+.event-cell { display:flex; align-items:center; gap:.5rem; }
+.event-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.event-icon.entered { background:rgba(34,197,94,.12); color:#16a34a; }
+.event-icon.exited  { background:rgba(107,114,128,.12); color:#6b7280; }
+
+/* ── Result count ── */
+.result-count { font-size:.78rem; color:var(--gray-500); font-weight:600; }
+
+/* ── No results ── */
+.no-results { text-align:center; padding:3rem 1rem; color:var(--gray-400); }
+.no-results svg { margin-bottom:.75rem; }
+.no-results p { font-size:.875rem; margin:0; }
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/dean-sidebar', { activePage: 'presence' }) %>
+
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Presence Logs</h1>
+          <p class="page-subtitle">BLE detection history — faculty room entry and exit events</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header-action" id="btnExport">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Logs
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Entries</p>
+            <h2 class="stat-card-value"><%= presenceLogs.filter(l=>l.status==='entered').length %></h2>
+            <p class="stat-card-sublabel">BLE detections</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Events</p>
+            <h2 class="stat-card-value"><%= presenceLogs.length %></h2>
+            <p class="stat-card-sublabel">Entries + exits</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Faculty Monitored</p>
+            <h2 class="stat-card-value"><%= faculty.length %></h2>
+            <p class="stat-card-sublabel">Active in system</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Card -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Filter Logs</h3>
+          <button class="btn-text-action" id="btnClearFilters">Clear all</button>
+        </div>
+        <div class="card-body" style="padding:1rem 1.25rem">
+
+          <!-- Row 1: Period tabs -->
+          <div style="margin-bottom:.875rem">
+            <div class="pres-filter-label" style="margin-bottom:.375rem">Period</div>
+            <div class="period-tabs">
+              <button class="period-tab active" data-period="all">All Time</button>
+              <button class="period-tab" data-period="today">Today</button>
+              <button class="period-tab" data-period="week">This Week</button>
+              <button class="period-tab" data-period="month">This Month</button>
+              <button class="period-tab" data-period="custom">Custom Date</button>
+              <input type="date" id="customDate" class="pres-date-input" style="display:none" aria-label="Custom date">
+            </div>
+          </div>
+
+          <!-- Row 2: Faculty, Room, Event type, Time range -->
+          <div class="pres-filter-bar">
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Faculty / Instructor</span>
+              <select class="pres-select" id="filterFaculty">
+                <option value="all">All Faculty</option>
+                <% faculty.forEach(f => { %>
+                <option value="<%= f.name %>"><%= f.name %></option>
+                <% }); %>
+              </select>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Room</span>
+              <select class="pres-select" id="filterRoom">
+                <option value="all">All Rooms</option>
+                <% [...new Set(presenceLogs.map(l=>l.location))].forEach(room => { %>
+                <option value="<%= room %>"><%= room %></option>
+                <% }); %>
+              </select>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Event Type</span>
+              <select class="pres-select" id="filterEvent">
+                <option value="all">All Events</option>
+                <option value="entered">Entries Only</option>
+                <option value="exited">Exits Only</option>
+              </select>
+            </div>
+
+            <div class="filter-divider"></div>
+
+            <div class="pres-filter-group">
+              <span class="pres-filter-label">Time Range</span>
+              <select class="pres-select" id="filterTime">
+                <option value="all">Any Time</option>
+                <option value="morning">Morning (6AM–12PM)</option>
+                <option value="afternoon">Afternoon (12PM–6PM)</option>
+                <option value="evening">Evening (6PM–10PM)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Active filter chips -->
+          <div class="active-filters" id="activeFilters"></div>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Detection History</h3>
+          <span class="result-count" id="resultCount">— results</span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="data-table" id="presenceTable">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Faculty / Instructor</th>
+                  <th>Room</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody id="presenceBody">
+                <% presenceLogs.forEach(log => { %>
+                <tr data-event="<%= log.status %>"
+                    data-faculty="<%= log.facultyName %>"
+                    data-room="<%= log.location %>"
+                    data-ts="<%= log.timestamp %>">
+                  <td>
+                    <div class="event-cell">
+                      <span class="event-icon <%= log.status %>">
+                        <% if(log.status==='entered'){ %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        <% } else { %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <% } %>
+                      </span>
+                      <span style="font-weight:600;font-size:.8125rem;color:<%= log.status==='entered'?'#15803d':'#374151' %>">
+                        <%= log.status==='entered'?'Entered':'Exited' %>
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:.5rem">
+                      <div class="apt-avatar-xs" style="font-size:.65rem;width:30px;height:30px"><%= log.facultyName.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+                      <span style="font-size:.8125rem;font-weight:600;color:var(--gray-900)"><%= log.facultyName %></span>
+                    </div>
+                  </td>
+                  <td style="font-size:.8125rem"><%= log.location %></td>
+                  <td style="font-size:.8125rem;white-space:nowrap">
+                    <%
+                      var _ts = new Date(log.timestamp);
+                      var _date = isNaN(_ts) ? log.timestamp : _ts.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                      var _time = isNaN(_ts) ? '' : _ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    %>
+                    <%= _date %>
+                  </td>
+                  <td style="font-size:.8125rem;white-space:nowrap"><%= _time %></td>
+                  <td><%= log.duration||'—' %></td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- No results state -->
+          <div class="no-results" id="noResults" style="display:none">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <p>No logs match the selected filters.</p>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination-bar" id="paginationBar">
+            <span class="page-info" id="pageInfo">—</span>
+            <div class="pagination-controls" id="paginationControls"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+(function(){
+  'use strict';
+  const ROWS = 10;
+  let page = 1;
+  let activePeriod = 'all';
+  let customDateVal = '';
+
+  const filterFaculty = document.getElementById('filterFaculty');
+  const filterRoom    = document.getElementById('filterRoom');
+  const filterEvent   = document.getElementById('filterEvent');
+  const filterTime    = document.getElementById('filterTime');
+  const customDate    = document.getElementById('customDate');
+  const periodTabs    = document.querySelectorAll('.period-tab');
+  const tbody         = document.getElementById('presenceBody');
+  const noResults     = document.getElementById('noResults');
+  const resultCount   = document.getElementById('resultCount');
+  const pageInfo      = document.getElementById('pageInfo');
+  const pgCtrl        = document.getElementById('paginationControls');
+  const activeFilters = document.getElementById('activeFilters');
+
+  function allRows(){ return Array.from(document.querySelectorAll('#presenceTable tbody tr')); }
+
+  function parseTs(ts){
+    try{ return new Date(ts); }catch(e){ return null; }
+  }
+
+  function inPeriod(ts){
+    const d = parseTs(ts);
+    if(!d) return true;
+    const now = new Date();
+    if(activePeriod==='today'){
+      return d.toDateString()===now.toDateString();
+    }
+    if(activePeriod==='week'){
+      const sun=new Date(now); sun.setDate(now.getDate()-now.getDay());
+      const sat=new Date(sun); sat.setDate(sun.getDate()+6);
+      return d>=sun&&d<=sat;
+    }
+    if(activePeriod==='month'){
+      return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    }
+    if(activePeriod==='custom'&&customDateVal){
+      const t=new Date(customDateVal);
+      return d.toDateString()===t.toDateString();
+    }
+    return true;
+  }
+
+  function inTimeRange(ts){
+    const d = parseTs(ts);
+    if(!d) return true;
+    const h = d.getHours();
+    const tv = filterTime.value;
+    if(tv==='morning')   return h>=6  && h<12;
+    if(tv==='afternoon') return h>=12 && h<18;
+    if(tv==='evening')   return h>=18 && h<22;
+    return true;
+  }
+
+  function getVisible(){
+    const fac = filterFaculty.value;
+    const room= filterRoom.value;
+    const evt = filterEvent.value;
+    return allRows().filter(r=>{
+      const facMatch  = fac==='all'  || r.dataset.faculty===fac;
+      const roomMatch = room==='all' || r.dataset.room===room;
+      const evtMatch  = evt==='all'  || r.dataset.event===evt;
+      const tsMatch   = inPeriod(r.dataset.ts);
+      const timeMatch = inTimeRange(r.dataset.ts);
+      return facMatch&&roomMatch&&evtMatch&&tsMatch&&timeMatch;
+    });
+  }
+
+  function renderPage(){
+    const visible = getVisible();
+    const total   = visible.length;
+    const pages   = Math.max(1, Math.ceil(total/ROWS));
+    if(page>pages) page=pages;
+
+    allRows().forEach(r=>r.style.display='none');
+    visible.slice((page-1)*ROWS, page*ROWS).forEach(r=>r.style.display='');
+
+    noResults.style.display = total===0?'block':'none';
+    resultCount.textContent = total+' result'+(total!==1?'s':'');
+
+    const from = total?(page-1)*ROWS+1:0;
+    const to   = Math.min(page*ROWS, total);
+    pageInfo.textContent = total?`Showing ${from}–${to} of ${total}`:'No results';
+
+    // Pagination buttons
+    pgCtrl.innerHTML='';
+    if(pages<=1) return;
+
+    const prev=document.createElement('button');
+    prev.className='pg-btn pg-arrow'; prev.innerHTML='&#8592;'; prev.disabled=page===1;
+    prev.addEventListener('click',()=>{page--;renderPage();});
+    pgCtrl.appendChild(prev);
+
+    let s=Math.max(1,page-2), e=Math.min(pages,s+4); s=Math.max(1,e-4);
+    for(let i=s;i<=e;i++){
+      const b=document.createElement('button');
+      b.className='pg-btn'+(i===page?' active':'');
+      b.textContent=i;
+      b.addEventListener('click',()=>{page=i;renderPage();});
+      pgCtrl.appendChild(b);
+    }
+
+    const next=document.createElement('button');
+    next.className='pg-btn pg-arrow'; next.innerHTML='&#8594;'; next.disabled=page===pages;
+    next.addEventListener('click',()=>{page++;renderPage();});
+    pgCtrl.appendChild(next);
+  }
+
+  function updateChips(){
+    activeFilters.innerHTML='';
+    const chips=[];
+    if(activePeriod!=='all') chips.push({label:'Period: '+{today:'Today',week:'This Week',month:'This Month',custom:customDateVal||'Custom'}[activePeriod], clear:()=>{activePeriod='all';customDateVal='';customDate.style.display='none';customDate.value='';periodTabs.forEach(t=>t.classList.toggle('active',t.dataset.period==='all'));}});
+    if(filterFaculty.value!=='all') chips.push({label:'Faculty: '+filterFaculty.options[filterFaculty.selectedIndex].text, clear:()=>{filterFaculty.value='all';}});
+    if(filterRoom.value!=='all') chips.push({label:'Room: '+filterRoom.options[filterRoom.selectedIndex].text, clear:()=>{filterRoom.value='all';}});
+    if(filterEvent.value!=='all') chips.push({label:'Event: '+filterEvent.options[filterEvent.selectedIndex].text, clear:()=>{filterEvent.value='all';}});
+    if(filterTime.value!=='all') chips.push({label:'Time: '+filterTime.options[filterTime.selectedIndex].text, clear:()=>{filterTime.value='all';}});
+    chips.forEach(c=>{
+      const chip=document.createElement('div');
+      chip.className='filter-chip';
+      chip.innerHTML=`<span>${c.label}</span><button aria-label="Remove filter">×</button>`;
+      chip.querySelector('button').addEventListener('click',()=>{c.clear();page=1;updateChips();renderPage();});
+      activeFilters.appendChild(chip);
+    });
+  }
+
+  function onChange(){ page=1; updateChips(); renderPage(); }
+
+  // Period tabs
+  periodTabs.forEach(tab=>{
+    tab.addEventListener('click',function(){
+      periodTabs.forEach(t=>t.classList.remove('active'));
+      this.classList.add('active');
+      activePeriod=this.dataset.period;
+      customDate.style.display=activePeriod==='custom'?'inline-block':'none';
+      if(activePeriod!=='custom'){ customDateVal=''; }
+      onChange();
+    });
+  });
+  customDate.addEventListener('change',function(){ customDateVal=this.value; onChange(); });
+
+  filterFaculty.addEventListener('change', onChange);
+  filterRoom.addEventListener('change', onChange);
+  filterEvent.addEventListener('change', onChange);
+  filterTime.addEventListener('change', onChange);
+
+  document.getElementById('btnClearFilters').addEventListener('click',()=>{
+    activePeriod='all'; customDateVal=''; customDate.value=''; customDate.style.display='none';
+    periodTabs.forEach(t=>t.classList.toggle('active',t.dataset.period==='all'));
+    filterFaculty.value='all'; filterRoom.value='all'; filterEvent.value='all'; filterTime.value='all';
+    page=1; updateChips(); renderPage();
+  });
+
+  document.getElementById('btnExport').addEventListener('click',()=>{
+    if (window.ExportSystem) {
+      window.ExportSystem.fromTable({
+        table: '#presenceTable',
+        onlyVisible: true,
+        title: 'Presence Logs Report',
+        subtitle: 'Dean View',
+        meta: ['Filtered view export (current table results)']
+      });
+      return;
+    }
+    const c=document.getElementById('toastContainer'),t=document.createElement('div');
+    t.className='toast success';
+    t.innerHTML='<div class="toast-content"><p class="toast-title">Exported</p><p class="toast-message">Presence logs exported successfully.</p></div>';
+    c.appendChild(t);
+    setTimeout(()=>{t.style.transition='opacity .3s';t.style.opacity='0';setTimeout(()=>t.remove(),300);},4000);
+  });
+
+  // Init
+  updateChips();
+  renderPage();
+}());
+</script>

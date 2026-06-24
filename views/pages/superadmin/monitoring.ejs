@@ -1,0 +1,123 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.event-cell{display:flex;align-items:center;gap:.5rem}
+.event-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.event-icon.entered{background:rgba(34,197,94,.12);color:#16a34a}
+.event-icon.exited{background:rgba(107,114,128,.12);color:#6b7280}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/superadmin-sidebar', { activePage: 'monitoring' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Real-Time Monitoring</h1>
+          <p class="page-subtitle">Institution-wide faculty presence and activity tracking across all departments</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Faculty</p>
+            <h2 class="stat-card-value"><%= faculty.length %></h2>
+            <p class="stat-card-sublabel">All departments</p>
+          </div>
+        </div>
+        <div class="stat-card-large pending">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Entries</p>
+            <h2 class="stat-card-value"><%= presenceLogs.filter(l=>l.status==='entered').length %></h2>
+            <p class="stat-card-sublabel">BLE detections</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Events</p>
+            <h2 class="stat-card-value"><%= presenceLogs.length %></h2>
+            <p class="stat-card-sublabel">Entries + exits</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M7 12l5 5 8-8"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Departments with BLE</p>
+            <h2 class="stat-card-value"><%= deptData.filter(d=>d.bleDeployed).length %></h2>
+            <p class="stat-card-sublabel">Active BLE zones</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title">Detection History</h3>
+          <div style="display:flex;gap:.5rem">
+            <select class="modal-select" id="fFac" onchange="applyF()" style="padding:.375rem .75rem;font-size:.8125rem">
+              <option value="">All Faculty</option>
+              <% faculty.forEach(f=>{ %><option value="<%= f.name %>"><%= f.name %></option><% }); %>
+            </select>
+            <select class="modal-select" id="fEvt" onchange="applyF()" style="padding:.375rem .75rem;font-size:.8125rem">
+              <option value="">All Events</option>
+              <option value="entered">Entries</option>
+              <option value="exited">Exits</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="data-table" id="monTbl">
+              <thead><tr><th>Event</th><th>Faculty</th><th>Department</th><th>Room</th><th>Timestamp</th><th>Duration</th></tr></thead>
+              <tbody>
+                <% presenceLogs.forEach(log => { %>
+                <tr data-fac="<%= log.facultyName %>" data-evt="<%= log.status %>">
+                  <td>
+                    <div class="event-cell">
+                      <span class="event-icon <%= log.status %>">
+                        <% if(log.status==='entered'){ %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        <% } else { %>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        <% } %>
+                      </span>
+                      <span style="font-weight:600;font-size:.8125rem;color:<%= log.status==='entered'?'#15803d':'#374151' %>"><%= log.status==='entered'?'Entered':'Exited' %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:.5rem">
+                      <div class="apt-avatar-xs" style="font-size:.65rem;width:30px;height:30px"><%= log.facultyName.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+                      <span style="font-size:.8125rem;font-weight:600;color:var(--gray-900)"><%= log.facultyName %></span>
+                    </div>
+                  </td>
+                  <td style="font-size:.8125rem;color:var(--gray-600);"><%= log.department %></td>
+                  <td style="font-size:.8125rem"><%= log.location %></td>
+                  <td style="font-size:.8125rem;white-space:nowrap"><%= log.timestamp %></td>
+                  <td><%= log.duration||'—' %></td>
+                </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+function applyF(){
+  const fac=document.getElementById('fFac').value, evt=document.getElementById('fEvt').value;
+  document.querySelectorAll('#monTbl tbody tr').forEach(r=>{
+    r.style.display=(!fac||r.dataset.fac===fac)&&(!evt||r.dataset.evt===evt)?'':'none';
+  });
+}
+</script>

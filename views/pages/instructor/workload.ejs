@@ -1,0 +1,380 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+*{box-sizing:border-box}
+
+/* ── Stats ── */
+.wl-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.wl-stat{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:.9rem 1.1rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.wl-stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wl-stat-icon.blue{background:rgba(37,99,235,.12);color:#2563eb}
+.wl-stat-icon.green{background:rgba(22,163,74,.12);color:#16a34a}
+.wl-stat-icon.purple{background:rgba(124,58,237,.12);color:#7c3aed}
+.wl-stat-icon.orange{background:rgba(234,88,12,.12);color:#ea580c}
+.wl-stat-val{font-size:1.45rem;font-weight:800;color:#0f172a;line-height:1}
+.wl-stat-lbl{font-size:.72rem;color:#64748b;margin-top:2px}
+
+/* ── Calendar grid ── */
+.cal-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+  cursor:default;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(148,163,184,0.5) transparent;
+  position:relative;
+}
+.cal-wrap::-webkit-scrollbar{
+  height:8px;
+}
+.cal-wrap::-webkit-scrollbar-track{
+  background:transparent;
+}
+.cal-wrap::-webkit-scrollbar-thumb{
+  background:rgba(148,163,184,0.5);
+  border-radius:4px;
+}
+.cal-wrap::-webkit-scrollbar-thumb:hover{
+  background:rgba(100,116,139,0.7);
+}
+.cal-grid{
+  display:grid;
+  grid-template-columns:72px repeat(7,1fr);
+  min-width:820px;
+  position:relative;
+  user-select:none;
+}
+.cal-cell{
+  touch-action:pan-x;
+}
+
+/* Day headers */
+.cal-day-hdr{
+  text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;color:#475569;padding:.65rem .25rem;
+  background:linear-gradient(135deg,rgba(10,61,98,.05),rgba(30,136,229,.07));
+  border:1px solid #e2e8f0;position:sticky;top:0;z-index:10;
+}
+.cal-day-hdr.mon{border-top:3px solid #3b82f6}
+.cal-day-hdr.tue{border-top:3px solid #8b5cf6}
+.cal-day-hdr.wed{border-top:3px solid #06b6d4}
+.cal-day-hdr.thu{border-top:3px solid #f59e0b}
+.cal-day-hdr.fri{border-top:3px solid #10b981}
+.cal-day-hdr.sat{border-top:3px solid #ec4899}
+.cal-day-hdr.sun{border-top:3px solid #ef4444}
+.cal-time-hdr{background:#f8fafc;border:1px solid #e2e8f0;position:sticky;top:0;z-index:10}
+
+/* Time labels — 28px per 30-min slot */
+.cal-time{
+  font-size:.67rem;font-weight:700;color:#94a3b8;
+  padding:.25rem .5rem 0;text-align:right;
+  border-left:1px solid #e2e8f0;border-right:2px solid #e2e8f0;
+  background:#f8fafc;
+  height:28px;display:flex;align-items:flex-start;justify-content:flex-end;
+}
+/* :30 row — no label, no top border */
+.cal-time-half{
+  border-top:none;
+  background:#f8fafc;
+}
+/* :00 row — subtle top border on time column only */
+.cal-time:not(.cal-time-half){
+  border-top:1px solid #e2e8f0;
+}
+
+/* Day cells */
+.cal-cell{
+  height:28px;border-right:1px solid #e8edf2;
+  position:relative;cursor:crosshair;
+  transition:background .08s;
+}
+/* :00 row gets a top border */
+.cal-cell-hour{ border-top:1px solid #e8edf2; }
+/* :30 row — no top border (seamless with the hour above) */
+.cal-cell-half{ border-top:none; }
+.cal-cell:hover{background:rgba(37,99,235,.04)}
+
+/* Drag ghost */
+.drag-ghost{
+  position:absolute;left:2px;right:2px;
+  background:rgba(37,99,235,.22);border:2px dashed #2563eb;
+  border-radius:6px;pointer-events:none;z-index:5;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:2px 4px;
+}
+.dg-range{
+  font-size:.68rem;font-weight:700;color:#1d4ed8;
+  white-space:nowrap;line-height:1.2;
+}
+.dg-dur{
+  font-size:.62rem;font-weight:600;color:#2563eb;
+  opacity:.8;white-space:nowrap;line-height:1.2;
+}
+
+/* Placed blocks */
+.cal-block{
+  position:absolute;left:3px;right:3px;
+  border-radius:6px;padding:.3rem .45rem;
+  color:#fff;font-weight:700;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18);
+  overflow:hidden;z-index:4;
+  transition:filter .12s,transform .1s;
+  display:flex;flex-direction:column;justify-content:center;
+  align-items:center;text-align:center;
+}
+.cal-block:hover{filter:brightness(1.08);transform:scaleX(1.01)}
+.cal-block .cb-code{font-size:.73rem;font-weight:800;line-height:1.2}
+.cal-block .cb-time{font-size:.6rem;opacity:.85;margin-top:1px}
+.cal-block .cb-room{font-size:.6rem;opacity:.85}
+.cal-block .cb-sect{font-size:.58rem;opacity:.75;text-transform:uppercase}
+.cal-block .cb-del{
+  position:absolute;top:3px;right:4px;
+  background:rgba(255,255,255,.25);border:none;border-radius:4px;
+  color:#fff;font-size:.65rem;padding:1px 5px;cursor:pointer;
+  opacity:0;transition:opacity .12s;font-family:inherit;font-weight:700;
+}
+.cal-block:hover .cb-del{opacity:1}
+
+/* Modal */
+.mo{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(3px)}
+.mo.open{display:flex}
+.mo-box{background:#fff;border-radius:16px;width:100%;max-width:440px;box-shadow:0 24px 64px rgba(0,0,0,.25);animation:moIn .2s;overflow:hidden}
+@keyframes moIn{from{opacity:0;transform:scale(.93) translateY(10px)}to{opacity:1;transform:none}}
+.mo-head{padding:1.25rem 1.5rem 1rem;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;gap:1rem}
+.mo-head h3{font-size:1.05rem;font-weight:800;margin:0 0 .2rem;color:#0f172a}
+.mo-meta{font-size:.78rem;color:#64748b;margin:0}
+.mo-close{width:30px;height:30px;border:none;background:#f1f5f9;border-radius:8px;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mo-close:hover{background:#e2e8f0}
+.mo-body{padding:1.25rem 1.5rem}
+.mo-field{margin-bottom:.85rem}
+.mo-field label{display:block;font-size:.71rem;font-weight:700;color:#475569;margin-bottom:.3rem;text-transform:uppercase}
+.mo-field input,.mo-field select{width:100%;padding:.5rem .75rem;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.84rem;color:#0f172a;outline:none;font-family:inherit;background:#fff}
+.mo-field input:focus,.mo-field select:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.mo-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.mo-foot{padding:1rem 1.5rem;border-top:1px solid #f1f5f9;display:flex;gap:.5rem;justify-content:flex-end;background:#fafafa}
+.btn{padding:.5rem 1.15rem;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;font-family:inherit;display:inline-flex;align-items:center;gap:.35rem}
+.btn-ghost{background:#f1f5f9;color:#475569}
+.btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff}
+.btn-danger{background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca}
+.btn-danger:hover{background:#dc2626;color:#fff}
+
+/* Type color preview swatch */
+.type-swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:99999;display:flex;flex-direction:column;gap:.4rem}
+.toast{background:#0f172a;color:#fff;padding:.65rem 1.1rem;border-radius:10px;font-size:.8rem;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:toastIn .22s;display:flex;align-items:center;gap:.5rem}
+.toast.success{background:linear-gradient(135deg,#16a34a,#15803d)}
+.toast.error{background:linear-gradient(135deg,#dc2626,#b91c1c)}
+.toast.info{background:linear-gradient(135deg,#2563eb,#1d4ed8)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+@media(max-width:768px){
+  .wl-summary{grid-template-columns:repeat(2,1fr)}
+  .cal-wrap{
+    -webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+  }
+  .cal-grid{
+    min-width:100%;
+  }
+  .cal-cell{
+    min-width:80px;
+  }
+}
+@media(max-width:480px){
+  .mo-row{grid-template-columns:1fr}
+  .cal-wrap{
+    margin:0 -1.25rem;
+    padding:0 0.5rem;
+    width:calc(100% + 2.5rem);
+  }
+  .cal-grid{
+    min-width:calc(100% - 1rem);
+  }
+}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/instructor-sidebar', { activePage: 'workload', pendingCount: pendingCount }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Workload Schedule</h1>
+          <p class="page-subtitle">Drag on any day column to create a class block</p>
+        </div>
+        <div class="header-actions" style="display:flex;gap:.75rem;align-items:center">
+          <div style="position:relative;display:inline-block">
+            <button class="btn-header-action primary" id="btnExportWorkload" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Export/Print
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-left:.3rem"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="dropdown-menu" id="exportWorkloadDropdown" style="position:absolute;top:100%;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-top:.5rem;min-width:140px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:100;display:none">
+              <button class="dropdown-item-wl" data-action="export" style="display:block;width:100%;text-align:left;padding:.75rem 1rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:#374151;transition:background .15s">Export/Print</button>
+            </div>
+          </div>
+          <span id="autoSaveStatus" style="font-size:.75rem;color:#94a3b8;display:flex;align-items:center;gap:.35rem;padding:.4rem .6rem">
+            <svg id="autoSaveIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            <span id="autoSaveText">All changes saved</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="wl-summary">
+        <div class="wl-stat">
+          <div class="wl-stat-icon blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div><div class="wl-stat-val" id="statBlocks">0</div><div class="wl-stat-lbl">Total Blocks</div></div>
+        </div>
+        <div class="wl-stat">
+          <div class="wl-stat-icon green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><div class="wl-stat-val" id="statHours">0</div><div class="wl-stat-lbl">Teaching Hours/Week</div></div>
+        </div>
+        <div class="wl-stat">
+          <div class="wl-stat-icon purple"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+          <div><div class="wl-stat-val" id="statSubjects">0</div><div class="wl-stat-lbl">Subjects</div></div>
+        </div>
+        <div class="wl-stat">
+          <div class="wl-stat-icon orange"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div><div class="wl-stat-val" id="statRooms">0</div><div class="wl-stat-lbl">Rooms Used</div></div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div class="content-card">
+        <div class="card-header">
+          <h3 class="card-title"><%= instructor.name %> — Weekly Schedule</h3>
+          <span style="font-size:.75rem;color:#94a3b8">Drag on a column to create · Click a block to edit</span>        </div>
+        <div class="card-body" style="padding:0">
+          <div class="cal-wrap">
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="content-card">
+        <div class="card-header"><h3 class="card-title">Subject Legend</h3></div>
+        <div class="card-body legend-table-wrap" style="padding:0">
+          <table id="legendTable" style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0">
+                <th style="padding:.65rem 1rem;text-align:left;font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase;width:110px">Type</th>
+                <th style="padding:.65rem 1rem;text-align:left;font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase;width:150px">Subject Code</th>
+                <th style="padding:.65rem 1rem;text-align:left;font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase">Subject Name</th>
+              </tr>
+            </thead>
+            <tbody id="legendBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Edit / Add Modal -->
+<div class="mo" id="cellModal">
+  <div class="mo-box">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3 id="cmTitle">Add Class Block</h3>
+        <p class="mo-meta" id="cmMetaText"></p>
+      </div>
+      <button class="mo-close" id="cmClose">×</button>
+    </div>
+    <div class="mo-body">
+      <div class="mo-row">
+        <div class="mo-field">
+          <label>Subject Code</label>
+          <input type="text" id="cmSubjectCode" placeholder="e.g. ITEC 321">
+        </div>
+        <div class="mo-field">
+          <label>Subject Name</label>
+          <input type="text" id="cmSubjectName" placeholder="e.g. Web Systems 3">
+        </div>
+      </div>
+      <div class="mo-row">
+        <div class="mo-field">
+          <label>Room / Venue</label>
+          <input type="text" id="cmRoom" placeholder="e.g. Room 4">
+        </div>
+        <div class="mo-field">
+          <label>Section</label>
+          <input type="text" id="cmSection" placeholder="e.g. BSIT 3-A">
+        </div>
+      </div>
+      <div class="mo-field">
+        <label>Class Type</label>
+        <select id="cmType">
+          <option value="Lecture">Lecture</option>
+          <option value="Laboratory">Laboratory</option>
+          <option value="Online">Online</option>
+        </select>
+      </div>
+    </div>
+    <div class="mo-foot">
+      <button class="btn btn-danger" id="cmRemove" style="margin-right:auto;display:none">Remove</button>
+      <button class="btn btn-ghost" id="cmCancel">Cancel</button>
+      <button class="btn btn-primary" id="cmSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clear confirm -->
+<div class="mo" id="clearModal">
+  <div class="mo-box" style="max-width:360px">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3>Clear All Schedule?</h3>
+        <p class="mo-meta">This removes all class blocks.</p>
+      </div>
+    </div>
+    <div class="mo-foot">
+      <button class="btn btn-ghost" id="clearCancel">Cancel</button>
+      <button class="btn btn-danger" id="clearConfirm">Yes, Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="mo" id="exportModal">
+  <div class="mo-box" style="max-width:480px">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3>Export Workload</h3>
+        <p class="mo-meta">Configure export details</p>
+      </div>
+      <button class="mo-close" id="exportClose">×</button>
+    </div>
+    <div class="mo-body">
+      <div class="mo-field">
+        <label>Semester</label>
+        <input type="text" id="exportSemester" value="Second Semester">
+      </div>
+      <div class="mo-field">
+        <label>School Year</label>
+        <input type="text" id="exportSchoolYear" placeholder="e.g. 2025-2026">
+      </div>
+      <div class="mo-field">
+        <label>Effective Date <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+        <input type="text" id="exportEffectiveDate" placeholder="e.g. June 2026">
+      </div>
+    </div>
+    <div class="mo-foot">
+      <button class="btn btn-ghost" id="exportCancel">Cancel</button>
+      <button class="btn btn-primary" id="exportConfirm">Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<%- include('../../partials/script') %>
+<script>
+  window.__WORKLOAD_DATA__ = <%- workloadData %>;
+</script>
+<script src="/js/workload.js?v=<%= Date.now() %>"></script>
+<%- include('../../partials/footer') %>

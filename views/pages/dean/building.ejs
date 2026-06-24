@@ -1,0 +1,461 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* 3D Building Page Styles */
+.building-3d-page {
+    padding: 2rem;
+}
+
+.building-3d-section {
+    background: #fff;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.floor-selector {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-floor {
+    padding: 0.5rem 1rem;
+    border: 1.5px solid var(--gray-300);
+    background: #fff;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-floor:hover {
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+    background: rgba(10,61,98,.04);
+}
+
+.btn-floor.active {
+    background: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: #fff;
+}
+
+#building3d-container {
+    width: 100%;
+    height: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    position: relative;
+}
+
+.building-controls {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.btn-control {
+    padding: 0.5rem 1rem;
+    border: 1.5px solid var(--gray-300);
+    background: #fff;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-control:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.legend-color.available { background: #10b981; }
+.legend-color.occupied { background: #ef4444; }
+.legend-color.scheduled { background: #f59e0b; }
+
+.info-box {
+    background: rgba(10,61,98,.06);
+    border: 1.5px solid rgba(10,61,98,.2);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+    line-height: 1.5;
+}
+
+.info-box svg {
+    display: inline;
+    width: 14px;
+    height: 14px;
+    margin-right: 0.5rem;
+    color: var(--primary-blue);
+}
+
+/* Room Info Modal */
+.room-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.room-modal.open { display: flex; }
+
+.room-modal-content {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.room-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.room-modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.btn-modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--gray-100);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+
+.btn-modal-close:hover {
+    background: var(--gray-200);
+}
+
+.room-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.room-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+}
+
+.room-info-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.room-info-text {
+    flex: 1;
+}
+
+.room-info-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.25rem;
+}
+
+.room-info-value {
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    font-weight: 600;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    #building3d-container {
+        height: 400px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/dean-sidebar', { activePage: 'building' }) %>
+
+    <main class="instructor-main">
+        <div class="main-container building-3d-page">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">3D Building Viewer</h1>
+                    <p class="page-subtitle">Interactive CCS Building visualization with real-time room occupancy</p>
+                </div>
+            </div>
+
+            <div class="building-3d-section">
+                <div class="section-header">
+                    <h2 class="section-title">CCS Building</h2>
+                    <div class="floor-selector">
+                        <button class="btn-floor active" data-floor="0">All Floors</button>
+                        <button class="btn-floor" data-floor="1">Ground</button>
+                        <button class="btn-floor" data-floor="2">2nd Floor</button>
+                        <button class="btn-floor" data-floor="3">3rd Floor</button>
+                        <button class="btn-floor" data-floor="4">4th Floor</button>
+                    </div>
+                </div>
+
+                <div id="building3d-container"></div>
+
+                <div class="building-controls">
+                    <div class="control-group">
+                        <span class="control-label">View:</span>
+                        <button class="btn-control" id="btnResetView">Reset View</button>
+                        <button class="btn-control" id="btnTopView">Top View</button>
+                        <button class="btn-control" id="btnFrontView">Front View</button>
+                    </div>
+                </div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color available"></div>
+                        <span>Available</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color occupied"></div>
+                        <span>Occupied</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color scheduled"></div>
+                        <span>Scheduled</span>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <strong>How to use:</strong> Hover over rooms to highlight them. Click on a room to view details. Use floor buttons to navigate between floors. Drag to rotate, scroll to zoom.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Room Info Modal -->
+<div class="room-modal" id="roomModal">
+    <div class="room-modal-content">
+        <div class="room-modal-header">
+            <h3 class="room-modal-title" id="modalRoomNumber">Room Details</h3>
+            <button class="btn-modal-close" id="btnCloseModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="room-modal-body">
+            <div class="room-info-row">
+                <div class="room-info-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2-2v16"/></svg>
+                </div>
+                <div class="room-info-text">
+                    <p class="room-info-label">Floor</p>
+                    <p class="room-info-value" id="modalFloor">-</p>
+                </div>
+            </div>
+            <div class="room-info-row">
+                <div class="room-info-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="room-info-text">
+                    <p class="room-info-label">Status</p>
+                    <p class="room-info-value" id="modalStatus">-</p>
+                </div>
+            </div>
+            <div class="room-info-row" id="modalFacultyRow" style="display:none">
+                <div class="room-info-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="room-info-text">
+                    <p class="room-info-label">Occupied By</p>
+                    <p class="room-info-value" id="modalFaculty">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+
+<!-- Three.js and dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<!-- Building 3D Viewer -->
+<script src="/js/building-3d.js"></script>
+
+<script>
+// Initialize 3D Viewer
+const viewer = new Building3DViewer('building3d-container', {
+    modelPath: '/models/ccs-building.glb', // Your Tripo3D model (or null for geometric)
+    useGeometricFallback: true,
+    enableInteraction: true,
+    onRoomClick: showRoomDetails
+});
+
+// Floor selector
+document.querySelectorAll('.btn-floor').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const floor = parseInt(btn.dataset.floor);
+        viewer.setFloor(floor);
+        document.querySelectorAll('.btn-floor').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+});
+
+// View controls
+document.getElementById('btnResetView').addEventListener('click', () => {
+    viewer.camera.position.set(30, 25, 30);
+    viewer.controls.target.set(0, 8, 0);
+});
+
+document.getElementById('btnTopView').addEventListener('click', () => {
+    viewer.camera.position.set(0, 50, 0);
+    viewer.controls.target.set(0, 0, 0);
+});
+
+document.getElementById('btnFrontView').addEventListener('click', () => {
+    viewer.camera.position.set(0, 8, 40);
+    viewer.controls.target.set(0, 8, 0);
+});
+
+// Room details modal
+function showRoomDetails(roomData) {
+    document.getElementById('modalRoomNumber').textContent = roomData.roomNumber;
+    document.getElementById('modalFloor').textContent = roomData.floorLabel;
+    document.getElementById('modalStatus').textContent = roomData.status.charAt(0).toUpperCase() + roomData.status.slice(1);
+    
+    const facultyRow = document.getElementById('modalFacultyRow');
+    if (roomData.faculty) {
+        document.getElementById('modalFaculty').textContent = roomData.faculty;
+        facultyRow.style.display = '';
+    } else {
+        facultyRow.style.display = 'none';
+    }
+    
+    document.getElementById('roomModal').classList.add('open');
+}
+
+document.getElementById('btnCloseModal').addEventListener('click', () => {
+    document.getElementById('roomModal').classList.remove('open');
+});
+
+document.getElementById('roomModal').addEventListener('click', (e) => {
+    if (e.target.id === 'roomModal') {
+        document.getElementById('roomModal').classList.remove('open');
+    }
+});
+
+// Simulate real-time updates
+function updateRoomOccupancy() {
+    // Example: Update based on your actual data
+    viewer.updateRoomStatus('CCS 201', 'occupied', 'Dr. Maria Santos');
+    viewer.updateRoomStatus('CCS 202', 'available');
+    viewer.updateRoomStatus('CCS 203', 'scheduled');
+    viewer.updateRoomStatus('CCS 301', 'occupied', 'Prof. Jose Dela Cruz');
+    viewer.updateRoomStatus('CCS 302', 'available');
+}
+
+// Update every 30 seconds
+setInterval(updateRoomOccupancy, 30000);
+updateRoomOccupancy();
+</script>

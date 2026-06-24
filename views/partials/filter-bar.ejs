@@ -1,0 +1,266 @@
+<%
+/*
+  filter-bar.ejs — Reusable filter toolbar partial
+  ─────────────────────────────────────────────────
+  Required variables (pass via include locals):
+    filterId      {string}  Unique prefix so multiple bars can coexist on one page
+                            e.g. "log", "apt", "user", "room"
+    searchPlaceholder {string}  Placeholder text for the search input
+                            e.g. "Search student or topic…"
+
+  Optional variables:
+    filterSections  {Array}  Sections inside the Filter dropdown.
+                             Each section: { label, type, items }
+                             type = "buttons" | "date" | "select"
+                             items (for "buttons"): [{ value, label }]
+                             items (for "select"):  [{ value, label }]
+                             (for "date"): no items needed
+                             e.g. [
+                               { label: "By Date", type: "buttons",
+                                 items: [{ value:"week", label:"This Week" },
+                                         { value:"month", label:"This Month" }] },
+                               { label: "Specific Day", type: "date" },
+                               { label: "By Status", type: "buttons",
+                                 items: [{ value:"all", label:"All Status" },
+                                         { value:"confirmed", label:"Confirmed" },
+                                         { value:"pending", label:"Pending" },
+                                         { value:"declined", label:"Declined" }] }
+                             ]
+    showFilter      {bool}   Show the Filter dropdown button (default true)
+*/
+var _fid   = typeof filterId !== 'undefined'          ? filterId          : 'fb';
+var _ph    = typeof searchPlaceholder !== 'undefined' ? searchPlaceholder : 'Search…';
+var _secs  = typeof filterSections !== 'undefined'    ? filterSections    : [];
+var _show  = typeof showFilter !== 'undefined'        ? showFilter        : true;
+%>
+
+<style>
+/* ── Filter Bar (shared) ── */
+.fb-bar{display:flex;align-items:center;gap:.625rem;flex-wrap:wrap;padding:.875rem 1.5rem;border-bottom:1px solid var(--gray-100)}
+.fb-search-wrap{position:relative;flex:1;min-width:180px}
+.fb-search-icon{position:absolute;left:.625rem;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--gray-400)}
+.fb-search{width:100%;padding:.45rem .75rem .45rem 2rem;border:1.5px solid var(--gray-200);border-radius:8px;font-size:.8125rem;font-family:var(--font-body);color:var(--gray-800);background:#fff;outline:none;box-sizing:border-box;transition:border-color .15s}
+.fb-search:focus{border-color:var(--primary-blue)}
+.fb-filter-wrap{position:relative}
+.fb-filter-btn{display:flex;align-items:center;gap:.4rem;padding:.45rem .875rem;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff;font-size:.8125rem;font-weight:600;color:var(--gray-700);cursor:pointer;font-family:var(--font-body);white-space:nowrap;transition:border-color .15s,color .15s}
+.fb-filter-btn:hover,.fb-filter-btn.open{border-color:var(--primary-blue);color:var(--primary-blue)}
+.fb-filter-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:300;background:#fff;border:1.5px solid var(--gray-200);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.15);min-width:240px;max-width:min(360px, calc(100vw - 24px));max-height:calc(90vh - 100px);overflow:auto;scrollbar-width:thin;padding:.5rem 0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.fb-filter-menu::-webkit-scrollbar{width:6px}
+.fb-filter-menu::-webkit-scrollbar-thumb{background:var(--gray-300);border-radius:10px}
+.fb-filter-menu.open{display:block;animation:fb-fade-in .2s ease-out}
+@keyframes fb-fade-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.fb-section-label{padding:.6rem 1rem .3rem;font-size:.65rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin:0}
+.fb-opt{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:left;padding:.6rem 1rem;font-size:.8125rem;font-family:var(--font-body);background:none;border:none;cursor:pointer;color:var(--gray-700);transition:all .15s;border-left:3px solid transparent}
+.fb-opt:hover{background:var(--gray-50);color:var(--primary-blue)}
+.fb-opt.active{background:rgba(10,61,98,0.04);color:var(--primary-blue);font-weight:700;border-left-color:var(--primary-blue)}
+.fb-opt.active::after{content:'\2713';font-size:.75rem;font-weight:900}
+.fb-divider{border-top:1px solid var(--gray-100);margin:.4rem 0}
+.fb-date-wrap{padding:.5rem 1rem .75rem}
+.fb-date-sublabel{font-size:.65rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin:0 0 .5rem}
+.fb-date-input{width:100%;padding:.5rem .75rem;border:1.5px solid var(--gray-200);border-radius:8px;font-size:.8125rem;font-family:var(--font-body);color:var(--gray-800);background:#fff;outline:none;box-sizing:border-box;transition:all .2s;cursor:pointer}
+.fb-date-input:focus{border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(10,61,98,0.1)}
+</style>
+
+<div class="fb-bar" id="<%= _fid %>Bar">
+  <!-- Search -->
+  <div class="fb-search-wrap">
+    <svg class="fb-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input class="fb-search" id="<%= _fid %>Search" type="text" placeholder="<%= _ph %>" autocomplete="off">
+  </div>
+
+  <% if (_show && _secs.length) { %>
+  <!-- Filter dropdown -->
+  <div class="fb-filter-wrap" id="<%= _fid %>FilterWrap">
+    <button class="fb-filter-btn" id="<%= _fid %>FilterBtn" type="button" aria-haspopup="true" aria-expanded="false">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/>
+      </svg>
+      <span id="<%= _fid %>FilterLabel">Filter</span>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+
+    <div class="fb-filter-menu" id="<%= _fid %>FilterMenu">
+      <% _secs.forEach(function(sec, si) { %>
+        <% if (si > 0) { %><div class="fb-divider"></div><% } %>
+
+        <% if (sec.type === 'date') { %>
+          <div class="fb-date-wrap">
+            <p class="fb-date-sublabel"><%= sec.label %></p>
+            <input class="fb-date-input" type="date" id="<%= _fid %>DayPicker">
+          </div>
+
+        <% } else if (sec.type === 'buttons' || sec.type === 'select') { %>
+          <p class="fb-section-label"><%= sec.label %></p>
+          <% sec.items.forEach(function(item) { %>
+          <button class="fb-opt <%= (item.value === 'all' || item.label === 'All') ? 'active' : '' %>" type="button"
+                  data-fb-section="<%= sec.key || sec.label %>"
+                  data-fb-value="<%= item.value %>">
+            <%= item.label %>
+          </button>
+          <% }); %>
+        <% } %>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<script>
+(function(){
+  var fid = '<%= _fid %>';
+  var btn  = document.getElementById(fid + 'FilterBtn');
+  var menu = document.getElementById(fid + 'FilterMenu');
+  var lbl  = document.getElementById(fid + 'FilterLabel');
+  var day  = document.getElementById(fid + 'DayPicker');
+
+  if (!btn || !menu) return;
+
+  /* Toggle */
+  var isFixed = false;
+  var origParent = null;
+  var origNextSibling = null;
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+  function placeMenuFixed(){
+    if (!menu.classList.contains('open')) return;
+
+    // Move the menu to <body> so it can't be clipped by overflow containers.
+    if (!isFixed) {
+      origParent = menu.parentNode;
+      origNextSibling = menu.nextSibling;
+      document.body.appendChild(menu);
+      isFixed = true;
+    }
+
+    menu.style.position = 'fixed';
+
+    // Ensure we have dimensions before positioning.
+    var rectBtn = btn.getBoundingClientRect();
+    var vw = window.innerWidth || document.documentElement.clientWidth;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+
+    // Set a max height that respects viewport and keeps the menu scrollable.
+    var top = rectBtn.bottom + 6;
+    var maxH = Math.max(180, vh - top - 12);
+    menu.style.maxHeight = maxH + 'px';
+
+    // Fit horizontally in viewport, align to button's right edge.
+    var menuW = menu.offsetWidth || 260;
+    var left = clamp(rectBtn.right - menuW, 12, vw - menuW - 12);
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    menu.style.right = 'auto';
+    menu.style.zIndex = 5000;
+  }
+
+  function restoreMenu(){
+    if (!isFixed) return;
+    menu.style.position = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.right = '';
+    menu.style.zIndex = '';
+    menu.style.maxHeight = '';
+    if (origParent) origParent.insertBefore(menu, origNextSibling);
+    isFixed = false;
+  }
+
+  function closeMenu(){
+    menu.classList.remove('open');
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', false);
+    restoreMenu();
+  }
+
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    var open = menu.classList.toggle('open');
+    btn.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open);
+    if (open) {
+      // Defer positioning until the menu is measurable.
+      requestAnimationFrame(placeMenuFixed);
+    } else {
+      restoreMenu();
+    }
+  });
+
+  /* Close on outside click */
+  document.addEventListener('click', function(){ closeMenu(); });
+  menu.addEventListener('click', function(e){ e.stopPropagation(); });
+  window.addEventListener('resize', function(){ if(menu.classList.contains('open')) placeMenuFixed(); });
+  window.addEventListener('scroll', function(){ if(menu.classList.contains('open')) placeMenuFixed(); }, true);
+
+  /* Option buttons */
+  menu.querySelectorAll('.fb-opt').forEach(function(opt){
+    opt.addEventListener('click', function(){
+      var section = this.dataset.fbSection;
+      var value   = this.dataset.fbValue;
+      var label   = this.textContent.trim();
+
+      /* Highlight active within same section */
+      menu.querySelectorAll('.fb-opt[data-fb-section="' + section + '"]').forEach(function(o){
+        o.classList.remove('active');
+      });
+      this.classList.add('active');
+
+      /* Update button label */
+      if (lbl) lbl.textContent = label === 'All Status' || label === 'All' ? 'Filter' : label;
+
+      /* Close menu */
+      closeMenu();
+
+      /* Dispatch custom event for the page to handle */
+      document.dispatchEvent(new CustomEvent('fbChange', {
+        detail: { filterId: fid, section: section, value: value, label: label }
+      }));
+    });
+  });
+
+  /* Date picker */
+  if (day) {
+    day.addEventListener('change', function(){
+      if (!this.value) return;
+      if (lbl) lbl.textContent = this.value;
+      closeMenu();
+      document.dispatchEvent(new CustomEvent('fbChange', {
+        detail: { filterId: fid, section: 'date', value: this.value, label: this.value }
+      }));
+    });
+  }
+
+  /* Search input */
+  var search = document.getElementById(fid + 'Search');
+  if (search) {
+    search.addEventListener('input', function(){
+      document.dispatchEvent(new CustomEvent('fbSearch', {
+        detail: { filterId: fid, value: this.value.trim() }
+      }));
+    });
+  }
+
+  /* Init: dispatch active defaults so pages don't require reselect */
+  try {
+    var sent = {};
+    menu.querySelectorAll('.fb-opt.active').forEach(function(opt){
+      var section = opt.dataset.fbSection;
+      if (sent[section]) return;
+      sent[section] = true;
+      document.dispatchEvent(new CustomEvent('fbChange', {
+        detail: {
+          filterId: fid,
+          section: section,
+          value: opt.dataset.fbValue,
+          label: opt.textContent.trim()
+        }
+      }));
+    });
+  } catch (e) {}
+}());
+</script>

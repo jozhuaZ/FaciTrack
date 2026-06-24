@@ -1,0 +1,617 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── Make-Up Request Cards ── */
+.mu-list { display:flex; flex-direction:column; gap:1rem; }
+
+.mu-card {
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius-xl);
+  box-shadow:0 2px 8px rgba(0,0,0,.04);
+  overflow:hidden;
+  transition:all .2s ease;
+}
+.mu-card:hover {
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+  border-color:var(--primary-blue);
+  transform:translateY(-1px);
+}
+
+.mu-card-header {
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  padding:1.25rem 1.5rem;
+  background:linear-gradient(135deg,rgba(10,61,98,.06),rgba(30,136,229,.08));
+  border-bottom:1px solid var(--gray-100);
+}
+.mu-card-icon {
+  width:52px; height:52px;
+  border-radius:var(--radius-lg);
+  background:rgba(10,61,98,.1);
+  color:var(--primary-blue);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.mu-card-title { font-size:1rem; font-weight:700; color:var(--gray-900); margin:0 0 .2rem; }
+.mu-card-sub   { font-size:.8125rem; color:var(--gray-500); margin:0; }
+.mu-card-status { margin-left:auto; flex-shrink:0; display:flex; align-items:center; }
+
+.mu-status {
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.45rem 1rem;
+  border-radius:var(--radius-full);
+  font-size:.75rem; font-weight:700; white-space:nowrap;
+  border:1px solid transparent;
+}
+.mu-status-dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.mu-status.pending  { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+.mu-status.approved { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.mu-status.declined { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+
+.mu-card-body { padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:0; }
+
+.mu-detail-row {
+  display:flex; align-items:flex-start; gap:.75rem;
+  padding:.75rem 0;
+  border-bottom:1px solid var(--gray-100);
+}
+.mu-detail-row:last-child { border-bottom:none; padding-bottom:0; }
+
+.mu-detail-icon {
+  width:34px; height:34px;
+  border-radius:var(--radius-md);
+  background:rgba(10,61,98,.08);
+  color:var(--primary-blue);
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.mu-detail-label { font-size:.75rem; font-weight:600; color:var(--gray-500); text-transform:uppercase; letter-spacing:.5px; margin:0 0 .2rem; }
+.mu-detail-value { font-size:.9375rem; font-weight:600; color:var(--gray-900); margin:0; }
+
+
+
+.mu-card-footer {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1rem 1.5rem;
+  border-top:1px solid var(--gray-100);
+  background:var(--gray-50);
+  flex-wrap:wrap; gap:.75rem;
+}
+.mu-submitted { font-size:.75rem; color:var(--gray-500); display:flex; align-items:center; gap:.35rem; }
+
+.btn-view-doc {
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.5rem 1rem;
+  border:1.5px solid var(--gray-300);
+  border-radius:var(--radius-md);
+  background:#fff; font-size:.8125rem; font-weight:600;
+  cursor:pointer; transition:all .2s;
+  color:var(--gray-700); text-decoration:none; white-space:nowrap;
+}
+.btn-view-doc:hover { border-color:var(--primary-blue); color:var(--primary-blue); background:rgba(10,61,98,.04); }
+
+/* Search & filter */
+.search-filter-bar {
+  display:flex; gap:.75rem;
+  padding:1rem 1.25rem;
+  background:#fff;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--gray-200);
+  align-items:center; flex-wrap:wrap;
+  box-shadow:0 1px 4px rgba(0,0,0,.04);
+}
+.search-input-wrap {
+  flex:1; min-width:180px;
+  display:flex; align-items:center; gap:.5rem;
+  border:1.5px solid var(--gray-200);
+  border-radius:var(--radius-md);
+  padding:0 .875rem; background:#fff;
+  transition:border-color .2s;
+}
+.search-input-wrap:focus-within { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.08); }
+.search-input-wrap svg { color:var(--gray-400); flex-shrink:0; }
+.search-input-wrap input {
+  flex:1; border:none; padding:.6rem 0;
+  font-size:.875rem; background:transparent; outline:none; color:var(--gray-900);
+}
+.search-input-wrap input::placeholder { color:var(--gray-400); }
+.filter-dropdown {
+  border:1.5px solid var(--gray-200); border-radius:var(--radius-md);
+  padding:.6rem 1rem; background:#fff; color:var(--gray-700);
+  font-size:.875rem; font-weight:500; cursor:pointer;
+  font-family:inherit; min-width:140px; transition:all .2s; outline:none;
+}
+.filter-dropdown:focus { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.08); }
+
+/* Empty state */
+.empty-state { text-align:center; padding:3.5rem 1rem; color:var(--gray-400); }
+.empty-state svg { margin-bottom:.875rem; opacity:.35; }
+.empty-state p { font-size:.9375rem; font-weight:600; color:var(--gray-600); margin:0 0 .35rem; }
+.empty-state span { font-size:.8125rem; color:var(--gray-400); }
+
+/* Detail Modal */
+.mu-modal { position:fixed; inset:0; background:rgba(10,30,60,.55); z-index:2000; display:none; align-items:center; justify-content:center; padding:1rem; }
+.mu-modal.open { display:flex; }
+.mu-modal-overlay { position:absolute; inset:0; }
+.mu-modal-box { position:relative; background:#fff; border-radius:var(--radius-xl); width:100%; max-width:680px; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto; z-index:2001; }
+.mu-modal-header { padding:1.5rem; border-bottom:1px solid var(--gray-100); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:#fff; }
+.mu-modal-title { font-size:1.125rem; font-weight:700; color:var(--gray-900); margin:0; }
+.mu-modal-close { width:32px; height:32px; border:none; background:var(--gray-100); border-radius:var(--radius-md); color:var(--gray-600); font-size:1.5rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.mu-modal-close:hover { background:var(--gray-200); color:var(--gray-900); }
+
+.mu-modal-body { padding:1.5rem; display:flex; flex-direction:column; gap:1.5rem; }
+.mu-detail-section { display:flex; flex-direction:column; gap:.75rem; }
+.mu-detail-section-title { font-size:.875rem; font-weight:700; color:var(--gray-900); margin:0; text-transform:uppercase; letter-spacing:.5px; }
+.mu-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.mu-detail-field { display:flex; flex-direction:column; }
+.mu-detail-field-label { font-size:.75rem; font-weight:600; color:var(--gray-500); text-transform:uppercase; letter-spacing:.5px; margin-bottom:.35rem; }
+.mu-detail-field-value { font-size:.9375rem; color:var(--gray-900); margin:0; font-weight:500; }
+.mu-detail-status-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.mu-detail-status-badge { display:inline-flex; align-items:center; gap:.4rem; padding:.45rem 1rem; border-radius:var(--radius-full); font-size:.75rem; font-weight:700; border:1px solid transparent; }
+.mu-detail-status-badge.pending { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+.mu-detail-status-badge.approved { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+.mu-detail-status-badge.declined { background:#fef2f2; color:#dc2626; border-color:#fecaca; }
+.mu-detail-status-badge::before { content:''; width:7px; height:7px; border-radius:50%; background:currentColor; }
+
+.mu-dean-response { background:var(--gray-50); border:1px solid var(--gray-200); border-radius:var(--radius-md); padding:1rem; }
+.mu-dean-response-label { font-size:.75rem; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:.5px; margin:0 0 .5rem; }
+.mu-dean-response-text { font-size:.875rem; color:var(--gray-900); margin:0; line-height:1.6; }
+
+.mu-modal-footer { padding:1rem 1.5rem; border-top:1px solid var(--gray-100); display:flex; align-items:center; gap:.75rem; justify-content:space-between; background:var(--gray-50); }
+.btn-mu-close { padding:.5rem 1.25rem; background:white; color:var(--gray-700); border:1.5px solid var(--gray-300); border-radius:var(--radius-md); font-size:.8125rem; font-weight:600; cursor:pointer; transition:all .2s; }
+.btn-mu-close:hover { border-color:var(--gray-400); background:var(--gray-50); }
+.btn-view-document-link { display:inline-flex; align-items:center; gap:.4rem; padding:.5rem 1rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.8125rem; font-weight:600; cursor:pointer; text-decoration:none; transition:all .2s; }
+.btn-view-document-link:hover { background:#083d5e; }
+
+@media(max-width:640px){
+  .mu-modal-box { max-width:100%; max-height:100vh; border-radius:var(--radius-lg); }
+  .mu-detail-grid { grid-template-columns:1fr; }
+  .mu-modal-header { padding:1rem 1.25rem; }
+  .mu-modal-body { padding:1rem 1.25rem; gap:1rem; }
+  .mu-modal-footer { padding:.75rem 1.25rem; flex-direction:column; align-items:stretch; }
+  .btn-mu-close { width:100%; }
+  .btn-view-document-link { width:100%; justify-content:center; }
+}
+
+/* Alert flash */
+.alert-success { background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:var(--radius-md); padding:.75rem 1rem; font-size:.875rem; color:#16a34a; font-weight:600; display:flex; align-items:flex-start; gap:.5rem; margin-bottom:1.25rem; }
+.alert-error   { background:#fef2f2; border:1.5px solid #fecaca; border-radius:var(--radius-md); padding:.75rem 1rem; font-size:.875rem; color:#dc2626; font-weight:600; display:flex; align-items:flex-start; gap:.5rem; margin-bottom:1.25rem; }
+
+/* Pagination */
+.pagination-wrap { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-top:1px solid var(--gray-100); flex-wrap:wrap; gap:.75rem; }
+.pagination-info { font-size:.8125rem; color:var(--gray-500); }
+.pagination-controls { display:flex; align-items:center; gap:.375rem; }
+.pg-btn { width:34px; height:34px; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); background:#fff; color:var(--gray-600); font-size:.8125rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .18s; font-family:var(--font-body); }
+.pg-btn:hover:not(:disabled) { border-color:var(--primary-blue); color:var(--primary-blue); background:rgba(10,61,98,.04); }
+.pg-btn:disabled { opacity:.4; cursor:not-allowed; }
+.pg-btn.active { background:var(--primary-blue); color:#fff; border-color:var(--primary-blue); }
+
+@media(max-width:768px){
+  .mu-card-header { flex-wrap:wrap; }
+  .mu-card-status { margin-left:0; }
+}
+
+@media(max-width:640px){
+  .search-filter-bar { flex-direction:column; gap:.625rem; }
+  .search-input-wrap { min-width:0; width:100%; }
+  .filter-dropdown { width:100%; }
+  .mu-card-header { gap:.75rem; padding:1rem 1.25rem; }
+  .mu-card-icon { width:44px; height:44px; }
+  .mu-card-title { font-size:.9375rem; }
+  .mu-card-body { padding:1rem 1.25rem; }
+  .mu-detail-row { padding:.6rem 0; }
+  .mu-detail-icon { width:30px; height:30px; }
+  .mu-detail-label { font-size:.7rem; }
+  .mu-detail-value { font-size:.8125rem; }
+  .mu-card-footer { padding:.75rem 1.25rem; }
+  .btn-view-doc { width:100%; justify-content:center; padding:.45rem .875rem; font-size:.75rem; }
+  .mu-status { padding:.35rem .75rem; font-size:.7rem; }
+}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/instructor-sidebar', { activePage: 'makeup', pendingCount: pendingCount }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Make-Up Class Requests</h1>
+          <p class="page-subtitle">Track the status of your submitted make-up class requests</p>
+        </div>
+        <div class="header-actions">
+          <a href="/instructor/makeup/request" class="btn-header-action primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Request
+          </a>
+        </div>
+      </div>
+
+      <% if (flash) { %>
+      <div class="alert-<%= flash.type === 'success' ? 'success' : 'error' %>">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+          <% if (flash.type === 'success') { %>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          <% } else { %>
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          <% } %>
+        </svg>
+        <%= flash.message %>
+      </div>
+      <% } %>
+
+      <!-- Search & Filter -->
+      <div class="search-filter-bar">
+        <div class="search-input-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="muSearch" placeholder="Search subject or section…" autocomplete="off">
+        </div>
+        <select class="filter-dropdown" id="muStatusFilter">
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Proceeded</option>
+          <option value="declined">Declined</option>
+        </select>
+      </div>
+
+      <% if (myRequests.length === 0) { %>
+      <div class="content-card">
+        <div class="empty-state">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          <p>No requests yet</p>
+          <span>Click "New Request" to submit a make-up class request.</span>
+        </div>
+      </div>
+      <% } else { %>
+
+      <div class="mu-list" id="muList">
+        <% myRequests.forEach((r, idx) => { %>
+        <div class="mu-card"
+             data-index="<%= idx %>"
+             data-status="<%= r.status %>"
+             data-subject="<%= (r.subjectName + ' ' + r.section).toLowerCase() %>"
+             data-date="<%= r.date || '' %>"
+             data-class-type="<%= r.classType || '' %>"
+             data-dean-statement="<%= r.deanStatement ? r.deanStatement.replace(/"/g, '&quot;') : '' %>"
+             data-decline-reason="<%= r.declineReason ? r.declineReason.replace(/"/g, '&quot;') : '' %>">
+
+          <!-- Header -->
+          <div class="mu-card-header">
+            <div class="mu-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <p class="mu-card-title"><%= r.subjectName %></p>
+              <p class="mu-card-sub"><%= r.subjectCode %> &middot; Section <%= r.section %></p>
+            </div>
+            <div class="mu-card-status">
+              <span class="mu-status <%= r.status %>">
+                <span class="mu-status-dot"></span>
+                <%= r.status === 'approved' ? 'Proceeded' : r.status.charAt(0).toUpperCase() + r.status.slice(1) %>
+              </span>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="mu-card-body">
+
+            <div class="mu-detail-row">
+              <div class="mu-detail-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div>
+                <p class="mu-detail-label">Schedule</p>
+                <p class="mu-detail-value"><%= r.day %> &middot; <%= slotToLabel(r.startSlot) %> – <%= slotToLabel(r.endSlot) %></p>
+              </div>
+            </div>
+
+            <div class="mu-detail-row">
+              <div class="mu-detail-icon">
+                <% if (r.deliveryMode === 'online') { %>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                <% } else { %>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <% } %>
+              </div>
+              <div>
+                <p class="mu-detail-label">Mode / Room</p>
+                <p class="mu-detail-value"><%= r.deliveryMode === 'online' ? 'Online' : (r.room || 'In-Campus') %></p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="mu-card-footer">
+            <span class="mu-submitted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Submitted <%= new Date(r.submittedAt).toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' }) %>
+              &middot; <%= new Date(r.submittedAt).toLocaleTimeString('en-PH', { hour:'numeric', minute:'2-digit' }) %>
+            </span>
+            <button class="btn-view-doc btn-view-request" data-request-id="<%= r.id %>">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              View
+            </button>
+          </div>
+
+        </div>
+        <% }); %>
+      </div>
+
+      <div class="content-card" style="margin-top:1rem" id="muPaginationCard">
+        <div class="pagination-wrap">
+          <span class="pagination-info" id="muPaginationInfo"></span>
+          <div class="pagination-controls" id="muPaginationControls"></div>
+        </div>
+      </div>
+
+      <% } %>
+
+    </div>
+  </main>
+</div>
+
+<!-- Request Detail Modal -->
+<div class="mu-modal" id="muDetailModal">
+  <div class="mu-modal-overlay"></div>
+  <div class="mu-modal-box">
+    <div class="mu-modal-header">
+      <h3 class="mu-modal-title">Make-Up Class Request Details</h3>
+      <button class="mu-modal-close" id="muModalClose">×</button>
+    </div>
+    <div class="mu-modal-body">
+      <div class="mu-detail-section">
+        <h4 class="mu-detail-section-title">Subject Information</h4>
+        <div class="mu-detail-grid">
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Subject Code</label>
+            <p class="mu-detail-field-value" id="modalSubjectCode">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Subject Name</label>
+            <p class="mu-detail-field-value" id="modalSubjectName">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Section</label>
+            <p class="mu-detail-field-value" id="modalSection">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mu-detail-section">
+        <h4 class="mu-detail-section-title">Schedule Details</h4>
+        <div class="mu-detail-grid">
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Date</label>
+            <p class="mu-detail-field-value" id="modalDate">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Day</label>
+            <p class="mu-detail-field-value" id="modalDay">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Time</label>
+            <p class="mu-detail-field-value" id="modalTime">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Class Type</label>
+            <p class="mu-detail-field-value" id="modalClassType">—</p>
+          </div>
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Room / Venue</label>
+            <p class="mu-detail-field-value" id="modalRoom">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mu-detail-section">
+        <h4 class="mu-detail-section-title">Status & Response</h4>
+        <div class="mu-detail-status-row">
+          <label class="mu-detail-field-label">Current Status</label>
+          <p id="modalStatus" class="mu-detail-status-badge">—</p>
+        </div>
+        <div id="deanResponseSection" style="display:none; margin-top:1rem;">
+          <div class="mu-dean-response">
+            <p class="mu-dean-response-label" id="deanResponseLabel">Dean's Response</p>
+            <p class="mu-dean-response-text" id="deanResponseText">—</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mu-detail-section">
+        <h4 class="mu-detail-section-title">Submission</h4>
+        <div class="mu-detail-grid">
+          <div class="mu-detail-field">
+            <label class="mu-detail-field-label">Submitted Date & Time</label>
+            <p class="mu-detail-field-value" id="modalSubmitted">—</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mu-modal-footer">
+      <a href="#" class="btn-view-document-link" id="viewDocumentLink" target="_blank" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        View Document
+      </a>
+      <button class="btn-mu-close" id="muModalCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<%- include('../../partials/script') %>
+<%- include('../../partials/footer') %>
+
+<script>
+(function () {
+  const ITEMS = 10;
+  let page = 1;
+  let filterStatus = 'all';
+  let filterSearch = '';
+
+  const searchInput  = document.getElementById('muSearch');
+  const statusSelect = document.getElementById('muStatusFilter');
+
+  function getVisible() {
+    return Array.from(document.querySelectorAll('#muList .mu-card')).filter(r => {
+      const matchStatus = filterStatus === 'all' || r.dataset.status === filterStatus;
+      const matchSearch = !filterSearch || r.dataset.subject.includes(filterSearch);
+      return matchStatus && matchSearch;
+    });
+  }
+
+  function render() {
+    const cards = getVisible();
+    const total = cards.length;
+    const totalPages = Math.max(1, Math.ceil(total / ITEMS));
+    page = Math.min(page, totalPages);
+    const start = (page - 1) * ITEMS;
+    const end   = start + ITEMS;
+
+    document.querySelectorAll('#muList .mu-card').forEach(c => c.style.display = 'none');
+    cards.forEach((c, i) => { c.style.display = (i >= start && i < end) ? '' : 'none'; });
+
+    const info = document.getElementById('muPaginationInfo');
+    if (info) info.textContent = total === 0 ? 'No requests found' : `Showing ${start + 1}–${Math.min(end, total)} of ${total}`;
+
+    const paginationCard = document.getElementById('muPaginationCard');
+    const ctrl = document.getElementById('muPaginationControls');
+    if (!ctrl) return;
+    ctrl.innerHTML = '';
+
+    if (totalPages <= 1) {
+      if (paginationCard) paginationCard.style.display = total > 0 ? '' : 'none';
+      return;
+    }
+    if (paginationCard) paginationCard.style.display = '';
+
+    const prev = document.createElement('button');
+    prev.className = 'pg-btn'; prev.innerHTML = '&#8592;'; prev.disabled = page === 1;
+    prev.addEventListener('click', () => { page--; render(); });
+    ctrl.appendChild(prev);
+
+    let s = Math.max(1, page - 2), e = Math.min(totalPages, s + 4);
+    s = Math.max(1, e - 4);
+    for (let p = s; p <= e; p++) {
+      const btn = document.createElement('button');
+      btn.className = 'pg-btn' + (p === page ? ' active' : '');
+      btn.textContent = p;
+      btn.addEventListener('click', () => { page = p; render(); });
+      ctrl.appendChild(btn);
+    }
+
+    const next = document.createElement('button');
+    next.className = 'pg-btn'; next.innerHTML = '&#8594;'; next.disabled = page === totalPages;
+    next.addEventListener('click', () => { page++; render(); });
+    ctrl.appendChild(next);
+  }
+
+  if (searchInput) searchInput.addEventListener('input', () => { filterSearch = searchInput.value.toLowerCase().trim(); page = 1; render(); });
+  if (statusSelect) statusSelect.addEventListener('change', () => { filterStatus = statusSelect.value; page = 1; render(); });
+
+  // ── View Request Details ──
+  function openDetailModal(requestId) {
+    const btn = document.querySelector(`[data-request-id="${requestId}"]`);
+    if (!btn) return;
+    const card = btn.closest('.mu-card');
+    if (!card) return;
+    const modal = document.getElementById('muDetailModal');
+
+    const titleEl = card.querySelector('.mu-card-title');
+    const subEl = card.querySelector('.mu-card-sub');
+    const rows = card.querySelectorAll('.mu-detail-row');
+
+    document.getElementById('modalSubjectCode').textContent = subEl ? subEl.textContent.split('·')[0].trim() : '—';
+    document.getElementById('modalSubjectName').textContent = titleEl ? titleEl.textContent : '—';
+    document.getElementById('modalSection').textContent = subEl ? subEl.textContent.split('·')[1]?.trim() || '—' : '—';
+
+    let timeText = '—', roomText = '—', dateText = '—', classTypeText = '—';
+    rows.forEach(row => {
+      const label = row.querySelector('.mu-detail-label')?.textContent || '';
+      const value = row.querySelector('.mu-detail-value')?.textContent || '';
+      if (label.includes('SCHEDULE')) {
+        const parts = value.split('·');
+        document.getElementById('modalDay').textContent = parts[0].trim();
+        document.getElementById('modalTime').textContent = (parts[1] || '').trim();
+      } else if (label.includes('MODE')) {
+        document.getElementById('modalDeliveryMode').textContent = value.includes('Online') ? 'Online' : 'In-Campus';
+        roomText = value.includes('Online') ? 'Online' : value;
+        document.getElementById('modalRoom').textContent = roomText;
+      }
+    });
+
+    // Get date and classType from card data attributes
+    const dateAttr = card.getAttribute('data-date');
+    if (dateAttr) {
+      const dateObj = new Date(dateAttr);
+      document.getElementById('modalDate').textContent = dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    const classTypeAttr = card.getAttribute('data-class-type');
+    if (classTypeAttr) {
+      document.getElementById('modalClassType').textContent = classTypeAttr;
+    }
+
+    const status = card.dataset.status;
+    const statusBadge = document.getElementById('modalStatus');
+    statusBadge.textContent = status === 'approved' ? 'Proceeded' : status.charAt(0).toUpperCase() + status.slice(1);
+    statusBadge.className = 'mu-detail-status-badge ' + status;
+
+    const submitted = card.querySelector('.mu-submitted')?.textContent || '—';
+    document.getElementById('modalSubmitted').textContent = submitted;
+
+    const deanResponseSection = document.getElementById('deanResponseSection');
+    const deanResponseText = document.getElementById('deanResponseText');
+    const deanResponseLabel = document.getElementById('deanResponseLabel');
+
+    if (status === 'approved') {
+      const deanStatement = card.getAttribute('data-dean-statement') ||
+                            'This make-up class is hereby approved. The instructor is authorized to conduct the session as scheduled.';
+      deanResponseText.textContent = deanStatement;
+      deanResponseLabel.textContent = 'Dean\'s Approval Statement';
+      deanResponseSection.style.display = 'block';
+    } else if (status === 'declined') {
+      const declineReason = card.getAttribute('data-decline-reason') || 'Not specified.';
+      deanResponseText.textContent = declineReason;
+      deanResponseLabel.textContent = 'Decline Reason';
+      deanResponseSection.style.display = 'block';
+    } else {
+      deanResponseSection.style.display = 'none';
+    }
+
+    const docLink = document.getElementById('viewDocumentLink');
+    docLink.href = `/instructor/makeup/${requestId}/document`;
+    docLink.style.display = 'inline-flex';
+
+    modal.classList.add('open');
+  }
+
+  function closeDetailModal() {
+    const modal = document.getElementById('muDetailModal');
+    modal.classList.remove('open');
+  }
+
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-view-request');
+    if (btn) {
+      const requestId = btn.getAttribute('data-request-id');
+      openDetailModal(requestId);
+      e.preventDefault();
+    }
+  });
+
+  document.getElementById('muModalClose')?.addEventListener('click', closeDetailModal);
+  document.getElementById('muModalCloseBtn')?.addEventListener('click', closeDetailModal);
+
+  document.getElementById('muDetailModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeDetailModal();
+  });
+
+  render();
+})();
+</script>

@@ -1,0 +1,50 @@
+<script src="/js/main.js?v=<%= Date.now() %>"></script>
+<script src="/js/export-system.js?v=<%= Date.now() %>"></script>
+<script>
+    function confirmDelete(name) {
+        return confirm(`Are you sure you want to delete ${name}?`);
+    }
+
+    function confirmAction(action, studentName) {
+        return confirm(`Are you sure you want to ${action} the appointment for ${studentName}?`);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Mobile sidebar toggle — hamburger button
+        const toggleBtn = document.getElementById('sidebarToggle');
+        const sidebarNav = document.querySelector('.sidebar-nav');
+        const sidebarFooter = document.querySelector('.sidebar-footer');
+        const iconMenu = toggleBtn ? toggleBtn.querySelector('.icon-menu') : null;
+        const iconClose = toggleBtn ? toggleBtn.querySelector('.icon-close') : null;
+
+        if (toggleBtn && sidebarNav) {
+            // On mobile, hide footer initially (nav is collapsed)
+            if (window.innerWidth <= 1024 && sidebarFooter) {
+                sidebarFooter.style.display = 'none';
+            }
+
+            toggleBtn.addEventListener('click', function () {
+                const isOpen = sidebarNav.classList.toggle('mobile-open');
+                toggleBtn.setAttribute('aria-expanded', isOpen);
+                if (iconMenu) iconMenu.style.display = isOpen ? 'none' : '';
+                if (iconClose) iconClose.style.display = isOpen ? '' : 'none';
+                if (sidebarFooter && window.innerWidth <= 1024) {
+                    sidebarFooter.style.display = isOpen ? 'block' : 'none';
+                }
+            });
+
+            // Close nav when a nav item is tapped on mobile
+            sidebarNav.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    if (window.innerWidth <= 1024) {
+                        sidebarNav.classList.remove('mobile-open');
+                        toggleBtn.setAttribute('aria-expanded', 'false');
+                        if (iconMenu) iconMenu.style.display = '';
+                        if (iconClose) iconClose.style.display = 'none';
+                        if (sidebarFooter) sidebarFooter.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>

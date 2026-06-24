@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="FaciTrack - Progressive Web Application for Faculty Appointment and Real-Time Monitoring System at Camarines Sur Polytechnic Colleges">
+    <meta name="keywords" content="faculty, appointment, monitoring, BLE, IoT, CSPC">
+    <meta name="author" content="CSPC - College of Computer Studies">
+    <meta name="theme-color" content="#0A3D62">
+    <title>FaciTrack - Smart Campus Innovation</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/images/FaciTrack-logo.png" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"></noscript>
+    <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
+    <link rel="stylesheet" href="/css/header.css?v=<%= Date.now() %>">
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="/images/FaciTrack-logo.png" alt="FaciTrack Logo">
+                </div>
+            </div>
+            <div class="header-institution">
+            <% if (typeof instructor !== 'undefined' || typeof dean !== 'undefined') { %>
+                <% const _notifSource = (typeof notifications !== 'undefined') ? notifications : []; %>
+                <% const unreadCount = _notifSource.filter(n => !n.read).length; %>
+                    <div class="notif-wrapper">
+                        <button class="btn-notif-bell header-notif" id="btnNotifBell" aria-label="Notifications">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            <% if (unreadCount > 0) { %>
+                            <span class="notif-bell-badge" id="notifBellBadge"><%= unreadCount %></span>
+                            <% } else { %>
+                            <span class="notif-bell-badge" id="notifBellBadge" style="display:none">0</span>
+                            <% } %>
+                        </button>
+                    </div>
+                <% } %>
+                <span>Camarines Sur Polytechnic Colleges</span>
+            </div>
+        </div>
+    </header>

@@ -1,0 +1,141 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/student/dashboard.css?v=<%= Date.now() %>">
+<style>
+    /* Photo placeholder in faculty cards */
+    .card-photo-placeholder {
+        width: 52px;
+        height: 52px;
+        border-radius: var(--radius-full);
+        background: linear-gradient(135deg, #e8eef5 0%, #d0dce8 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(10,61,98,0.12);
+    }
+    .card-photo-placeholder svg {
+        width: 26px;
+        height: 26px;
+        color: #a0b4c8;
+    }
+
+    @media (max-width: 640px) {
+        #deptFilter {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="instructor-layout">
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Faculty Directory</h1>
+                    <p class="page-subtitle">Browse CCS faculty members and book a consultation appointment</p>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="content-card" style="margin-bottom:1rem;">
+                <div class="card-body" style="padding:0.875rem 1.25rem;">
+                    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+                        <div style="position:relative;flex:1;min-width:160px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray-400);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="searchInput" placeholder="Search name or specialization..." style="width:100%;padding:0.6rem 1rem 0.6rem 2.4rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--secondary-teal)'" onblur="this.style.borderColor='var(--gray-200)'">
+                        </div>
+                        <select id="deptFilter" style="padding:0.6rem 0.875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer;flex-shrink:0;">
+                            <option value="all">All Departments</option>
+                            <% departments.forEach(function(d) { %>
+                                <option value="<%= d.value %>" <%= activeDept === d.value ? 'selected' : '' %>><%= d.label %></option>
+                            <% }); %>
+                        </select>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Faculty Card Grid -->
+            <div class="content-card" style="flex:1;min-height:0;">
+                <div class="card-body" style="padding:1.25rem;overflow-y:auto;height:100%;">
+                    <div class="faculty-grid" id="facultyGrid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));">
+
+                        <div class="empty-state" id="emptyState" style="display:none;grid-column:1/-1;text-align:center;padding:3rem;color:var(--gray-400);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 1rem;display:block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <p style="font-size:0.9rem;">No faculty found for the selected filters.</p>
+                        </div>
+
+                        <% facultyList.forEach((faculty, index) => { %>
+                        <a href="/student/faculty/<%= faculty.id %>" class="faculty-card" data-status="<%= faculty.status %>" data-name="<%= faculty.name.toLowerCase() %>" data-spec="<%= faculty.specialization.toLowerCase() %>" data-dept="<%= faculty.department %>">
+                            <div class="card-top">
+                                <!-- Photo placeholder — replace with <img> when actual photo is available -->
+                                <div class="card-photo-placeholder">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h3 class="card-name"><%= faculty.name %></h3>
+                                <p class="card-position"><%= faculty.position %></p>
+                                <p class="card-college">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                    <%= faculty.department %>
+                                </p>
+                                <p class="card-spec">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    <%= faculty.specialization %>
+                                </p>
+                            </div>
+                            <div class="card-footer">
+                                <div class="next-available">
+                                    <span class="next-label">Next available:</span>
+                                    <span class="next-time"><%= faculty.nextAvailable %></span>
+                                </div>
+                                <span class="btn-view-inline">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                                </span>
+                            </div>
+                        </a>
+                        <% }); %>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('searchInput');
+    const deptFilter = document.getElementById('deptFilter');
+    const cards = document.querySelectorAll('.faculty-card');
+    const emptyState = document.getElementById('emptyState');
+
+    function applyFilters() {
+        const dept = deptFilter.value;
+        const query = searchInput.value.toLowerCase().trim();
+        let visible = 0;
+
+        cards.forEach(card => {
+            const matchDept   = dept === 'all' || card.dataset.dept === dept;
+            const matchSearch = !query || card.dataset.name.includes(query) || card.dataset.spec.includes(query);
+            const show = matchDept && matchSearch;
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        emptyState.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    deptFilter.addEventListener('change', applyFilters);
+
+    applyFilters();
+});
+</script>

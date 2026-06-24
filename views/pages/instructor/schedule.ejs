@@ -1,0 +1,1801 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.gcal-wrap{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:1.35rem;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:default;position:relative;overflow:visible;pointer-events:auto;}
+.gcal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.15rem;pointer-events:auto;}
+.gcal-title{font-size:1.08rem;font-weight:700;color:#111827;pointer-events:auto;}
+.gcal-tz{font-size:.79rem;color:#6b7280;pointer-events:auto;}
+.gcal-body{display:grid;grid-template-columns:230px 1fr;gap:1.25rem;overflow:visible;pointer-events:auto;}
+.mini-cal{border-right:1px solid #e5e7eb;padding-right:1.15rem}
+.mini-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem}
+.mini-month{font-size:.84rem;font-weight:700;color:#111827}
+.mini-nav{display:flex;gap:.3rem}
+.mini-btn{width:26px;height:26px;border:1px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;transition:all 0.2s ease}
+.mini-btn:hover{border-color:#1a73e8;background:rgba(26,115,232,0.05)}
+.mini-btn:disabled{opacity:.35;cursor:not-allowed}
+.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.mini-dow{font-size:.62rem;color:#6b7280;text-align:center;font-weight:700}
+.mini-day{height:26px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-size:.72rem;color:#374151;transition:all 0.15s ease}
+.mini-day.other{color:#d1d5db}
+.mini-day.past{color:#d1d5db;background:#f9fafb;cursor:not-allowed}
+.mini-day.bookable{cursor:pointer}
+.mini-day.today{outline:2px solid #1a73e8;outline-offset:-2px;font-weight:700}
+.mini-day.selected{background:#1a73e8;color:#fff;font-weight:700}
+.mini-day.bookable:hover{background:rgba(26,115,232,.15);transform:scale(1.1)}
+.week-strip-wrapper{width:100%;pointer-events:auto;touch-action:pan-x;}
+.week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:.3rem;cursor:default;position:relative;width:100%;pointer-events:auto;}
+.week-day{height:auto;min-height:100px;min-width:80px;border:1.5px solid #e5e7eb;border-radius:11px;padding:.5rem .3rem;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;transition:all 0.2s ease;box-sizing:border-box;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
+.week-day.past{background:#f9fafb;opacity:.6;cursor:not-allowed}
+.week-day.bookable{cursor:pointer}
+.week-day.bookable:hover{border-color:#1a73e8;background:rgba(26,115,232,.03);transform:translateY(-2px);box-shadow:0 4px 12px rgba(26,115,232,0.12)}
+.week-day.selected{border-color:#1a73e8;border-width:2px;box-shadow:0 0 0 3px rgba(26,115,232,.15);background:rgba(26,115,232,.02)}
+.w-dow{text-align:center;font-size:.55rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.02em}
+.w-date{text-align:center;font-size:1.25rem;font-weight:700;color:#111827;margin-top:.15rem}
+.w-date.today{color:#1a73e8}
+.w-slot{font-size:.55rem;background:#1a73e8;color:#fff;padding:.15rem .3rem;border-radius:4px;margin-top:.2rem;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;}
+.w-slot.closed{background:#9ca3af}
+.week-empty{text-align:center;padding:1.2rem .3rem;color:var(--gray-500);font-size:.7rem;}
+.week-empty a{font-size:.82rem;color:#1a73e8;text-decoration:none}
+
+/* compact modal style aligned with system */
+#slotModal,
+#slotViewOverlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+#slotModal .modal-content,
+#slotViewOverlay .modal-content {
+  width: min(100%, 560px);
+  max-width: 560px;
+  margin: auto;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+}
+#slotViewOverlay .modal-content {
+  max-width: 440px;
+}
+#slotModal .modal-body,
+#slotViewOverlay .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 1.5rem;
+}
+.slot-form-group{margin-bottom:1rem;width:100%;}
+
+@media (max-width:640px){
+  .gcal-wrap { padding: 1rem; overflow: visible; pointer-events: auto !important; }
+  .gcal-top { flex-direction: column; align-items: stretch; gap: .6rem; pointer-events: auto !important; }
+  .gcal-title { font-size: 0.95rem; pointer-events: auto !important; }
+  .gcal-tz { font-size: 0.7rem; text-align: left; pointer-events: auto !important; }
+  .gcal-body{display:flex !important;flex-direction:column !important;gap:0.9rem;overflow:visible;pointer-events:auto;}
+  .gcal-content-wrapper { flex: 1 !important; min-width: 0 !important; overflow-x: hidden !important; overflow-y: visible !important; display: flex !important; flex-direction: column !important; pointer-events: auto !important; }
+  .mini-cal { width: 100%; pointer-events: auto !important; }
+  .week-strip-wrapper { display: flex !important; flex-wrap: nowrap !important; flex-shrink: 0 !important; width: 100% !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x !important; scrollbar-width: thin !important; scrollbar-color: rgba(148,163,184,0.6) transparent !important; pointer-events: auto !important; user-select: none !important; scroll-behavior: smooth !important; scroll-padding: 1rem; }
+  .week-strip-wrapper::-webkit-scrollbar { height: 10px; }
+  .week-strip-wrapper::-webkit-scrollbar-track { background: transparent; }
+  .week-strip-wrapper::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.6); border-radius: 5px; height: 10px; }
+  .week-strip-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.8); }
+  .week-strip { display: flex !important; flex-wrap: nowrap !important; grid-template-columns: unset !important; width: fit-content !important; gap: 0.3rem !important; pointer-events: auto !important; padding: 0.5rem 0; }
+  .week-day { min-width: 84px !important; min-height: 100px !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; padding: 0.6rem 0.4rem !important; border-radius: 12px !important; }
+  .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; margin-top: auto !important; }
+  .w-add-btn { touch-action: auto !important; pointer-events: auto !important; padding: .32rem .3rem !important; font-size: 0.58rem !important; gap: 0.2rem !important; border-width: 1.5px !important; border-radius: 6px !important; }
+  .w-add-btn:active { background: rgba(26,115,232,.12); transform: scale(0.98); }
+  .w-dow { font-size: 0.55rem; font-weight: 600; letter-spacing: 0.5px; }
+  .w-date { font-size: 1.1rem; margin-top: 0.1rem; font-weight: 700; }
+  .w-slot { font-size: 0.52rem; padding: .15rem .3rem; line-height: 1.3; border-radius: 5px !important; }
+  .w-slot .slot-label { font-weight: 600; }
+  .gcal-wrap { padding: 0.85rem !important; border-radius: 12px !important; }
+  .gcal-top { gap: 0.5rem !important; }
+  .gcal-title { font-size: 1rem !important; font-weight: 700 !important; }
+  .gcal-tz { font-size: 0.72rem !important; opacity: 0.8; }
+  .mini-cal { margin-bottom: 0.8rem; }
+  .page-header { margin-bottom: 0.75rem; }
+  #slotModal,
+  #slotViewOverlay { padding: 0.8rem; }
+  #slotModal .modal-content,
+  #slotViewOverlay .modal-content {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+  }
+  #slotModal .modal-body,
+  #slotViewOverlay .modal-body { padding: 0.9rem; }
+  .modal-header { padding: 0.85rem 0.9rem; }
+  .modal-title { font-size: 0.95rem; }
+  .slot-form-label { font-size: 0.75rem; margin-bottom: 0.35rem; }
+  .time-picker-wrapper{grid-template-columns:auto auto auto;justify-items:center;padding:.5rem .4rem;gap:.25rem;}
+  .time-period{flex-direction:row;gap:.3rem;justify-content:center;}
+  .time-period .period-btn{min-width:38px; padding: 0.3rem 0.45rem; font-size: 0.65rem;}
+  .time-separator{margin:0 .1rem; font-size: 1.2rem;}
+  .time-wheel{width:52px;min-width:52px;height:110px; font-size: 0.95rem;}
+  .wheel-item { font-size: 0.95rem; }
+  .slot-form-input, .slot-form-select { padding: 0.5rem 0.7rem; font-size: 0.8rem; }
+}
+@media (max-width:520px) {
+  .gcal-wrap { padding: 0.8rem; pointer-events: auto !important; }
+  .gcal-top { gap: 0.4rem; pointer-events: auto !important; }
+  .gcal-title { font-size: 0.9rem; pointer-events: auto !important; }
+  .mini-cal { border-right: none; padding-right: 0; padding-bottom: 0.7rem; margin-bottom: 0.7rem; border-bottom: 1px solid #e5e7eb; pointer-events: auto !important; }
+  .mini-head { margin-bottom: 0.5rem; pointer-events: auto !important; }
+  .mini-month { font-size: 0.8rem; pointer-events: auto !important; }
+  .mini-grid { gap: 1.5px; pointer-events: auto !important; }
+  .mini-day { height: 22px; font-size: 0.68rem; pointer-events: auto !important; }
+  .week-strip { display: flex !important; flex-wrap: nowrap !important; width: fit-content !important; gap: 0.25rem !important; pointer-events: auto !important; padding: 0.4rem 0; }
+  .week-day { min-width: 78px !important; min-height: 92px !important; padding: 0.5rem 0.35rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 11px !important; }
+  .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; padding: .28rem .28rem !important; font-size: 0.56rem !important; }
+  .w-date { font-size: 0.95rem; margin-top: 0.08rem; }
+  .w-slot { font-size: 0.48rem; padding: .1rem .2rem; }
+  .w-add-btn { font-size: 0.5rem; padding: 0.2rem 0.22rem; }
+  .dsp-header { padding: 0.8rem 1rem; }
+  .dsp-title { font-size: 0.9rem; }
+  .time-picker-wrapper { grid-template-columns: auto auto; padding: 0.45rem 0.4rem; gap: 0.2rem; }
+  .time-separator { grid-column: 1 / -1; margin: 0.25rem 0; font-size: 1.1rem; }
+  .time-period { grid-column: 1 / -1; width: 100%; flex-wrap: wrap; justify-content: center; gap: 0.25rem; }
+  .time-wheel { width: 46px; min-width: 46px; height: 100px; }
+  .period-btn { min-width: 36px; padding: 0.25rem 0.45rem; font-size: 0.68rem; }
+  .dsp-body { padding: 0.9rem; }
+  .dsp-empty { padding: 1.5rem 0.9rem; font-size: 0.8rem; }
+  .slot-form-input, .slot-form-select { padding: 0.45rem 0.6rem; font-size: 0.78rem; }
+}
+@media (max-width:420px) {
+  .gcal-wrap { padding: 0.65rem; pointer-events: auto !important; }
+  .gcal-top { gap: 0.3rem; pointer-events: auto !important; }
+  .gcal-title { font-size: 0.85rem; pointer-events: auto !important; }
+  .gcal-tz { font-size: 0.65rem; pointer-events: auto !important; }
+  .mini-head { margin-bottom: 0.4rem; pointer-events: auto !important; }
+  .mini-month { font-size: 0.75rem; pointer-events: auto !important; }
+  .mini-nav button { width: 22px; height: 22px; font-size: 0.7rem; pointer-events: auto !important; }
+  .mini-grid { gap: 1px; pointer-events: auto !important; }
+  .mini-day { height: 20px; font-size: 0.65rem; pointer-events: auto !important; }
+  .week-strip { display: flex !important; flex-wrap: nowrap !important; width: fit-content !important; gap: 0.2rem !important; pointer-events: auto !important; padding: 0.3rem 0; }
+  .week-day { min-width: 70px !important; min-height: 84px !important; padding: 0.45rem 0.3rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 10px !important; }
+  .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; padding: .25rem .25rem !important; font-size: 0.54rem !important; }
+  .w-date { font-size: 1rem !important; }
+  .w-dow { font-size: 0.52rem !important; }
+  .w-slot { font-size: 0.50rem !important; }
+  .w-dow { font-size: 0.45rem; }
+  .w-date { font-size: 0.85rem; }
+  .w-slot { font-size: 0.45rem; padding: .08rem .15rem; }
+  .w-add-btn { font-size: 0.48rem; padding: 0.18rem 0.2rem; }
+  #slotModal .modal-content,
+  #slotViewOverlay .modal-content {
+    width: calc(100vw - 14px);
+    max-width: calc(100vw - 14px);
+  }
+  #slotModal .modal-body,
+  #slotViewOverlay .modal-body { padding: 0.75rem; }
+  .modal-header { padding: 0.75rem 0.8rem; gap: 0.3rem; }
+  .modal-title { font-size: 0.9rem; }
+  .modal-close { font-size: 1.1rem; }
+  .time-picker-wrapper { grid-template-columns: 1fr; padding: 0.4rem 0.35rem; gap: 0.35rem; }
+  .time-segment { width: 100%; }
+  .time-wheel { width: 100%; min-width: auto; height: 90px; font-size: 0.9rem; }
+  .time-separator { display: none; }
+  .time-period { grid-column: 1 / -1; justify-content: space-between; gap: 0.2rem; }
+  .period-btn { min-width: 45%; width: 45%; padding: 0.25rem 0.4rem; font-size: 0.65rem; }
+  .slot-form-label { text-align: left; font-size: 0.72rem; }
+  .slot-form-input, .slot-form-select { padding: 0.4rem 0.55rem; font-size: 0.75rem; }
+  .dsp-header { padding: 0.7rem 0.85rem; }
+  .dsp-title { font-size: 0.85rem; gap: 0.35rem; }
+  .dsp-body { padding: 0.8rem; }
+  .dsp-empty { padding: 1.2rem 0.8rem; font-size: 0.75rem; }
+}
+
+.slot-form-label{display:block;font-size:.8rem;font-weight:700;color:#374151;margin-bottom:.5rem;letter-spacing:-.01em;text-align:center;}
+.slot-form-input,.slot-form-select{width:100%;padding:.65rem .85rem;border:2px solid #e5e7eb;border-radius:10px;font-size:.875rem;transition:all 0.2s ease;background:#fff;}
+.slot-form-input:focus,.slot-form-select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,0.1);}
+.slot-form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+
+/* Modern time picker */
+.time-picker-wrapper {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    background: linear-gradient(to bottom, #ffffff, #f9fafb);
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    padding: .65rem .6rem;
+    transition: all 0.2s ease;
+    width: auto;
+    max-width: 340px;
+}
+.time-picker-wrapper:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+    background: #fff;
+}
+.time-picker-wrapper.disabled {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.time-segment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+}
+.time-arrow {
+    display: none;
+}
+.time-arrow:hover:not(.disabled) {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59,130,246,0.3);
+}
+.time-arrow:active:not(.disabled) {
+    transform: translateY(0);
+}
+.time-arrow.disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: #f9fafb;
+}
+.time-arrow svg {
+    width: 13px;
+    height: 13px;
+}
+.time-wheel {
+    width: 68px;
+    min-width: 66px;
+    height: 140px;
+    overflow: hidden;
+    border: 2px solid #e5e7eb;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(229,231,235,0.8);
+    display: grid;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+}
+.time-wheel:active {
+    cursor: grabbing;
+}
+.time-wheel::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 50%;
+    height: 50px;
+    transform: translateY(-50%);
+    border-radius: 16px;
+    border: 1px solid rgba(59,130,246,0.16);
+    background: rgba(255,255,255,0.95);
+    pointer-events: none;
+}
+.time-wheel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.96), rgba(255,255,255,0.55) 18%, rgba(255,255,255,0.55) 82%, rgba(255,255,255,0.96));
+    pointer-events: none;
+}
+.wheel-item {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+    opacity: 0.7;
+    user-select: none;
+    transition: color 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+}
+.wheel-item:nth-child(3) {
+    color: #000000;
+    opacity: 1;
+    transform: scale(1.08);
+}
+.wheel-item:nth-child(2),
+.wheel-item:nth-child(4) {
+    opacity: 0.75;
+}
+.wheel-item:nth-child(1),
+.wheel-item:nth-child(5) {
+    opacity: 0.55;
+}
+.wheel-item.disabled {
+    opacity: 0.35;
+}
+.time-picker-wrapper.disabled .wheel-item {
+    color: #9ca3af;
+}
+.time-separator {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #9ca3af;
+    margin: 0 .2rem;
+}
+.time-period {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    margin-left: 0;
+    justify-self: center;
+}
+.period-btn {
+    padding: .35rem .7rem;
+    font-size: .7rem;
+    font-weight: 700;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.period-btn:hover:not(.disabled) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59,130,246,0.2);
+}
+.period-btn.active {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-color: #2563eb;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+}
+.period-btn.disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    pointer-events: none;
+    background: #f9fafb;
+}
+
+
+/* Slot display in week strip */
+.w-slots { margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; width: 100%; align-items: stretch; }
+.w-slot {
+    position: relative;
+    font-size: .67rem;
+    background: linear-gradient(135deg, #1a73e8 0%, #1565c0 100%);
+    color: #fff;
+    padding: .38rem .5rem .38rem 2.3rem;
+    border-radius: 7px;
+    text-align: left;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: default;
+    box-shadow: 0 1px 3px rgba(26,115,232,0.15);
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.w-slot:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(26,115,232,0.3); }
+.w-slot.closed { background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%); box-shadow: 0 1px 3px rgba(107,114,128,0.15); }
+.w-slot.full  { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); box-shadow: 0 1px 3px rgba(220,38,38,0.15); }
+/* time label inside chip */
+.w-slot .slot-label { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35; }
+/* capacity badge */
+.w-slot .slot-cap {
+    display: block;
+    font-size: .6rem;
+    opacity: .85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+/* eye / view button — left side */
+.w-slot .slot-view-btn {
+    position: absolute;
+    top: 50%;
+    left: 4px;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: none;
+    padding: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+.w-slot .slot-view-btn:hover { background: rgba(255,255,255,0.4); transform: translateY(-50%) scale(1.1); }
+.w-slot .slot-view-btn svg { width: 12px; height: 12px; }
+/* action row — edit + delete, shown on hover */
+.w-slot .slot-actions {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.w-slot:hover .slot-actions { opacity: 1; }
+.w-slot .slot-action-btn {
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.25);
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 9px;
+    color: #fff;
+    padding: 0;
+    transition: all 0.18s ease;
+}
+.w-slot .slot-action-btn:hover { background: rgba(255,255,255,0.45); transform: scale(1.1); }
+.w-slot .slot-action-btn svg { width: 10px; height: 10px; }
+/* status toggle pill inside chip */
+.slot-status-pill {
+    display: inline-block;
+    font-size: .56rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+    cursor: pointer;
+    margin-top: 2px;
+    letter-spacing: .02em;
+    transition: all 0.18s ease;
+    border: none;
+    line-height: 1.4;
+}
+.slot-status-pill:hover { background: rgba(255,255,255,0.42); transform: scale(1.05); }
+/* slot view modal list items */
+.slot-view-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .55rem .75rem;
+    border-radius: 8px;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    font-size: .8125rem;
+}
+.slot-view-item .svi-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-right: .6rem;
+}
+.slot-view-item .svi-time { flex: 1; color: var(--gray-800); font-weight: 600; }
+.slot-view-item .svi-badge {
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+.svi-badge.available { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.svi-badge.booked    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+/* conflict warning in modal */
+.slot-conflict-warn {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: .6rem .85rem;
+    font-size: .78rem;
+    color: #92400e;
+    margin-bottom: .75rem;
+    display: none;
+}
+.slot-conflict-warn.show { display: flex; align-items: center; gap: .5rem; }
+
+/* "+ Add Slot/s" box inside each day card */
+.w-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    width: 100%;
+    margin-top: auto;
+    padding: .4rem .45rem;
+    border: 1.5px dashed rgba(26,115,232,.32);
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(26,115,232,.7);
+    font-size: .64rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s ease;
+    font-family: var(--font-body);
+    letter-spacing: .01em;
+    pointer-events: auto;
+    touch-action: auto;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.w-add-btn:hover {
+    border-color: #1a73e8;
+    border-style: solid;
+    background: rgba(26,115,232,.08);
+    color: #1a73e8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(26,115,232,0.12);
+}
+.w-add-btn svg { flex-shrink: 0; }
+.week-day.past .w-add-btn { display: none; }
+
+/* Clean day slots panel */
+#daySlotPanel {
+    margin-top: 1.5rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    animation: slideDown 0.25s ease-out;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+#daySlotPanel.show { display: block; }
+.dsp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fafbfc;
+}
+.dsp-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.dsp-title-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+}
+.dsp-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0.25rem;
+    transition: color 0.15s ease;
+    font-weight: 400;
+}
+.dsp-close:hover {
+    color: #111827;
+}
+.dsp-body { padding: 1.25rem; }
+.dsp-empty {
+    padding: 2.5rem 1.25rem;
+    font-size: 0.875rem;
+    color: #9ca3af;
+    text-align: center;
+}
+/* Clean slot group */
+.dsp-slot-group {
+    margin-bottom: 1.25rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+}
+.dsp-slot-group:hover {
+    border-color: #d1d5db;
+}
+.dsp-slot-group:last-child { margin-bottom: 0; }
+.dsp-slot-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.875rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+.dsp-slot-range {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    flex: 1;
+}
+.dsp-slot-range::before {
+    display: none;
+}
+.dsp-slot-badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.25rem 0.625rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+    text-transform: capitalize;
+}
+.dsp-slot-badge.open   { background: #d1fae5; color: #065f46; }
+.dsp-slot-badge.closed { background: #f3f4f6; color: #4b5563; }
+.dsp-slot-badge.full   { background: #fee2e2; color: #991b1b; }
+/* Clean action buttons */
+.dsp-slot-action-btn {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.375rem;
+    cursor: pointer;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+.dsp-slot-action-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #111827;
+}
+.dsp-slot-action-btn.delete:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+/* Clean sub-slot grid */
+.dsp-subslot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.75rem;
+}
+.dsp-subslot-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0.875rem;
+    border-radius: 8px;
+    border: 1.5px solid #e5e7eb;
+    gap: 0.5rem;
+    transition: all 0.15s ease;
+    background: #fff;
+    position: relative;
+}
+.dsp-subslot-card::before {
+    display: none;
+}
+.dsp-subslot-card.available:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
+.dsp-subslot-card.booked {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+.dsp-subslot-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.dsp-subslot-num {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: #fff;
+    background: #6b7280;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+.dsp-subslot-card.booked .dsp-subslot-num {
+    background: #3b82f6;
+}
+.dsp-subslot-time {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    flex: 1;
+    color: #374151;
+}
+.dsp-subslot-card.booked .dsp-subslot-time {
+    color: #1e40af;
+}
+.dsp-subslot-student {
+    font-size: 0.75rem;
+    color: #6b7280;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.dsp-subslot-student-name {
+    font-weight: 600;
+    color: #111827;
+}
+.dsp-subslot-search-btn {
+    background: #3b82f6;
+    border: none;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.dsp-subslot-search-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Override btn-confirm to be blue for Save Slot */
+#confirmSlot {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+    border: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+#confirmSlot:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 6px 16px rgba(37,99,235,0.4);
+    transform: translateY(-1px);
+}
+#confirmSlot:disabled {
+    background: #e5e7eb;
+    color: #9ca3af;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+#confirmSlot:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+/* Stepper control */
+.slot-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color .2s ease, box-shadow .2s ease;
+  max-width: 180px;
+  margin: 0 auto;
+}
+.slot-stepper:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.1);
+}
+.stepper-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: #f9fafb;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s ease;
+  flex-shrink: 0;
+}
+.stepper-btn:hover:not(:disabled) {
+  background: #3b82f6;
+  color: #fff;
+}
+.stepper-btn:active:not(:disabled) {
+  background: #2563eb;
+}
+.stepper-btn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+.stepper-input {
+  width: 56px;
+  text-align: center;
+  border: none;
+  border-left: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+  padding: .5rem 0;
+  background: #fff;
+  -moz-appearance: textfield;
+  outline: none;
+}
+.stepper-input::-webkit-inner-spin-button,
+.stepper-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+/* Save Slot button */
+#confirmSlot {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+  border: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+@media (max-width:640px) {
+  .slot-stepper { max-width: 100%; }
+  .stepper-btn { width: 40px; height: 40px; }
+  .stepper-input { font-size: 1rem; }
+}
+
+@media (max-width: 1200px) {
+    .dashboard-content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width:900px){.gcal-body{grid-template-columns:1fr}.mini-cal{border-right:none;border-bottom:1px solid var(--gray-100);padding-right:0;padding-bottom:1rem}}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/instructor-sidebar', { activePage: 'schedule', pendingCount: pendingCount }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Consultation Schedule</h1>
+          <p class="page-subtitle">Google Calendar style consultation availability</p>
+        </div>
+      </div>
+      <div class="gcal-wrap">
+        <div class="gcal-top"><h3 class="gcal-title">Select an appointment time</h3><div class="gcal-tz">(GMT+08:00) Philippine Standard Time</div></div>
+        <div class="gcal-body">
+          <div class="mini-cal">
+            <div class="mini-head"><span class="mini-month" id="miniMonthTitle"></span></div>
+            <div class="mini-grid" id="miniCalGrid"></div>
+          </div>
+          <div style="flex:1;min-width:auto;overflow-x:auto;overflow-y:visible;display:flex;flex-direction:column;" class="gcal-content-wrapper">
+            <div class="week-strip-wrapper">
+              <div class="week-strip" id="weekStrip"></div>
+            </div>
+            <div class="week-empty" id="weekEmpty" style="display:none">No availability during these days<br><a href="#" id="jumpBookable">Jump to the next bookable date</a></div>
+            <!-- Day slots panel � shown when a day card background is clicked -->
+            <div id="daySlotPanel">
+              <div class="dsp-header">
+                <span class="dsp-title" id="dspTitle">Slots</span>
+                <button class="dsp-close" id="dspClose" title="Close">&times;</button>
+              </div>
+              <div id="dspBody"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="slotModal">
+  <div class="modal-content">
+    <div class="modal-header"><h3 class="modal-title" id="slotModalTitle">Add Consultation Slot</h3><button class="modal-close" id="closeSlotModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="slotDay">
+      <input type="hidden" id="slotEditIdx" value="-1">
+      <div class="slot-conflict-warn" id="slotConflictWarn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="slotConflictText">This time overlaps an existing slot on the same day.</span>
+      </div>
+      <div class="slot-form-row">
+        <div class="slot-form-group">
+          <label class="slot-form-label">Start Time</label>
+          <div class="time-picker-wrapper" id="startTimePicker">
+            <div class="time-segment">
+              <div class="time-wheel" id="startHourWheel" data-type="start" data-unit="hour"></div>
+            </div>
+            <span class="time-separator">:</span>
+            <div class="time-segment">
+              <div class="time-wheel" id="startMinuteWheel" data-type="start" data-unit="minute"></div>
+            </div>
+            <div class="time-period">
+              <button type="button" class="period-btn active" id="startAM" onclick="setPeriod('start','AM')">AM</button>
+              <button type="button" class="period-btn" id="startPM" onclick="setPeriod('start','PM')">PM</button>
+            </div>
+          </div>
+        </div>
+        <div class="slot-form-group">
+          <label class="slot-form-label">End Time</label>
+          <div class="time-picker-wrapper" id="endTimePicker">
+            <div class="time-segment">
+              <div class="time-wheel" id="endHourWheel" data-type="end" data-unit="hour"></div>
+            </div>
+            <span class="time-separator">:</span>
+            <div class="time-segment">
+              <div class="time-wheel" id="endMinuteWheel" data-type="end" data-unit="minute"></div>
+            </div>
+            <div class="time-period">
+              <button type="button" class="period-btn active" id="endAM" onclick="setPeriod('end','AM')">AM</button>
+              <button type="button" class="period-btn" id="endPM" onclick="setPeriod('end','PM')">PM</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slot-form-group">
+        <label class="slot-form-label">Maximum Students <span style="font-weight:400;color:var(--gray-400)">(divides the time equally)</span></label>
+        <div class="slot-stepper">
+          <button type="button" class="stepper-btn" id="stepperMinus" aria-label="Decrease">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <input type="number" id="slotMaxCapacity" class="stepper-input" min="1" max="10" value="3" readonly>
+          <button type="button" class="stepper-btn" id="stepperPlus" aria-label="Increase">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Validation feedback -->
+      <div id="timeValidationMsg" style="display:none;padding:.6rem .8rem;border-radius:8px;font-size:.78rem;margin-top:.5rem;"></div>
+    </div>
+    <div class="modal-footer"><button class="btn-modal btn-cancel" id="cancelSlot">Cancel</button><button class="btn-modal btn-confirm" id="confirmSlot">Save Slot</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="slotViewOverlay" onclick="if(event.target===this){closeSlotView();}">
+  <div class="modal-content" style="max-width:440px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="slotViewTitle">Slot Breakdown</h3>
+      <button class="modal-close" type="button" onclick="closeSlotView();">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="slotViewSummary" style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;"></div>
+      <p style="font-size:.72rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:0 0 .55rem">Divided Sub-slots</p>
+      <ul id="slotViewList" style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:.45rem;"></ul>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn-modal btn-cancel" type="button" id="slotViewEditBtn">Edit Slot</button>
+      <button class="btn-modal btn-confirm" type="button" onclick="closeSlotView();" style="background:var(--primary-blue)">Close</button>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+let slots = <%- JSON.stringify(consultationSlots || []) %>;
+const DAYS      = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DOW_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const today = new Date(); today.setHours(0,0,0,0);
+let selectedDate  = new Date(today);
+let viewMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+let slotViewIdx   = -1;
+
+/* -- Helpers -- */
+function normalizeDate(d){ const n=new Date(d); n.setHours(0,0,0,0); return n; }
+function isPastDate(d){ return normalizeDate(d).getTime() < today.getTime(); }
+function esc(v){ return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* -- Custom Time Picker -- */
+let timePickerState = {
+  start: { hour: 12, minute: 0, period: 'AM' },
+  end: { hour: 1, minute: 0, period: 'AM' },
+  selectedDay: null,
+  selectedDate: null
+};
+
+function adjustTime(type, unit, delta) {
+  const state = timePickerState[type];
+  if (unit === 'hour') {
+    state.hour += delta;
+    if (state.hour > 12) state.hour = 1;
+    if (state.hour < 1) state.hour = 12;
+  } else {
+    state.minute += delta; // 1-minute increments
+    if (state.minute >= 60) state.minute = 0;
+    if (state.minute < 0) state.minute = 59;
+  }
+  updateTimeDisplay(type);
+
+  // Auto-adjust end time to stay 1 hour ahead of start
+  if (type === 'start') {
+    autoAdjustEndTime();
+  }
+
+  validateTimeSelection();
+}
+
+let timePickerDragState = null;
+
+function initTimePickerDrag() {
+  const wheels = document.querySelectorAll('.time-wheel');
+  wheels.forEach(function(el) {
+    el.addEventListener('pointerdown', function(event) {
+      if (event.button !== 0) return;
+      const match = el.id.match(/^(start|end)(Hour|Minute)Wheel$/);
+      if (!match) return;
+      event.preventDefault();
+      timePickerDragState = {
+        type: match[1],
+        unit: match[2].toLowerCase(),
+        startY: event.clientY,
+        pointerId: event.pointerId
+      };
+      el.setPointerCapture(event.pointerId);
+    });
+    el.addEventListener('wheel', function(event) {
+      event.preventDefault();
+      const match = el.id.match(/^(start|end)(Hour|Minute)Wheel$/);
+      if (!match) return;
+      const type = match[1];
+      const unit = match[2].toLowerCase();
+      const delta = event.deltaY < 0 ? 1 : -1;
+      adjustTime(type, unit, delta);
+    }, { passive: false });
+  });
+
+  document.addEventListener('pointermove', function(event) {
+    if (!timePickerDragState || event.pointerId !== timePickerDragState.pointerId) return;
+    const deltaY = timePickerDragState.startY - event.clientY;
+    const stepSize = 18;
+    const stepCount = Math.trunc(deltaY / stepSize);
+    if (stepCount !== 0) {
+      adjustTime(timePickerDragState.type, timePickerDragState.unit, stepCount);
+      timePickerDragState.startY -= stepCount * stepSize;
+    }
+  });
+
+  document.addEventListener('pointerup', function(event) {
+    if (timePickerDragState && event.pointerId === timePickerDragState.pointerId) {
+      timePickerDragState = null;
+    }
+  });
+  document.addEventListener('pointercancel', function(event) {
+    if (timePickerDragState && event.pointerId === timePickerDragState.pointerId) {
+      timePickerDragState = null;
+    }
+  });
+}
+
+function setPeriod(type, period) {
+  timePickerState[type].period = period;
+  document.getElementById(type+'AM').classList.toggle('active', period === 'AM');
+  document.getElementById(type+'PM').classList.toggle('active', period === 'PM');
+
+  // Auto-adjust end time to stay 1 hour ahead of start (only when start changes)
+  if (type === 'start') {
+    autoAdjustEndTime();
+  }
+
+  validateTimeSelection();
+}
+
+// Keep end time exactly 1 hour ahead of start time
+function autoAdjustEndTime() {
+  const s = timePickerState.start;
+  // Convert start to 24h minutes
+  let startH = s.hour;
+  if (s.period === 'PM' && startH !== 12) startH += 12;
+  if (s.period === 'AM' && startH === 12) startH = 0;
+  let endMins = startH * 60 + s.minute + 60; // +1 hour
+  if (endMins >= 24 * 60) endMins -= 24 * 60; // wrap midnight
+  // Convert back to 12h
+  const endH24 = Math.floor(endMins / 60);
+  const endMin = endMins % 60;
+  const endPeriod = endH24 >= 12 ? 'PM' : 'AM';
+  let endH12 = endH24 % 12;
+  if (endH12 === 0) endH12 = 12;
+  timePickerState.end = { hour: endH12, minute: endMin, period: endPeriod };
+  updateTimeDisplay('end');
+  // Update AM/PM buttons directly (avoid calling setPeriod to prevent recursion)
+  const amBtn = document.getElementById('endAM');
+  const pmBtn = document.getElementById('endPM');
+  if (amBtn) amBtn.classList.toggle('active', endPeriod === 'AM');
+  if (pmBtn) pmBtn.classList.toggle('active', endPeriod === 'PM');
+}
+
+function renderTimeWheel(type, unit) {
+  const wheelId = type + (unit === 'hour' ? 'HourWheel' : 'MinuteWheel');
+  const el = document.getElementById(wheelId);
+  if (!el) return;
+  const current = timePickerState[type][unit];
+  const values = [];
+  if (unit === 'hour') {
+    for (let offset = -2; offset <= 2; offset++) {
+      let value = current + offset;
+      if (value > 12) value -= 12;
+      if (value < 1) value += 12;
+      values.push(value);
+    }
+  } else {
+    for (let offset = -2; offset <= 2; offset++) {
+      let value = current + offset;
+      if (value < 0) value += 60;
+      if (value >= 60) value -= 60;
+      values.push(value);
+    }
+  }
+  el.innerHTML = values.map(function(value, index) {
+    return '<div class="wheel-item" data-value="' + value + '">' + String(value).padStart(2, '0') + '</div>';
+  }).join('');
+}
+
+function updateTimeDisplay(type) {
+  renderTimeWheel(type, 'hour');
+  renderTimeWheel(type, 'minute');
+}
+
+function getTimeInMinutes(type) {
+  const state = timePickerState[type];
+  let hour = state.hour;
+  if (state.period === 'PM' && hour !== 12) hour += 12;
+  if (state.period === 'AM' && hour === 12) hour = 0;
+  return hour * 60 + state.minute;
+}
+
+function formatTimeFromState(type) {
+  const state = timePickerState[type];
+  return state.hour + ':' + String(state.minute).padStart(2, '0') + ' ' + state.period;
+}
+
+function isTimePast(hour, minute, period) {
+  if (!timePickerState.selectedDate) return false;
+  const now = new Date();
+  const selectedDate = new Date(timePickerState.selectedDate);
+  
+  // Normalize dates to compare only year/month/day (ignore time)
+  const selectedDay = normalizeDate(selectedDate).getTime();
+  const currentDay = normalizeDate(now).getTime();
+  
+  // If selected date is in the future, no times are past
+  if (selectedDay > currentDay) {
+    return false;
+  }
+  
+  // If selected date is in the past, all times are past
+  if (selectedDay < currentDay) {
+    return true;
+  }
+  
+  // Same day - check actual time with proper 24-hour conversion
+  let checkHour = hour;
+  if (period === 'PM' && hour !== 12) {
+    checkHour = hour + 12; // 1 PM = 13, 2 PM = 14, etc.
+  } else if (period === 'AM' && hour === 12) {
+    checkHour = 0; // 12 AM = 0 (midnight)
+  }
+  // If AM and not 12, keep as is (1 AM = 1, 2 AM = 2, etc.)
+  
+  const checkMinutes = checkHour * 60 + minute;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  // Time is past if it's less than current time
+  return checkMinutes < nowMinutes;
+}
+
+function hasConflict(startMins, endMins) {
+  if (!timePickerState.selectedDay) return false;
+  const editIdx = parseInt(document.getElementById('slotEditIdx').value, 10);
+  return findConflict(timePickerState.selectedDay, startMins, endMins, editIdx) >= 0;
+}
+
+function checkAndDisableArrows() {
+  // No restrictions: instructor can choose any time freely.
+}
+
+
+function validateTimeSelection() {
+  const saveBtn = document.getElementById('confirmSlot');
+  const minusBtn = document.getElementById('stepperMinus');
+  const plusBtn  = document.getElementById('stepperPlus');
+  const capInput = document.getElementById('slotMaxCapacity');
+  const cap = Math.max(1, parseInt(capInput ? capInput.value : 1, 10) || 1);
+
+  if (minusBtn) minusBtn.disabled = cap <= 1;
+  if (plusBtn)  plusBtn.disabled  = cap >= 10;
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+    saveBtn.title = 'Click to save this slot';
+  }
+}
+
+
+function initializeTimePicker(day, date, slot) {
+  timePickerState.selectedDay = day;
+  timePickerState.selectedDate = date;
+  
+  // Show date context in modal if available
+  const modalTitle = document.getElementById('slotModalTitle');
+  if (date && modalTitle) {
+    const dateStr = MONTHS[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
+    const dayStr = DAYS[date.getDay()];
+    modalTitle.textContent = (slot ? 'Edit' : 'Add') + ' Slot - ' + dayStr + ' | ' + dateStr;
+  }
+  
+  if (slot) {
+    // Editing existing slot - parse times
+    const startParts = slot.timeStart.match(/(\d+):(\d+)\s*(AM|PM)/);
+    const endParts = slot.timeEnd.match(/(\d+):(\d+)\s*(AM|PM)/);
+    if (startParts) {
+      timePickerState.start = {
+        hour: parseInt(startParts[1], 10),
+        minute: parseInt(startParts[2], 10),
+        period: startParts[3]
+      };
+    }
+    if (endParts) {
+      timePickerState.end = {
+        hour: parseInt(endParts[1], 10),
+        minute: parseInt(endParts[2], 10),
+        period: endParts[3]
+      };
+    }
+  } else {
+    // New slot - set default to 12:00 AM
+    const now = new Date();
+    const selectedDate = new Date(date);
+    
+    // If same day, start from current time + 1 minute
+    if (normalizeDate(selectedDate).getTime() === normalizeDate(now).getTime()) {
+      let currentMinutes = now.getHours() * 60 + now.getMinutes();
+      
+      // Start from next minute
+      let nextMinutes = currentMinutes + 1;
+      
+      // Calculate hour and minute from total minutes
+      let startHour24 = Math.floor(nextMinutes / 60);
+      let startMinute = nextMinutes % 60;
+      
+      // Handle day overflow (if rounded to next day)
+      if (startHour24 >= 24) {
+        startHour24 = 0;
+        startMinute = 0;
+      }
+      
+      // Convert to 12-hour format
+      const startPeriod = startHour24 >= 12 ? 'PM' : 'AM';
+      let startHour12 = startHour24 % 12;
+      if (startHour12 === 0) startHour12 = 12;
+      
+      // End time is 1 hour after start time
+      let endMinutes = nextMinutes + 60;
+      let endHour24 = Math.floor(endMinutes / 60);
+      let endMinute = endMinutes % 60;
+      
+      if (endHour24 >= 24) {
+        endHour24 = 23;
+        endMinute = 59;
+      }
+      
+      const endPeriod = endHour24 >= 12 ? 'PM' : 'AM';
+      let endHour12 = endHour24 % 12;
+      if (endHour12 === 0) endHour12 = 12;
+
+      timePickerState.start = { hour: startHour12, minute: startMinute, period: startPeriod };
+      timePickerState.end = { hour: endHour12, minute: endMinute, period: endPeriod };
+    } else {
+      // Future day - default to 8:00 AM
+      timePickerState.start = { hour: 8, minute: 0, period: 'AM' };
+      timePickerState.end = { hour: 9, minute: 0, period: 'AM' };
+    }
+  }
+  
+  // Update displays
+  updateTimeDisplay('start');
+  updateTimeDisplay('end');
+  setPeriod('start', timePickerState.start.period);
+  setPeriod('end', timePickerState.end.period);
+  
+  // Validate and update the save button state
+  validateTimeSelection();
+}
+
+function parseTimeValue(str){
+  const parts = str.trim().split(' ');
+  let [h,m] = parts[0].split(':').map(Number);
+  const p = parts[1];
+  if (p==='PM' && h!==12) h+=12;
+  if (p==='AM' && h===12) h=0;
+  return h*60+m;
+}
+function formatTimeValue(mins){
+  let h=Math.floor(mins/60), m=mins%60;
+  const p=h>=12?'PM':'AM';
+  if(h>12)h-=12; if(h===0)h=12;
+  return h+':'+String(m).padStart(2,'0')+' '+p;
+}
+function formatTime24(t){
+  const parts=t.split(':'), h=parseInt(parts[0],10), m=parts[1];
+  const p=h>=12?'PM':'AM', h12=h===0?12:h>12?h-12:h;
+  return h12+':'+m+' '+p;
+}
+function toInputTime(str){
+  const parts=str.trim().split(' ');
+  let [h,m]=parts[0].split(':').map(Number);
+  const p=parts[1];
+  if(p==='PM'&&h!==12)h+=12; if(p==='AM'&&h===12)h=0;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function splitSlotTimes(slot){
+  const start=parseTimeValue(slot.timeStart), end=parseTimeValue(slot.timeEnd);
+  const cap=Math.max(1,parseInt(slot.maxCapacity,10)||1);
+  const piece=Math.floor((end-start)/cap);
+  const res=[];
+  for(let i=0;i<cap;i++){
+    const s=start+i*piece, e=i===cap-1?end:s+piece;
+    res.push(formatTimeValue(s)+' \u2013 '+formatTimeValue(e));
+  }
+  return res;
+}
+
+/* -- Overlap detection -- */
+function findConflict(day, startMins, endMins, excludeIdx){
+  return slots.findIndex(function(s,i){
+    if(i===excludeIdx) return false;
+    if(s.day!==day) return false;
+    const sS=parseTimeValue(s.timeStart), sE=parseTimeValue(s.timeEnd);
+    return startMins<sE && endMins>sS;
+  });
+}
+
+/* -- Toast -- */
+function showToast(type,title,message){
+  const c=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  
+  // Add icon based on type
+  const icon = type === 'success' 
+    ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
+    : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  
+  t.innerHTML=icon+'<div class="toast-content"><p class="toast-title">'+title+'</p><p class="toast-message">'+message+'</p></div>';
+  c.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},300);},3500);
+}
+
+/* -- Mini calendar -- */
+function renderMiniCalendar(){
+  const year=viewMonthDate.getFullYear(), month=viewMonthDate.getMonth();
+  document.getElementById('miniMonthTitle').textContent=MONTHS[month]+' '+year;
+  const grid=document.getElementById('miniCalGrid');
+  grid.innerHTML='';
+  DOW_SHORT.forEach(function(d){
+    const el=document.createElement('div'); el.className='mini-dow'; el.textContent=d[0]; grid.appendChild(el);
+  });
+  const firstDay=new Date(year,month,1), offset=firstDay.getDay(), prevLast=new Date(year,month,0).getDate();
+  for(let i=offset-1;i>=0;i--){
+    const p=document.createElement('div'); p.className='mini-day other'; p.textContent=prevLast-i; grid.appendChild(p);
+  }
+  const lastDate=new Date(year,month+1,0).getDate();
+  for(let d=1;d<=lastDate;d++){
+    const date=new Date(year,month,d), cell=document.createElement('div');
+    cell.className='mini-day'; cell.textContent=d;
+    if(isPastDate(date)) cell.classList.add('past'); else cell.classList.add('bookable');
+    if(normalizeDate(date).getTime()===today.getTime()) cell.classList.add('today');
+    if(normalizeDate(date).getTime()===normalizeDate(selectedDate).getTime()) cell.classList.add('selected');
+    if(!isPastDate(date)){
+      cell.addEventListener('click',function(){ selectedDate=new Date(date); viewMonthDate=new Date(date.getFullYear(), date.getMonth(), 1); renderMiniCalendar(); renderWeekStrip(); });
+    }
+    grid.appendChild(cell);
+  }
+  const total=offset+lastDate, rest=(Math.ceil(total/7)*7)-total;
+  for(let i=1;i<=rest;i++){
+    const n=document.createElement('div'); n.className='mini-day other'; n.textContent=i; grid.appendChild(n);
+  }
+}
+
+/* -- Week strip -- */
+function renderWeekStrip(){
+  const strip=document.getElementById('weekStrip'), empty=document.getElementById('weekEmpty');
+  strip.innerHTML='';
+  const startDate=normalizeDate(selectedDate);
+  let hasAvailability=false;
+
+  for(let i=0;i<7;i++){
+    const date=new Date(startDate);
+    date.setDate(startDate.getDate()+i);
+    const dayName=DAYS[date.getDay()];
+    const daySlots=slots.filter(function(s){ return s.day===dayName; });
+    const card=document.createElement('div');
+    card.className='week-day';
+    if(isPastDate(date)) card.classList.add('past'); else card.classList.add('bookable');
+    if(normalizeDate(date).getTime()===normalizeDate(selectedDate).getTime()) card.classList.add('selected');
+
+    // Track if day has slots for availability check
+    if(daySlots.length){
+      hasAvailability=true;
+    }
+
+    // Don't show slot count badge anymore - keep day cards clean
+    
+    card.innerHTML=
+      '<div class="w-dow">'+DOW_SHORT[date.getDay()].toUpperCase()+'</div>'+
+      '<div class="w-date'+(normalizeDate(date).getTime()===today.getTime()?' today':'')+'">'+date.getDate()+'</div>'+
+      (!isPastDate(date) ?
+        '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\''+dayName+'\',new Date('+date.getTime()+'))">'+
+          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'+
+          ' Add Slot'+
+        '</button>'
+      : '');
+
+    if(!isPastDate(date)){
+      let scrollStartX = 0;
+      let isScrolling = false;
+
+      card.addEventListener('pointerdown', function(e) {
+        scrollStartX = e.clientX;
+        isScrolling = false;
+      }, { passive: true });
+
+      card.addEventListener('pointermove', function(e) {
+        const moveDistance = Math.abs(e.clientX - scrollStartX);
+        if (moveDistance > 15) {
+          isScrolling = true;
+        }
+      }, { passive: true });
+
+      card.addEventListener('pointerup', function(e) {
+        if (isScrolling) {
+          isScrolling = false;
+          return;
+        }
+        // Clicking the card background (not the add button)? show day panel
+        if(!e.target.closest('.w-add-btn')){
+          selectedDate=new Date(date);
+          viewMonthDate=new Date(date.getFullYear(), date.getMonth(), 1);
+          renderMiniCalendar(); renderWeekStrip();
+          showDayPanel(dayName, date);
+        }
+      }, { passive: true });
+    }
+    strip.appendChild(card);
+  }
+  empty.style.display=hasAvailability?'none':'block';
+}
+
+/* -- Day slots panel -- */
+let activePanelDay  = null;
+let activePanelDate = null;
+
+function showDayPanel(dayName, date){
+  activePanelDay  = dayName;
+  activePanelDate = date;
+  const panel = document.getElementById('daySlotPanel');
+  // First show the panel, then refresh content
+  panel.classList.add('show');
+  refreshDayPanel();
+  setTimeout(function(){ panel.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 60);
+}
+
+function refreshDayPanel(){
+  if(!activePanelDay) return;
+  const panel = document.getElementById('daySlotPanel');
+  if(!panel.classList.contains('show')) return;
+  const title = document.getElementById('dspTitle');
+  const body  = document.getElementById('dspBody');
+  const daySlots = slots.filter(function(s){ return s.day===activePanelDay; });
+  const d = activePanelDate;
+  const dateLabel = DOW_SHORT[d.getDay()]+', '+MONTHS[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  title.innerHTML = '<span class="dsp-title-dot"></span>'+esc(activePanelDay)+' <span style="font-weight:400;color:var(--gray-500);font-size:.8rem">&mdash; '+esc(dateLabel)+'</span>';
+  body.innerHTML = '';
+  if(!daySlots.length){
+    const empty = document.createElement('div');
+    empty.className = 'dsp-empty';
+    empty.innerHTML =
+      '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
+      '<span>No slots for '+esc(activePanelDay)+'.</span>'+
+      '<span style="font-size:.75rem">Click <strong>+ Add Slot</strong> on the day card to add one.</span>';
+    body.appendChild(empty);
+    return;
+  }
+  daySlots.forEach(function(s){
+    const gIdx   = slots.indexOf(s);
+    const cap    = Math.max(1, parseInt(s.maxCapacity,10)||1);
+    const booked = parseInt(s.bookedCount,10)||0;
+    const isFull = booked >= cap;
+    const statusKey   = s.status==='closed' ? 'closed' : (isFull ? 'full' : 'open');
+    const statusLabel = statusKey.charAt(0).toUpperCase()+statusKey.slice(1);
+    const group = document.createElement('div');
+    group.className = 'dsp-slot-group';
+    const header = document.createElement('div');
+    header.className = 'dsp-slot-group-header';
+    header.innerHTML =
+      '<span class="dsp-slot-range">'+esc(s.timeStart)+' \u2013 '+esc(s.timeEnd)+'</span>'+
+      '<div style="display:flex;align-items:center;gap:.5rem">'+
+        (statusKey!=='open' ? '<span class="dsp-slot-badge '+statusKey+'">'+statusLabel+'</span>' : '')+
+        '<button class="dsp-slot-action-btn" onclick="toggleSlotStatus('+gIdx+')" title="Toggle Open/Closed">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">'+(s.status==='closed'?'<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>':'<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>')+'</svg>'+
+        '</button>'+
+        '<button class="dsp-slot-action-btn" onclick="editSlot('+gIdx+')" title="Edit">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'+
+        '</button>'+
+        '<button class="dsp-slot-action-btn delete" onclick="deleteSlot('+gIdx+')" title="Delete">'+
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>'+
+        '</button>'+
+      '</div>';
+    group.appendChild(header);
+    const grid = document.createElement('div');
+    grid.className = 'dsp-subslot-grid';
+    splitSlotTimes(s).forEach(function(timeStr, idx){
+      const isBooked = idx < booked;
+      const card = document.createElement('div');
+      card.className = 'dsp-subslot-card '+(isBooked ? 'booked' : 'available');
+      
+      let cardHTML = '<div class="dsp-subslot-header">'+
+        '<span class="dsp-subslot-num">'+(idx+1)+'</span>'+
+        '<span class="dsp-subslot-time">'+esc(timeStr)+'</span>'+
+        '</div>';
+      
+      // If booked, show student info and search button
+      if (isBooked) {
+        cardHTML += '<div class="dsp-subslot-student">'+
+          '<span class="dsp-subslot-student-name">Student Name</span>'+
+          '<button class="dsp-subslot-search-btn" onclick="goToAppointments()">'+
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'+
+            'View'+
+          '</button>'+
+        '</div>';
+      }
+      
+      card.innerHTML = cardHTML;
+      grid.appendChild(card);
+    });
+    group.appendChild(grid);
+    body.appendChild(group);
+  });
+}
+
+function hideDayPanel(){
+  document.getElementById('daySlotPanel').classList.remove('show');
+  activePanelDay  = null;
+  activePanelDate = null;
+}
+
+function goToAppointments(){
+  window.location.href = '/instructor/consultations';
+}
+
+document.getElementById('dspClose').addEventListener('click', hideDayPanel);
+
+/* -- Slot view modal -- */
+function openSlotView(idx){
+  const slot=slots[idx];
+  if(!slot) return;
+  slotViewIdx=idx;
+  const cap=Math.max(1,parseInt(slot.maxCapacity,10)||1);
+  const booked=parseInt(slot.bookedCount,10)||0;
+  const avail=Math.max(0,cap-booked);
+  const statusLabel=slot.status==='closed'?'Closed':(booked>=cap?'Full':'Open');
+  const statusColor=slot.status==='closed'?'#6b7280':(booked>=cap?'#dc2626':'#16a34a');
+
+  document.getElementById('slotViewTitle').textContent=slot.day+' \u00b7 '+slot.timeStart+' \u2013 '+slot.timeEnd;
+
+  document.getElementById('slotViewSummary').innerHTML=
+    '<div style="flex:1;min-width:70px;text-align:center;padding:.5rem .6rem;background:rgba(26,115,232,.06);border-radius:8px;border:1px solid rgba(26,115,232,.12)">'+
+      '<p style="font-size:1.1rem;font-weight:800;color:#1a73e8;margin:0">'+cap+'</p>'+
+      '<p style="font-size:.62rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Max</p>'+
+    '</div>'+
+    '<div style="flex:1;min-width:70px;text-align:center;padding:.5rem .6rem;background:rgba(29,78,216,.06);border-radius:8px;border:1px solid rgba(29,78,216,.12)">'+
+      '<p style="font-size:1.1rem;font-weight:800;color:#1d4ed8;margin:0">'+booked+'</p>'+
+      '<p style="font-size:.62rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Booked</p>'+
+    '</div>'+
+    '<div style="flex:1;min-width:70px;text-align:center;padding:.5rem .6rem;background:rgba(22,163,74,.06);border-radius:8px;border:1px solid rgba(22,163,74,.12)">'+
+      '<p style="font-size:1.1rem;font-weight:800;color:#16a34a;margin:0">'+avail+'</p>'+
+      '<p style="font-size:.62rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Available</p>'+
+    '</div>'+
+    '<div style="flex:1;min-width:70px;text-align:center;padding:.5rem .6rem;background:rgba(0,0,0,.03);border-radius:8px;border:1px solid var(--gray-200)">'+
+      '<p style="font-size:.95rem;font-weight:800;color:'+statusColor+';margin:0">'+statusLabel+'</p>'+
+      '<p style="font-size:.62rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Status</p>'+
+    '</div>';
+
+  const list=document.getElementById('slotViewList');
+  list.innerHTML='';
+  splitSlotTimes(slot).forEach(function(part,index){
+    const isBooked=index<booked;
+    const li=document.createElement('li');
+    li.className='slot-view-item';
+    li.innerHTML=
+      '<span class="svi-num">'+(index+1)+'</span>'+
+      '<span class="svi-time">'+esc(part)+'</span>'+
+      '<span class="svi-badge '+(isBooked?'booked':'available')+'">'+(isBooked?'Booked':'Available')+'</span>';
+    list.appendChild(li);
+  });
+
+  document.getElementById('slotViewOverlay').classList.add('show');
+}
+function closeSlotView(){
+  document.getElementById('slotViewOverlay').classList.remove('show');
+  slotViewIdx=-1;
+}
+document.getElementById('slotViewEditBtn').addEventListener('click',function(){
+  if(slotViewIdx<0) return;
+  const idx=slotViewIdx;
+  closeSlotView();
+  editSlot(idx);
+});
+
+/* -- Edit slot -- */
+function editSlot(idx){
+  const slot=slots[idx];
+  if(!slot) return;
+  document.getElementById('slotDay').value=slot.day;
+  document.getElementById('slotEditIdx').value=idx;
+  document.getElementById('slotMaxCapacity').value=slot.maxCapacity||3;
+  document.getElementById('slotModalTitle').textContent='Edit Slot - '+slot.day;
+  
+  // Find the date for this day of the week in the current week view
+  const dayIndex = DAYS.indexOf(slot.day);
+  let slotDate = null;
+  if (dayIndex >= 0) {
+    // Calculate the date based on the current selectedDate
+    const currentDayIndex = selectedDate.getDay();
+    const dayDiff = dayIndex - currentDayIndex;
+    slotDate = new Date(selectedDate);
+    slotDate.setDate(selectedDate.getDate() + dayDiff);
+  }
+  
+  if(slotDate) document.getElementById('slotModal').dataset.date=slotDate.getTime();
+  else delete document.getElementById('slotModal').dataset.date;
+  document.getElementById('slotConflictWarn').classList.remove('show');
+  initializeTimePicker(slot.day, slotDate, slot);
+  document.getElementById('slotModal').classList.add('show');
+}
+
+/* -- Toggle status -- */
+function toggleSlotStatus(idx){
+  const slot=slots[idx];
+  if(!slot) return;
+  slot.status=slot.status==='open'?'closed':'open';
+  saveSlots();
+  renderWeekStrip();
+  refreshDayPanel();
+  showToast('success','Updated','Slot '+(slot.status==='open'?'opened':'closed')+' for '+slot.day+' '+slot.timeStart);
+}
+
+/* -- Delete slot -- */
+function deleteSlot(idx){
+  const slot=slots[idx];
+  if(!slot) return;
+  if(!confirm('Delete slot on '+slot.day+' ('+slot.timeStart+' \u2013 '+slot.timeEnd+')?')) return;
+  slots.splice(idx,1);
+  saveSlots();
+  renderWeekStrip();
+  refreshDayPanel();
+}
+
+/* -- Open Add modal -- */
+function openAddModal(day, date){
+  document.getElementById('slotEditIdx').value=-1;
+  document.getElementById('slotConflictWarn').classList.remove('show');
+  document.getElementById('slotDay').value=day||'';
+  document.getElementById('slotModalTitle').textContent='Add Slot'+(day?' - '+day:'');
+  if(date) document.getElementById('slotModal').dataset.date=date.getTime();
+  else delete document.getElementById('slotModal').dataset.date;
+  document.getElementById('slotMaxCapacity').value='3';
+  initializeTimePicker(day, date, null);
+  document.getElementById('slotModal').classList.add('show');
+}
+
+/* -- Conflict detection (removed - now handled by time picker) -- */
+function updatePreview(){
+  // This function is no longer needed - validation happens in validateTimeSelection()
+}
+
+/* -- Save -- */
+function saveSlots(){
+  fetch('/instructor/schedule/save',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({slots:slots})
+  }).then(function(r){return r.json();}).then(function(data){
+    if(data.success) showToast('success','Saved','Schedule updated successfully');
+    else showToast('error','Error',data.error||'Failed to save');
+  }).catch(function(){ showToast('error','Error','Network error'); });
+  // Auto-refresh the day panel if it's open
+  refreshDayPanel();
+}
+
+/* -- Confirm (Add / Edit) -- */
+document.getElementById('confirmSlot').addEventListener('click',function(){
+  // Check if button is disabled
+  if(this.disabled) {
+    return;
+  }
+  
+  const day=document.getElementById('slotDay').value;
+  const timeStart=formatTimeFromState('start');
+  const timeEnd=formatTimeFromState('end');
+  const maxCapacity=Math.max(1,Math.min(10,parseInt(document.getElementById('slotMaxCapacity').value,10)||1));
+  const editIdx=parseInt(document.getElementById('slotEditIdx').value,10);
+  // Status: preserve existing when editing, default to 'open' for new slots
+  const status = editIdx >= 0 ? (slots[editIdx].status || 'open') : 'open';
+
+  if(!day||!timeStart||!timeEnd){ showToast('error','Required','Please fill in all fields'); return; }
+
+  const startMins=getTimeInMinutes('start');
+  const endMins=getTimeInMinutes('end');
+  
+  const modalDateMs=document.getElementById('slotModal').dataset.date;
+  if(modalDateMs && editIdx<0 && isPastDate(new Date(parseInt(modalDateMs)))){
+    // Allow past dates if instructor chooses them, do not block.
+  }
+
+  if(editIdx>=0){
+    const existing=slots[editIdx];
+    slots[editIdx]=Object.assign({},existing,{day:day,timeStart:timeStart,timeEnd:timeEnd,maxCapacity:maxCapacity,status:status});
+    showToast('success','Updated','Slot updated for '+day);
+  } else {
+    slots.push({day:day,timeStart:timeStart,timeEnd:timeEnd,maxCapacity:maxCapacity,bookedCount:0,status:status});
+    showToast('success','Added','New slot added for '+day);
+  }
+  saveSlots();
+  renderWeekStrip();
+  refreshDayPanel();
+  document.getElementById('slotModal').classList.remove('show');
+});
+
+initTimePickerDrag();
+
+/* -- Stepper wiring -- */
+(function() {
+  const minusBtn = document.getElementById('stepperMinus');
+  const plusBtn  = document.getElementById('stepperPlus');
+  const capInput = document.getElementById('slotMaxCapacity');
+  function updateStepper(delta) {
+    let val = parseInt(capInput.value, 10) || 1;
+    val = Math.min(10, Math.max(1, val + delta));
+    capInput.value = val;
+    validateTimeSelection();
+  }
+  if (minusBtn) minusBtn.addEventListener('click', function() { updateStepper(-1); });
+  if (plusBtn)  plusBtn.addEventListener('click',  function() { updateStepper(+1); });
+})();
+
+/* -- Event wiring -- */
+document.getElementById('closeSlotModal').addEventListener('click',function(){
+  document.getElementById('slotModal').classList.remove('show');
+});
+document.getElementById('cancelSlot').addEventListener('click',function(){
+  document.getElementById('slotModal').classList.remove('show');
+});
+document.getElementById('jumpBookable').addEventListener('click',function(e){
+  e.preventDefault();
+  selectedDate=new Date(today);
+  viewMonthDate=new Date(today.getFullYear(),today.getMonth(),1);
+  renderMiniCalendar(); renderWeekStrip();
+});
+
+renderMiniCalendar();
+renderWeekStrip();
+
+// Trigger validation when max capacity changes
+document.getElementById('slotMaxCapacity').addEventListener('input',function(){
+  validateTimeSelection();
+});
+</script>

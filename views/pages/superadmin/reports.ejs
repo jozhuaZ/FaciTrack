@@ -1,0 +1,455 @@
+﻿<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.emp-badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:700;white-space:nowrap}
+.emp-badge.regular    {background:rgba(22,163,74,.12);color:#15803d}
+.emp-badge.parttime   {background:rgba(234,88,12,.1);color:#c2410c}
+.emp-badge.contractual{background:rgba(124,58,237,.1);color:#7c3aed}
+@media print{
+  @page{size:A4 portrait;margin:1.5cm}
+  *{box-sizing:border-box!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  html,body{width:100%!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important;color:#000!important;font-family:'Arial','Helvetica',sans-serif!important}
+  body.print-mode .report-preview:not(.print-only){display:none!important}
+  .instructor-layout,.instructor-main,.main-container{width:100%!important;margin:0!important;padding:0!important;display:block!important;overflow:visible!important}
+  .superadmin-sidebar,.sidebar-footer,.header-actions,.stats-overview,.pagination-bar,.toast-container,.page-header,.two-col,.filter-bar-container,.fb-bar,.fb-filter-menu,.dropdown-menu,.btn-header-action,.main-header{display:none!important}
+  .content-card{box-shadow:none!important;border:none!important;border-radius:0!important;background:#fff!important;margin:0!important;padding:0!important}
+  .card-header,.card-body{padding:0!important;margin:0!important;background:transparent!important;border:none!important;box-shadow:none!important}
+  .report-preview{display:block!important;margin:0!important;padding:0!important;width:100%!important}
+  .report-preview.print-only{display:block!important}
+  .report-preview + .report-preview{page-break-before:always!important}
+  /* ── Official CSPC Letterhead Header ── */
+  .report-header-block{display:block!important;width:100%!important;border-bottom:2.5pt solid #000!important;padding:0 0 0.3cm 0!important;margin:0 0 0.4cm 0!important;position:relative!important;overflow:visible!important}
+  .report-header-block::before{content:'CSPC-F-STA-01';display:block!important;font-size:7pt!important;font-weight:700!important;text-align:right!important;position:absolute!important;top:0!important;right:0!important;font-family:'Arial',sans-serif!important}
+  .report-header-block > *{display:none!important}
+  .report-header-block > .print-header-inner{display:flex!important;align-items:center!important;gap:0.4cm!important;padding-top:0.2cm!important}
+  .report-header-block > .print-header-inner > img{width:1.4cm!important;height:1.4cm!important;object-fit:contain!important;flex-shrink:0!important;display:block!important}
+  .report-header-block > .print-header-inner > .print-header-text{flex:1!important;text-align:center!important;display:block!important}
+  .print-header-inner .ph-republic{display:block!important;font-size:7.5pt!important;font-weight:400!important;font-style:italic!important;text-align:center!important;margin:0!important;line-height:1.4!important}
+  .print-header-inner .ph-institution{display:block!important;font-size:13pt!important;font-weight:900!important;text-transform:uppercase!important;text-align:center!important;letter-spacing:0.03em!important;margin:0.04cm 0 0!important;line-height:1.2!important}
+  .print-header-inner .ph-address{display:block!important;font-size:8pt!important;text-align:center!important;margin:0.02cm 0 0.12cm!important;line-height:1.3!important}
+  .print-header-inner .ph-title{display:block!important;font-size:13pt!important;font-weight:800!important;text-transform:uppercase!important;text-align:center!important;text-decoration:underline!important;letter-spacing:0.04em!important;margin:0.12cm 0 0.04cm!important;line-height:1.2!important}
+  .print-header-inner .ph-subtitle{display:block!important;font-size:9pt!important;font-weight:600!important;text-align:center!important;margin:0 0 0.04cm!important}
+  .print-header-inner .ph-period{display:block!important;font-size:8pt!important;text-align:center!important;margin:0.04cm 0 0!important;color:#333!important}
+  /* ── Table ── */
+  div[style*="padding:0 1.5rem"]{padding:0!important}
+  div[style*="overflow-x:auto"]{overflow:visible!important}
+  .pagination-bar,button{display:none!important}
+  .data-table{margin:0!important;padding:0!important;width:100%!important;border-collapse:collapse!important;font-family:'Arial',sans-serif!important;font-size:8.5pt!important}
+  .data-table th{background:#e8e8e8!important;border:1pt solid #000!important;padding:0.18cm 0.2cm!important;font-weight:700!important;text-align:left!important;vertical-align:middle!important}
+  .data-table td{border:1pt solid #000!important;padding:0.15cm 0.2cm!important;text-align:left!important;vertical-align:top!important}
+  .data-table tr:nth-child(even) td{background:#f5f5f5!important}
+  .table-badge{background:none!important;border:none!important;padding:0!important;font-weight:700!important;font-size:8pt!important;color:#000!important}
+  .apt-avatar-xs{display:none!important}
+  .section-divider{border-top:1px solid #000!important;margin:0.3cm 0!important}
+}
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/superadmin-sidebar', { activePage: 'reports' }) %>
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Reports</h1>
+          <p class="page-subtitle">Institution-wide department staff directory and user account registry — all CSPC departments</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Departments</p>
+            <h2 class="stat-card-value"><%= deptData.length %></h2>
+            <p class="stat-card-sublabel">CSPC colleges</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Users</p>
+            <h2 class="stat-card-value"><%= users.length %></h2>
+            <p class="stat-card-sublabel">All roles combined</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Active Accounts</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.status==='active').length %></h2>
+            <p class="stat-card-sublabel">Enabled users</p>
+          </div>
+        </div>
+        <div class="stat-card-large pending">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Inactive Accounts</p>
+            <h2 class="stat-card-value"><%= users.filter(u=>u.status==='inactive').length %></h2>
+            <p class="stat-card-sublabel">Disabled users</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Summary + User Breakdown side by side -->
+      <div class="two-col">
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Department Summary</h3></div>
+          <div class="card-body" style="padding:0">
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead><tr><th>College</th><th>Sub-Admin</th><th>Dean</th><th>Instructors</th><th>Total</th><th>BLE</th></tr></thead>
+                <tbody>
+                  <% deptData.forEach(d => {
+                    const deptUsers = users.filter(u => u.department === d.name);
+                    const admins = deptUsers.filter(u => u.role === 'Admin').length;
+                    const deans  = deptUsers.filter(u => u.role === 'Dean').length;
+                    const instr  = deptUsers.filter(u => u.role === 'Instructor').length;
+                  %>
+                  <tr>
+                    <td style="font-weight:600;font-size:.8125rem"><%= d.name %></td>
+                    <td><%= admins %></td>
+                    <td><%= deans %></td>
+                    <td><%= instr %></td>
+                    <td style="font-weight:600"><%= deptUsers.length %></td>
+                    <td><span class="table-badge <%= d.bleDeployed?'confirmed':'declined' %>" style="font-size:.65rem"><%= d.bleStatusLabel || (d.bleDeployed?'Active':'Not Deployed') %></span></td>
+                  </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-card">
+          <div class="card-header"><h3 class="card-title">Employment Type Breakdown</h3></div>
+          <div class="card-body">
+            <% ['Regular','Part-time','Contractual'].forEach(et => {
+              const cnt = users.filter(u => u.employmentType === et).length;
+              const pct = users.length ? Math.round(cnt/users.length*100) : 0;
+            %>
+            <div style="margin-bottom:1rem">
+              <div style="display:flex;justify-content:space-between;margin-bottom:.25rem">
+                <span style="font-size:.8125rem;font-weight:600;color:var(--gray-800)"><%= et %></span>
+                <span style="font-size:.8125rem;color:var(--gray-500)"><%= cnt %></span>
+              </div>
+              <div style="height:6px;background:var(--gray-100);border-radius:999px;overflow:hidden">
+                <div style="height:100%;border-radius:999px;background:var(--teal-gradient);width:<%= pct %>%;transition:width .4s"></div>
+              </div>
+            </div>
+            <% }); %>
+            <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:.8125rem;color:var(--gray-500)">Total instructors</span>
+              <span class="table-badge confirmed"><%= users.filter(u=>u.role==='Instructor').length %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Staff Report -->
+      <div class="content-card" style="margin-top:1.5rem;overflow:visible">
+        <div class="card-body">
+          <div class="report-preview">
+            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
+              <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+              <div>
+                <p class="report-republic">Republic of the Philippines</p>
+                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
+                <p class="report-college">Office of the Super Administrator</p>
+                <h4 class="report-title-block">Department Staff Report</h4>
+                <p class="report-subtitle">Department Staff Directory and BLE Deployment Status</p>
+                <p class="report-period">All Departments &middot; Period: <span id="dsrReportPeriodText">All Records</span></p>
+              </div>
+              <div style="margin-left:auto">
+                <button class="btn-header-action primary" id="btnExportDsr" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Export/Print
+                </button>
+              </div>
+            </div>
+
+            <%- include('../../partials/filter-bar', {
+              filterId: 'dsr',
+              searchPlaceholder: 'Search department…',
+              filterSections: [
+                { label: 'By BLE Status', key: 'blestatus', type: 'buttons',
+                  items: [{ value:'all', label:'All' }, { value:'active', label:'Active' }, { value:'inactive', label:'Not Deployed' }] }
+              ]
+            }) %>
+
+            <div style="padding:0 1.5rem 1.5rem">
+              <div style="overflow-x:auto;margin-top:1rem">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Department</th>
+                      <th style="text-align:center">Sub-Admins</th>
+                      <th style="text-align:center">Deans</th>
+                      <th style="text-align:center">Instructors</th>
+                      <th style="text-align:center">Total Staff</th>
+                      <th>BLE Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dsrReportBody"></tbody>
+                </table>
+              </div>
+              <div class="pagination-bar" id="dsrReportPagBar">
+                <span class="page-info" id="dsrReportPageInfo">-</span>
+                <div class="pagination-controls">
+                  <button class="btn-page" id="dsrReportPrev" disabled>Prev</button>
+                  <button class="btn-page" id="dsrReportNext" disabled>Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full User Registry Report -->
+      <div class="content-card" style="margin-top:1.5rem;overflow:visible">
+        <div class="card-body">
+          <div class="report-preview">
+            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
+              <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+              <div>
+                <p class="report-republic">Republic of the Philippines</p>
+                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
+                <p class="report-college">Office of the Super Administrator</p>
+                <h4 class="report-title-block">Full User Registry Report</h4>
+                <p class="report-subtitle">Complete User Account Directory and Employment Details</p>
+                <p class="report-period">All Users &middot; Status: <span id="furReportPeriodText">All Records</span></p>
+              </div>
+              <div style="margin-left:auto">
+                <button class="btn-header-action primary" id="btnExportFur" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                  Export/Print
+                </button>
+              </div>
+            </div>
+
+            <%- include('../../partials/filter-bar', {
+              filterId: 'fur',
+              searchPlaceholder: 'Search name or email…',
+              filterSections: [
+                { label: 'By Status', key: 'status', type: 'buttons',
+                  items: [{ value:'all', label:'All Status' }, { value:'active', label:'Active' }, { value:'inactive', label:'Inactive' }] },
+                { label: 'By Role', key: 'role', type: 'buttons',
+                  items: [{ value:'all', label:'All Roles' }, { value:'Admin', label:'Sub-Admin' }, { value:'Dean', label:'Dean' }, { value:'Instructor', label:'Instructor' }] }
+              ]
+            }) %>
+
+            <div style="padding:0 1.5rem 1.5rem">
+              <div style="overflow-x:auto;margin-top:1rem">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Employment</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="furReportBody"></tbody>
+                </table>
+              </div>
+              <div class="pagination-bar" id="furReportPagBar">
+                <span class="page-info" id="furReportPageInfo">-</span>
+                <div class="pagination-controls">
+                  <button class="btn-page" id="furReportPrev" disabled>Prev</button>
+                  <button class="btn-page" id="furReportNext" disabled>Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+(function(){
+  var USERS = <%- JSON.stringify(users) %>;
+  var DEPTS = <%- JSON.stringify(deptData) %>;
+  const PAGE = 10;
+
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ===== Department Staff Report =====
+  var dsrPage = 1, dsrBleStatus = 'all';
+  var dsrBody = document.getElementById('dsrReportBody');
+  var dsrPageInfo = document.getElementById('dsrReportPageInfo');
+
+  function filterDsrRows(){
+    var rows = DEPTS.slice();
+    if(dsrBleStatus !== 'all'){
+      rows = rows.filter(function(d){ 
+        return dsrBleStatus === 'active' ? d.bleDeployed : !d.bleDeployed;
+      });
+    }
+    return rows;
+  }
+
+  function renderDsrTable(rows){
+    var total=rows.length, pages=Math.max(1,Math.ceil(total/PAGE));
+    if(dsrPage>pages) dsrPage=pages;
+    var s=(dsrPage-1)*PAGE, slice=rows.slice(s,s+PAGE);
+    dsrBody.innerHTML='';
+    if(!slice.length){
+      dsrBody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-400)">No departments found.</td></tr>';
+    } else {
+      slice.forEach(function(d){
+        var deptUsers = USERS.filter(function(u){ return u.department === d.name; });
+        var admins = deptUsers.filter(function(u){ return u.role === 'Admin'; }).length;
+        var deans = deptUsers.filter(function(u){ return u.role === 'Dean'; }).length;
+        var instrs = deptUsers.filter(function(u){ return u.role === 'Instructor'; }).length;
+        var tr=document.createElement('tr');
+        var badgeClass = d.bleDeployed ? 'confirmed' : 'pending';
+        var badgeText = d.bleStatusLabel || (d.bleDeployed ? 'Active' : 'Not Deployed');
+        tr.innerHTML='<td style="font-weight:600">'+esc(d.name)+'</td>'
+          +'<td style="text-align:center">'+admins+'</td>'
+          +'<td style="text-align:center">'+deans+'</td>'
+          +'<td style="text-align:center">'+instrs+'</td>'
+          +'<td style="text-align:center;font-weight:600">'+deptUsers.length+'</td>'
+          +'<td><span class="table-badge '+badgeClass+'">'+badgeText+'</span></td>';
+        dsrBody.appendChild(tr);
+      });
+    }
+    dsrPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
+    document.getElementById('dsrReportPrev').disabled = dsrPage<=1;
+    document.getElementById('dsrReportNext').disabled = dsrPage>=pages;
+  }
+
+  // Filter handlers for Department Staff Report
+  document.querySelectorAll('[data-filterid="dsr"]').forEach(function(item){
+    if(item.dataset.group){
+      item.addEventListener('click', function(){
+        if(item.dataset.group==='blestatus'){ dsrBleStatus=item.dataset.value||'all'; dsrPage=1; }
+        renderDsrTable(filterDsrRows());
+      });
+    }
+  });
+
+  document.getElementById('dsrReportPrev').addEventListener('click', function(){
+    if(dsrPage>1){ dsrPage--; renderDsrTable(filterDsrRows()); }
+  });
+  document.getElementById('dsrReportNext').addEventListener('click', function(){
+    var r=filterDsrRows(), pages=Math.ceil(r.length/PAGE);
+    if(dsrPage<pages){ dsrPage++; renderDsrTable(r); }
+  });
+
+  // ===== Full User Registry Report =====
+  var furPage = 1, furStatus = 'all', furRole = 'all';
+  var furBody = document.getElementById('furReportBody');
+  var furPageInfo = document.getElementById('furReportPageInfo');
+
+  function filterFurRows(){
+    var rows = USERS.slice();
+    if(furStatus !== 'all') rows = rows.filter(function(u){ return u.status===furStatus; });
+    if(furRole !== 'all') rows = rows.filter(function(u){ return u.role===furRole; });
+    return rows;
+  }
+
+  function renderFurTable(rows){
+    var total=rows.length, pages=Math.max(1,Math.ceil(total/PAGE));
+    if(furPage>pages) furPage=pages;
+    var s=(furPage-1)*PAGE, slice=rows.slice(s,s+PAGE);
+    furBody.innerHTML='';
+    if(!slice.length){
+      furBody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-400)">No users found.</td></tr>';
+    } else {
+      slice.forEach(function(u, i){
+        var tr=document.createElement('tr');
+        var roleLabel = u.role==='Admin' ? 'Sub-Admin' : u.role;
+        var roleClass = u.role==='Admin'?'workload':u.role==='Dean'?'pending':'confirmed';
+        var statusClass = u.status==='active' ? 'confirmed' : 'declined';
+        var statusLabel = u.status==='active' ? 'Active' : 'Inactive';
+        var rowNum = s + i + 1;
+        tr.innerHTML='<td style="color:var(--gray-400);font-size:.8125rem">'+rowNum+'</td>'
+          +'<td><div style="display:flex;align-items:center;gap:.625rem"><div class="apt-avatar-xs" style="width:30px;height:30px;font-size:.65rem;flex-shrink:0">'+esc(u.name.split(' ').map(n=>n[0]).join('').slice(0,2))+'</div><div><p style="font-weight:600;font-size:.875rem;color:var(--gray-900);margin:0">'+esc(u.name)+'</p><p style="font-size:.72rem;color:var(--gray-400);margin:0">'+esc(u.email)+'</p></div></div></td>'
+          +'<td><span class="table-badge '+roleClass+'">'+roleLabel+'</span></td>'
+          +'<td><span class="emp-badge regular">'+esc(u.employmentType||'-')+'</span></td>'
+          +'<td style="font-size:.8125rem;color:var(--gray-600)">'+esc(u.department||'')+'</td>'
+          +'<td><span class="table-badge '+statusClass+'">'+statusLabel+'</span></td>';
+        furBody.appendChild(tr);
+      });
+    }
+    furPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
+    document.getElementById('furReportPrev').disabled = furPage<=1;
+    document.getElementById('furReportNext').disabled = furPage>=pages;
+  }
+
+  // Filter handlers for Full User Registry Report
+  document.querySelectorAll('[data-filterid="fur"]').forEach(function(item){
+    if(item.dataset.group){
+      item.addEventListener('click', function(){
+        if(item.dataset.group==='status'){ furStatus=item.dataset.value||'all'; furPage=1; }
+        else if(item.dataset.group==='role'){ furRole=item.dataset.value||'all'; furPage=1; }
+        renderFurTable(filterFurRows());
+        document.getElementById('furReportPeriodText').textContent = {all:'All Records',active:'Active',inactive:'Inactive'}[furStatus]||'All Records';
+      });
+    }
+  });
+
+  document.getElementById('furReportPrev').addEventListener('click', function(){
+    if(furPage>1){ furPage--; renderFurTable(filterFurRows()); }
+  });
+  document.getElementById('furReportNext').addEventListener('click', function(){
+    var r=filterFurRows(), pages=Math.ceil(r.length/PAGE);
+    if(furPage<pages){ furPage++; renderFurTable(r); }
+  });
+
+  // Initial render
+  renderDsrTable(filterDsrRows());
+  renderFurTable(filterFurRows());
+}());
+
+function preparePrintReport(item){
+  var preview = item.closest('.report-preview');
+  if(!preview) return;
+  preview.querySelectorAll('.report-header-block').forEach(function(hdr){
+    var existing = hdr.querySelector('.print-header-inner');
+    if(existing) existing.remove();
+    var titleEl    = hdr.querySelector('.report-title-block');
+    var subtitleEl = hdr.querySelector('.report-subtitle');
+    var periodEl   = hdr.querySelector('.report-period');
+    var imgEl      = hdr.querySelector('img');
+    var title    = titleEl    ? titleEl.textContent.trim()    : '';
+    var subtitle = subtitleEl ? subtitleEl.textContent.trim() : '';
+    var period   = periodEl   ? periodEl.innerText.trim()     : '';
+    var imgSrc   = imgEl      ? imgEl.src                     : '/images/CSPC-logo.png';
+    var inner = document.createElement('div');
+    inner.className = 'print-header-inner';
+    inner.innerHTML =
+      '<img src="'+imgSrc+'" alt="CSPC Logo">' +
+      '<div class="print-header-text">' +
+        '<span class="ph-republic">Republic of the Philippines</span>' +
+        '<span class="ph-institution">Camarines Sur Polytechnic Colleges</span>' +
+        '<span class="ph-address">Nabua, Camarines Sur</span>' +
+        '<span class="ph-title">'+title+'</span>' +
+        '<span class="ph-subtitle">'+subtitle+'</span>' +
+        (period ? '<span class="ph-period">'+period+'</span>' : '') +
+      '</div>';
+    hdr.appendChild(inner);
+  });
+  document.querySelectorAll('.report-preview.print-only').forEach(function(c){ c.classList.remove('print-only'); });
+  preview.classList.add('print-only');
+  document.body.classList.add('print-mode');
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){
+      preview.classList.remove('print-only');
+      document.body.classList.remove('print-mode');
+      preview.querySelectorAll('.print-header-inner').forEach(function(el){ el.remove(); });
+    }, 500);
+  }, 50);
+}
+</script>

@@ -1,0 +1,315 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<style>
+/* ── Room grid ── */
+.mon-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1rem; }
+
+/* ── Faculty card ── */
+.fac-card { background:#fff; border:1.5px solid var(--gray-200); border-radius:14px; padding:1.1rem 1.25rem; display:flex; align-items:center; gap:.875rem; box-shadow:0 2px 8px rgba(0,0,0,.04); transition:all .2s; cursor:pointer; }
+.fac-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.1); transform:translateY(-2px); }
+.fac-card.in-room { border-color:rgba(34,197,94,.35); background:linear-gradient(135deg,#fff,rgba(34,197,94,.03)); }
+.fac-card.out-of-room { opacity:.78; }
+
+.fac-avatar { width:44px; height:44px; border-radius:50%; background:var(--teal-gradient); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.9rem; flex-shrink:0; }
+.fac-card.out-of-room .fac-avatar { background:var(--gray-300); }
+
+.fac-info { flex:1; min-width:0; }
+.fac-name { font-size:.9rem; font-weight:700; color:var(--gray-900); margin:0 0 .1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fac-pos  { font-size:.75rem; color:var(--gray-500); margin:0 0 .3rem; }
+.fac-room { display:flex; align-items:center; gap:.3rem; font-size:.78rem; color:var(--primary-blue); font-weight:600; }
+.fac-card.out-of-room .fac-room { color:var(--gray-500); }
+.fac-time { font-size:.7rem; color:var(--gray-400); margin-top:.2rem; }
+
+.status-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.22rem .65rem; border-radius:999px; font-size:.65rem; font-weight:700; flex-shrink:0; }
+.status-pill.in  { background:rgba(34,197,94,.12); color:#15803d; }
+.status-pill.out { background:rgba(107,114,128,.12); color:#374151; }
+.status-pill .dot { width:6px; height:6px; border-radius:50%; }
+.status-pill.in  .dot { background:#16a34a; animation:blink 1.5s infinite; }
+.status-pill.out .dot { background:#9ca3af; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── Section divider ── */
+.sec-div { display:flex; align-items:center; gap:.5rem; font-size:.72rem; font-weight:700; color:var(--gray-500); text-transform:uppercase; letter-spacing:.06em; margin:.25rem 0 .625rem; }
+.sec-div::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+.sec-div .sec-count { background:var(--gray-100); color:var(--gray-600); border-radius:999px; padding:1px 8px; font-size:.65rem; }
+
+/* ── Full-screen overlay — matches system design, true fullscreen ── */
+.preview-overlay { display:none; position:fixed; inset:0; z-index:2000; }
+.preview-overlay.open { display:flex; flex-direction:column; }
+.preview-box { display:flex; flex-direction:column; width:100%; height:100%; overflow:hidden; background:var(--bg-light); }
+.preview-header { padding:1rem 1.5rem; border-bottom:1px solid var(--gray-200); display:flex; align-items:center; justify-content:space-between; background:#fff; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.preview-title { font-size:1.0625rem; font-weight:700; color:var(--gray-900); margin:0; }
+.preview-close { width:34px; height:34px; border:1.5px solid var(--gray-200); background:#fff; border-radius:var(--radius-md); color:var(--gray-500); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.preview-close:hover { border-color:var(--primary-blue); color:var(--primary-blue); background:rgba(10,61,98,.05); }
+.preview-body { flex:1; overflow-y:auto; padding:1.5rem; background:var(--bg-light); }
+
+/* ── Full-screen stats bar ── */
+.fs-stats-bar { display:flex; gap:1.5rem; padding:.875rem 1.5rem; background:#fff; border-bottom:1px solid var(--gray-200); flex-shrink:0; flex-wrap:wrap; }
+.fs-stat { display:flex; align-items:center; gap:.5rem; }
+.fs-stat-val { font-size:1.25rem; font-weight:800; color:var(--gray-900); }
+.fs-stat-lbl { font-size:.72rem; color:var(--gray-500); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.fs-stat-dot { width:8px; height:8px; border-radius:50%; }
+.fs-stat-dot.green { background:#16a34a; animation:blink 1.5s infinite; }
+.fs-stat-dot.gray  { background:#9ca3af; }
+
+/* ── Full-screen room grid ── */
+.fs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+.fs-card { background:#fff; border:1.5px solid var(--gray-200); border-radius:var(--radius-lg); padding:1rem 1.125rem; display:flex; align-items:center; gap:.875rem; transition:all .2s; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.fs-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.1); transform:translateY(-2px); }
+.fs-card.in { border-color:rgba(34,197,94,.35); background:linear-gradient(135deg,#fff,rgba(34,197,94,.03)); }
+.fs-card.out { opacity:.75; }
+.fs-avatar { width:44px; height:44px; border-radius:50%; background:var(--teal-gradient); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.875rem; flex-shrink:0; }
+.fs-card.out .fs-avatar { background:var(--gray-300); }
+.fs-info { flex:1; min-width:0; }
+.fs-name { font-size:.9rem; font-weight:700; color:var(--gray-900); margin:0 0 .1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fs-pos  { font-size:.75rem; color:var(--gray-500); margin:0 0 .25rem; }
+.fs-room { font-size:.78rem; color:var(--primary-blue); font-weight:600; display:flex; align-items:center; gap:.25rem; }
+.fs-card.out .fs-room { color:var(--gray-500); }
+.fs-time { font-size:.7rem; color:var(--gray-400); margin-top:.15rem; }
+.fs-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.22rem .65rem; border-radius:999px; font-size:.65rem; font-weight:700; flex-shrink:0; }
+.fs-pill.in  { background:rgba(34,197,94,.12); color:#15803d; }
+.fs-pill.out { background:rgba(107,114,128,.12); color:#374151; }
+.fs-pill .dot { width:5px; height:5px; border-radius:50%; }
+.fs-pill.in  .dot { background:#16a34a; animation:blink 1.5s infinite; }
+.fs-pill.out .dot { background:#9ca3af; }
+.fs-section-title { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; margin:0 0 .75rem; display:flex; align-items:center; gap:.5rem; color:var(--gray-500); }
+.fs-section-title.green { color:#15803d; }
+.fs-dot-live { width:7px; height:7px; border-radius:50%; background:#16a34a; animation:blink 1.5s infinite; }
+.fs-dot-out  { width:7px; height:7px; border-radius:50%; background:#9ca3af; }
+
+</style>
+
+<div class="instructor-layout">
+  <%- include('../../partials/dean-sidebar', { activePage: 'monitoring' }) %>
+
+  <main class="instructor-main">
+    <div class="main-container">
+
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Monitoring</h1>
+          <p class="page-subtitle">Real-time faculty presence — BLE room detection</p>
+        </div>
+        <div class="header-actions">
+          <select id="filterStatus" style="padding:.5rem .875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer">
+            <option value="all">All Faculty</option>
+            <option value="in-room">In Room Only</option>
+            <option value="out-of-room">Out of Room Only</option>
+          </select>
+          <button class="btn-header-action primary" id="btnFullPreview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Full Preview
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-overview">
+        <div class="stat-card-large confirmed">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Currently In Room</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></h2>
+            <p class="stat-card-sublabel">of <%= faculty.length %> total faculty</p>
+          </div>
+        </div>
+        <div class="stat-card-large presence">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Out of Room</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.bleStatus==='out-of-room').length %></h2>
+            <p class="stat-card-sublabel">Not detected</p>
+          </div>
+        </div>
+        <div class="stat-card-large workload">
+          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Rooms Occupied</p>
+            <h2 class="stat-card-value"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></h2>
+            <p class="stat-card-sublabel">Active rooms now</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- In Room -->
+      <div id="inRoomSection">
+        <div class="sec-div">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Currently In Room
+          <span class="sec-count"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></span>
+        </div>
+        <div class="mon-grid">
+          <% faculty.filter(f=>f.bleStatus==='in-room').forEach(f => { %>
+          <div class="fac-card in-room" data-status="in-room" data-id="<%= f.id %>" onclick="openPreview()">
+            <div class="fac-avatar"><%= f.name.split(' ').map(n=>n[0]).join('') %></div>
+            <div class="fac-info">
+              <p class="fac-name"><%= f.name %></p>
+              <p class="fac-pos"><%= f.position %></p>
+              <div class="fac-room">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <%= f.officeRoom %>
+              </div>
+              <p class="fac-time">Detected <%= f.bleLastDetected %></p>
+            </div>
+            <span class="status-pill in"><span class="dot"></span>In Room</span>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Out of Room -->
+      <div id="outRoomSection">
+        <div class="sec-div" style="margin-top:.5rem">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Out of Room
+          <span class="sec-count"><%= faculty.filter(f=>f.bleStatus==='out-of-room').length %></span>
+        </div>
+        <div class="mon-grid">
+          <% faculty.filter(f=>f.bleStatus==='out-of-room').forEach(f => { %>
+          <div class="fac-card out-of-room" data-status="out-of-room">
+            <div class="fac-avatar"><%= f.name.split(' ').map(n=>n[0]).join('') %></div>
+            <div class="fac-info">
+              <p class="fac-name"><%= f.name %></p>
+              <p class="fac-pos"><%= f.position %></p>
+              <div class="fac-room">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <%= f.officeRoom %>
+              </div>
+              <p class="fac-time">Last seen <%= f.bleLastDetected %></p>
+            </div>
+            <span class="status-pill out"><span class="dot"></span>Out</span>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Full Screen Preview -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-box">
+    <div class="preview-header">
+      <div style="display:flex;align-items:center;gap:.875rem">
+        <img src="/images/CSPC-logo.png" alt="CSPC" style="width:36px;height:36px;object-fit:contain" onerror="this.style.display='none'">
+        <div>
+          <h3 class="preview-title">Live Room Status — CCS Faculty</h3>
+          <p style="font-size:.78rem;color:var(--gray-500);margin:.1rem 0 0">Real-time BLE detection · College of Computer Studies</p>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <span id="fsTimestamp" style="font-size:.75rem;color:var(--gray-400);font-weight:500"></span>
+        <button class="preview-close" id="previewClose" title="Close (Esc)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="fs-stats-bar">
+      <div class="fs-stat">
+        <span class="fs-stat-dot green"></span>
+        <span class="fs-stat-val"><%= faculty.filter(f=>f.bleStatus==='in-room').length %></span>
+        <span class="fs-stat-lbl">In Room</span>
+      </div>
+      <div class="fs-stat">
+        <span class="fs-stat-dot gray"></span>
+        <span class="fs-stat-val"><%= faculty.filter(f=>f.bleStatus==='out-of-room').length %></span>
+        <span class="fs-stat-lbl">Out of Room</span>
+      </div>
+      <div class="fs-stat">
+        <span class="fs-stat-val"><%= faculty.length %></span>
+        <span class="fs-stat-lbl">Total Faculty</span>
+      </div>
+    </div>
+
+    <div class="preview-body">
+      <!-- In Room -->
+      <div style="margin-bottom:1.5rem">
+        <div class="fs-section-title green">
+          <span class="fs-dot-live"></span>
+          Currently In Room (<%= faculty.filter(f=>f.bleStatus==='in-room').length %>)
+        </div>
+        <div class="fs-grid">
+          <% faculty.filter(f=>f.bleStatus==='in-room').forEach(f => { %>
+          <div class="fs-card in">
+            <div class="fs-avatar"><%= f.name.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+            <div class="fs-info">
+              <p class="fs-name"><%= f.name %></p>
+              <p class="fs-pos"><%= f.position %></p>
+              <div class="fs-room">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <%= f.officeRoom %>
+              </div>
+              <p class="fs-time">Detected <%= f.bleLastDetected %></p>
+            </div>
+            <span class="fs-pill in"><span class="dot"></span>In Room</span>
+          </div>
+          <% }); %>
+          <% if(faculty.filter(f=>f.bleStatus==='in-room').length===0){ %>
+          <p style="font-size:.875rem;color:var(--gray-400);padding:1rem 0">No faculty currently in room.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Out of Room -->
+      <div>
+        <div class="fs-section-title">
+          <span class="fs-dot-out"></span>
+          Out of Room (<%= faculty.filter(f=>f.bleStatus==='out-of-room').length %>)
+        </div>
+        <div class="fs-grid">
+          <% faculty.filter(f=>f.bleStatus==='out-of-room').forEach(f => { %>
+          <div class="fs-card out">
+            <div class="fs-avatar"><%= f.name.split(' ').map(n=>n[0]).join('').slice(0,2) %></div>
+            <div class="fs-info">
+              <p class="fs-name"><%= f.name %></p>
+              <p class="fs-pos"><%= f.position %></p>
+              <div class="fs-room">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <%= f.officeRoom %>
+              </div>
+              <p class="fs-time">Last seen <%= f.bleLastDetected %></p>
+            </div>
+            <span class="fs-pill out"><span class="dot"></span>Out</span>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+<script>
+// Filter
+document.getElementById('filterStatus').addEventListener('change', function(){
+  const v=this.value;
+  document.getElementById('inRoomSection').style.display=(v==='all'||v==='in-room')?'':'none';
+  document.getElementById('outRoomSection').style.display=(v==='all'||v==='out-of-room')?'':'none';
+});
+
+// Full screen preview
+function openPreview(){
+  document.getElementById('previewOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  updateClock();
+}
+function closePreview(){
+  document.getElementById('previewOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+function updateClock(){
+  const el=document.getElementById('fsTimestamp');
+  if(el) el.textContent=new Date().toLocaleString('en-PH',{weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(()=>{ if(document.getElementById('previewOverlay').classList.contains('open')) updateClock(); },1000);
+
+document.getElementById('btnFullPreview').addEventListener('click', openPreview);
+document.getElementById('previewClose').addEventListener('click', closePreview);
+document.getElementById('previewOverlay').addEventListener('click', function(e){ if(e.target===this) closePreview(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePreview(); });
+</script>
