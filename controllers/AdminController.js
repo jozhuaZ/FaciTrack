@@ -130,11 +130,11 @@ const AdminController = {
 
             const affectedRows = await UserModel.deleteUser(publicId);
 
-            if (!affectedRows) {
+            if (affectedRows === 0) {
                 return res.status(404).json({ success: false, error: 'User not found.' });
             }
 
-            res.json({ success: true, message: `${firstName} ${lastName} deleted successfully!` });
+            res.json({ success: true, message: `User deleted successfully!` });
 
         } catch (err) {
             console.error('[AdminController.deleteUser]', err);
