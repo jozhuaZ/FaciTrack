@@ -320,6 +320,7 @@ router.get('/dashboard', (req, res) => {
 router.get('/users', AdminController.renderPage);
 router.post('/users', AdminController.createUser);
 router.put('/users/:publicId',  AdminController.updateUser);
+router.delete('/users/:publicId', AdminController.deleteUser);
 
 router.get('/logs', (req, res) => {
     const data = getSharedData();
