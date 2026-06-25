@@ -107,6 +107,8 @@ const UserModel = {
         const query = `DELETE FROM users WHERE public_id = ?`;
 
         const [result] = await pool.execute(query, [publicId]);
+
+        return result.affectedRows;
     }
 }
 
