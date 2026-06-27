@@ -1,14 +1,15 @@
 // Import required modules
 require('dotenv').config();
 const express = require('express');
+const session = require('express-session');
 const path = require('path');
 const { ensureSeedUsers } = require('./services/auth');
-const { authContext } = require('./middleware/auth');
+const { authContext, requireRole } = require('./middleware/auth');
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
-ensureSeedUsers();
+ensureSeedUsers(); // remove soon
 
 // Set EJS as templating engine
 app.set('view engine', 'ejs');
@@ -38,11 +39,22 @@ app.use((req, res, next) => {
     next();
 });
 
-// Routes - IMPORTANT: This must be active
-app.use('/', require('./routes/index'));
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 8
+    },
+}));
+
+// Routes 
+// app.use('/', require('./routes/index'));
+app.use('/', require('./routes/auth'));
 app.use('/auth', require('./routes/oauth')); // Google OAuth routes
 app.use('/student', require('./routes/student'));
-app.use('/instructor', require('./routes/instructor'));
+app.use('/instructor', requireRole('Instructor'), require('./routes/instructor'));
 app.use('/export', require('./routes/export'));
 app.use('/dean', require('./routes/dean'));
 app.use('/admin', require('./routes/admin'));
