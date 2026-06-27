@@ -49,25 +49,22 @@ function authContext(req, res, next) {
   next();
 }
 
-function requireAuth(req, res, next) {
-  if (req.currentUser) return next();
-  if (req.accepts('html')) return res.redirect('/login');
-  return res.status(401).json({ error: 'Authentication required.' });
-}
+const requireAuth = (req, res, next) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+    next();
+};
 
-function requireRole(...roles) {
-  return (req, res, next) => {
-    if (!req.currentUser) {
-      if (req.accepts('html')) return res.redirect('/login');
-      return res.status(401).json({ error: 'Authentication required.' });
+const requireRole = (...roles) => (req, res, next) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
     }
-    if (!roles.includes(req.currentUser.role)) {
-      if (req.accepts('html')) return res.status(403).redirect('/login');
-      return res.status(403).json({ error: 'Forbidden.' });
+    if (!roles.includes(req.session.role)) {
+        return res.status(403).render('pages/403', { title: 'Access Denied' });
     }
-    return next();
-  };
-}
+    next();
+};
 
 module.exports = {
   SESSION_COOKIE_NAME,
