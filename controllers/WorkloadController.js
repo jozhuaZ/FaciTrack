@@ -4,11 +4,12 @@ const WorkloadModel = require('../models/WorkloadModel');
 const WorkloadController = {
 
   async renderPage(req, res) {
-    const instructorId = req.session.userId || 1;
+    // const instructorId = req.session.userId || 1;
+    const instructorId = 1;
 
     const instructor = {
         id: req.user?.id || req.session?.instructorId,
-        name: req.user?.name || req.session?.name || 'Unknown',
+        name: req.user?.first_name || req.session?.first_name || 'Unknown',
         email: req.user?.email || req.session?.email || '',
         profilePhoto: req.user?.profilePhoto || 'profile photo',
         department: req.user?.department || '',
@@ -51,7 +52,8 @@ const WorkloadController = {
 
   async load(req, res) {
     try {
-      const instructorId = req.session.userId;
+      // const instructorId = req.session.userId;
+      const instructorId = 1;
 
       const [subjects, blockRows] = await Promise.all([
         WorkloadModel.getSubjectsByInstructor(instructorId),
@@ -88,8 +90,7 @@ const WorkloadController = {
   },
 
   async save(req, res) {
-    // const instructorId = req.session.userId;
-    const instructorId = 1;
+    const instructorId = req.session.userId;
     const { subjects, blocks } = req.body;
 
     // Validate shape
