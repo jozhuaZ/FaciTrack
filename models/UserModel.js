@@ -1,6 +1,34 @@
+const bcrypt = require('bcrypt');
 const pool = require('../configs/db');
 
 const UserModel = {
+
+    async getUserByEmail(email) {
+        const query = 
+            `SELECT
+                u.public_id AS id,
+                u.id AS internal_id,
+                u.first_name,
+                u.last_name,
+                u.middle_name,
+                u.hashed_password,
+                u.email,
+                u.role,
+                u.employment_type,
+                u.position,
+                u.status,
+                u.last_login,
+                u.department_id,
+                d.full_name AS department_name
+            FROM users u
+            LEFT JOIN departments d ON u.department_id = d.id
+            WHERE email = ?
+            LIMIT 1`;
+
+        const [rows] = await pool.execute(query, [email]);
+
+        return rows[0] || null;
+    },
     
     async getUsers({role, limit, offset, fields = '*'}) {
         let query = `SELECT ${fields} FROM users WHERE 1=1`;
@@ -109,7 +137,12 @@ const UserModel = {
         const [result] = await pool.execute(query, [publicId]);
 
         return result.affectedRows;
-    }
+    },
+
+    async updateLastLogin(id) {
+        const query = `UPDATE users SET last_login = NOW() WHERE id = ?`;
+        await pool.execute(query, [id]);
+    },
 }
 
 module.exports = UserModel;
