@@ -4,30 +4,30 @@ const { authenticateUser, createSession, getRoleRedirect, revokeSession } = requ
 const { setSessionCookie, clearSessionCookie } = require('../middleware/auth');
 
 // Landing page
-router.get('/', (req, res) => {
-    const errorMessages = {
-        'oauth_not_configured': 'Google Sign-In is not configured. Please use email/password login.',
-        'authentication_failed': 'Authentication failed. Please try again.',
-        'missing_code': 'Authentication code missing. Please try again.',
-        'not_a_student_account': 'This account is not registered as a student.',
-        'account_inactive': 'Your account is inactive. Please contact support.'
-    };
-    const errorParam = req.query.error;
-    const errorMessage = errorParam ? errorMessages[errorParam] || 'An error occurred. Please try again.' : null;
+// router.get('/', (req, res) => {
+//     const errorMessages = {
+//         'oauth_not_configured': 'Google Sign-In is not configured. Please use email/password login.',
+//         'authentication_failed': 'Authentication failed. Please try again.',
+//         'missing_code': 'Authentication code missing. Please try again.',
+//         'not_a_student_account': 'This account is not registered as a student.',
+//         'account_inactive': 'Your account is inactive. Please contact support.'
+//     };
+//     const errorParam = req.query.error;
+//     const errorMessage = errorParam ? errorMessages[errorParam] || 'An error occurred. Please try again.' : null;
 
-    res.render('pages/index', { 
-        title: 'FaciTrack - Faculty Appointment & Monitoring System',
-        error: errorMessage
-    });
-});
+//     res.render('pages/index', { 
+//         title: 'FaciTrack - Faculty Appointment & Monitoring System',
+//         error: errorMessage
+//     });
+// });
 
 // Unified login page
-router.get('/login', (req, res) => {
-    res.render('pages/login', {
-        title: 'FaciTrack - Login',
-        error: null
-    });
-});
+// router.get('/login', (req, res) => {
+//     res.render('pages/login', {
+//         title: 'FaciTrack - Login',
+//         error: null
+//     });
+// });
 
 // Unified login POST — detect role from credentials and redirect
 // PROTOTYPE MODE: Password verification disabled for development
