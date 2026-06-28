@@ -4,15 +4,19 @@ const WorkloadModel = require('../models/WorkloadModel');
 const WorkloadController = {
 
   async renderPage(req, res) {
-    // const instructorId = req.session.userId || 1;
-    const instructorId = 1;
+    const instructorId = req.session.userId;
 
     const instructor = {
-        id: req.user?.id || req.session?.instructorId,
-        name: req.user?.first_name || req.session?.first_name || 'Unknown',
-        email: req.user?.email || req.session?.email || '',
-        profilePhoto: req.user?.profilePhoto || 'profile photo',
-        department: req.user?.department || '',
+        id: req.session?.instructorId,
+        name: req.session?.name,
+        firstName: req.session.firstName,
+        middleName: req.session.middleName,
+        lastName: req.session.lastName,
+        status: req.session.status,
+        email: req.session?.email,
+        position: req.session.position,
+        profilePhoto: req.session?.profilePhoto || 'N/A',
+        department: req.session?.department,
     };
 
     const [subjects, blockRows] = await Promise.all([
