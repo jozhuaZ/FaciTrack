@@ -70,6 +70,7 @@ const AuthController = {
             req.session.middleName = user?.middleName || '';
             req.session.lastName = user.last_name;
             req.session.email = user.email;
+            req.session.department = user.department_name;
             req.session.profilePhoto = user.profile_picture || null;
 
             // Update last login
