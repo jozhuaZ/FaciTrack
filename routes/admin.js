@@ -301,26 +301,17 @@ router.get('/dashboard', (req, res) => {
     res.render('pages/admin/dashboard', { title: 'FaciTrack - Admin Dashboard', ...data });
 });
 
-//     const data = getSharedData();
-//     const { role } = req.query;
-
-//     // Data is already CCS-only from getSharedData — just filter by role if requested
-//     let filteredUsers = data.users;
-//     if (role) {
-//         filteredUsers = filteredUsers.filter(u => u.role.toLowerCase() === role.toLowerCase());
-//     }
-
-//     res.render('pages/admin/users', {
-//         title: 'FaciTrack - Faculty Management',
-//         ...data,
-//         users: filteredUsers,
-//         filterRole: role || ''
-//     });
-// });
-router.get('/users', AdminController.renderPage);
+// Route for Users management page (faculty)
+router.get('/users', AdminController.renderUsersPage);
 router.post('/users', AdminController.createUser);
 router.put('/users/:publicId',  AdminController.updateUser);
 router.delete('/users/:publicId', AdminController.deleteUser);
+
+// Route for Rooms Management page
+router.get('/rooms', AdminController.renderRoomsPage);
+router.post('/rooms', AdminController.createRoom);
+router.put('/rooms/:roomId', AdminController.updateRoom);
+router.delete('/rooms/:roomId', AdminController.deleteRoom);
 
 router.get('/logs', (req, res) => {
     const data = getSharedData();
@@ -351,14 +342,6 @@ router.get('/departments', (req, res) => {
     const data = getSharedData();
     res.render('pages/admin/departments', {
         title: 'FaciTrack - Departments',
-        ...data
-    });
-});
-
-router.get('/rooms', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/rooms', {
-        title: 'FaciTrack - Rooms',
         ...data
     });
 });
