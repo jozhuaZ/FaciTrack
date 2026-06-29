@@ -171,11 +171,11 @@
                                 <td>
                                     <%
                                       const employmentTypeMap = {
-                                        'Job_Order': 'job-order',
+                                        'Job Order': 'job-order',
                                         'COS': 'cos',
                                         'Casual': 'casual',
                                         'Permanent': 'permanent',
-                                        'Co_Terminus': 'co-terminus',
+                                        'Co-Terminus': 'co-terminus',
                                         'Temporary': 'temporary'
                                     };
                                     var empClass = employmentTypeMap[u.employmentType] || 'unknown';
@@ -256,7 +256,7 @@
             </div>
             <div class="form-row">
                 <div class="form-field">
-                    <label>Middle Name <span style="color:#e53e3e;">*</span></label>
+                    <label>Middle Name</label>
                     <input type="text" id="userMiddleName" placeholder="Enter Middle Name">
                 </div>
                 <div class="form-field">
@@ -506,7 +506,7 @@ async function saveUser() {
     if (!isEditing && !password) { showToast('error', 'Required', 'Password is required.'); return; }
 
     // Update the row in the table to reflect new status/employment type
-    if (editingUserIndex !== null) {
+    if (isEditing) {
         const rows = getAllRows();
         const row = rows[editingUserIndex];
         if (row) {
@@ -538,14 +538,14 @@ async function saveUser() {
         let res, data;
 
         if (isEditing) {
-            const rowId = getAllRows()[editingUserIndex]?.dataset.publicid;
-            res  = await fetch(`/admin/users/${rowId}`, {
+            const userId = getAllRows()[editingUserIndex]?.dataset.publicid;
+            res = await fetch(`/admin/users/${userId}`, {
                 method:  'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify(payload),
             });
         } else {
-            res  = await fetch('/admin/users', {
+            res = await fetch('/admin/users', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body:    JSON.stringify(payload),
@@ -586,6 +586,7 @@ function openDeleteUserModal(publicId, name, role) {
 }
 
 function closeDeleteUserModal() {
+    deletingPublicId = null;
     deletingUserName = null;
     document.getElementById('deleteUserModal').classList.remove('show');
 }
@@ -609,7 +610,7 @@ async function confirmDeleteUser() {
         document.querySelector(`[data-publicid="${deletingPublicId}"]`)?.closest('tr').remove();
 
         deletingPublicId = null;
-
+        
     } catch (err) {
         console.error('[confirmDeleteUser]', err);
         showToast('error', 'Error', 'Could not reach the server.');
