@@ -100,6 +100,8 @@ const UserModel = {
             newUser?.profilePicture || null,
             newUser.hashedPassword
         ]);
+
+        return result.insertId;
     },
 
     async updateUser(publicId, data) {
