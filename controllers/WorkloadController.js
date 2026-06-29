@@ -15,6 +15,7 @@ const WorkloadController = {
         status: req.session.status,
         email: req.session?.email,
         position: req.session.position,
+        role: req.session.role,
         profilePhoto: req.session?.profilePhoto || 'N/A',
         department: req.session?.department,
     };
