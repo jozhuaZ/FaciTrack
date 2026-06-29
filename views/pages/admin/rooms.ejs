@@ -69,16 +69,6 @@
                         <p class="stat-card-sublabel">Rooms with faculty</p>
                     </div>
                 </div>
-                <div class="stat-card-large presence">
-                    <div class="stat-card-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                    </div>
-                    <div class="stat-card-content">
-                        <p class="stat-card-label">Departments</p>
-                        <h2 class="stat-card-value"><%= departments.length %></h2>
-                        <p class="stat-card-sublabel">With rooms registered</p>
-                    </div>
-                </div>
             </div>
 
             <!-- Table -->
@@ -91,12 +81,14 @@
                   searchPlaceholder: 'Search room…',
                   filterSections: [
                     { label: 'By Department', key: 'dept', type: 'buttons',
-                      items: [{ value:'all', label:'All Departments' }].concat(departments.map(function(d){ return { value: d, label: d }; })) },
+                      items: [{ value:'all', label:'All Departments' }].concat(departments.map(function(d){ return { value: d.id, label: d.full_name }; })) },
                     { label: 'By Type', key: 'type', type: 'buttons',
                       items: [{ value:'all', label:'All Types' }, { value:'Faculty Office', label:'Faculty Office' },
                               { value:'Consultation Room', label:'Consultation Room' },
                               { value:'Laboratory', label:'Laboratory' },
-                              { value:'Faculty Lounge', label:'Faculty Lounge' }] }
+                              { value:'Faculty Lounge', label:'Faculty Lounge' }] },
+                    { label: 'By Unassigned', key: 'unassigned', type: 'buttons',
+                      items: [{ value: 'Unassigned', label: 'Unassigned' }] }
                   ]
                 }) %>
                 <div class="card-body" style="padding:0;">
@@ -115,35 +107,49 @@
                         </thead>
                         <tbody id="roomTableBody">
                             <% roomData.forEach((room, i) => { %>
-                            <tr data-dept="<%= room.department %>" data-type="<%= room.type %>" data-name="<%= room.roomNumber.toLowerCase() %> <%= room.building.toLowerCase() %>">
+                            <tr data-roomid="<%= room.id %>"
+                                data-dept="<%= room.department_name %>" 
+                                data-type="<%= room.room_type %>" 
+                                data-assigned="<%= room.assigned_faculty_name ? 'assigned' : 'unassigned' %>"
+                                data-name="<%= room.room_number.toLowerCase() %> <%= room.building_name.toLowerCase() %>">
                                 <td style="color:var(--gray-400);font-size:0.8125rem;"><%= i + 1 %></td>
                                 <td>
                                     <div>
-                                        <p style="font-weight:700;font-size:0.875rem;color:var(--gray-900);margin:0 0 0.125rem;"><%= room.roomNumber %></p>
-                                        <p style="font-size:0.75rem;color:var(--gray-500);margin:0;"><%= room.building %></p>
+                                        <p style="font-weight:700;font-size:0.875rem;color:var(--gray-900);margin:0 0 0.125rem;"><%= room.room_number %></p>
+                                        <p style="font-size:0.75rem;color:var(--gray-500);margin:0;"><%= room.building_name %></p>
                                     </div>
                                 </td>
-                                <td style="font-size:0.8125rem;color:var(--gray-600);"><%= room.department %></td>
-                                <td><span class="table-badge pending" style="font-size:0.6875rem;"><%= room.type %></span></td>
-                                <td style="font-size:0.8125rem;color:<%= room.assignedFaculty === 'Unassigned' ? 'var(--gray-400)' : 'var(--gray-900)' %>;font-style:<%= room.assignedFaculty === 'Unassigned' ? 'italic' : 'normal' %>;"><%= room.assignedFaculty %></td>
+                                <td style="font-size:0.8125rem;color:var(--gray-600);"><%= room.department_name %></td>
+                                <td><span class="table-badge pending" style="font-size:0.6875rem;"><%= room.room_type %></span></td>
+                                <td style="font-size:0.8125rem;color:<%= !room.assigned_faculty_name ? 'var(--gray-400)' : 'var(--gray-900)' %>;font-style:<%= !room.assigned_faculty_name ? 'italic' : 'normal' %>;">
+                                    <%= room.assigned_faculty_name || 'Unassigned' %>
+                                </td>
                                 <td>
-                                    <% if (room.bleScanner) { %>
-                                    <span class="table-badge confirmed">ESP32 Active</span>
+                                    <% if (room.is_ble_scanner_installed) { %>
+                                    <span class="table-badge confirmed">BLE Scanner Installed</span>
                                     <% } else { %>
                                     <span class="table-badge" style="background:var(--gray-100);color:var(--gray-500);border:1px solid var(--gray-200);">None</span>
                                     <% } %>
                                 </td>
                                 <td>
-                                    <span class="table-badge <%= room.status === 'active' ? 'confirmed' : 'declined' %>">
-                                        <%= room.status === 'active' ? 'Active' : 'Inactive' %>
+                                    <span class="table-badge <%= room.status === 'Active' ? 'confirmed' : 'declined' %>">
+                                        <%= room.status === 'Active' ? 'Active' : 'Inactive' %>
                                     </span>
                                 </td>
                                 <td>
                                     <div style="display:flex;gap:0.375rem;">
-                                        <button class="btn-icon-action approve" title="Edit room" onclick="openEditRoom(<%= i %>)">
+                                        <button class="btn-icon-action approve btn-edit-room" title="Edit room"
+                                            data-index="<%= i %>"
+                                            data-roomid="<%= room.id %>"
+                                            data-roomnumber="<%= room.room_number %>" 
+                                            data-department="<%= room.department_id %>"
+                                            data-roomtype="<%= room.room_type %>"
+                                            data-assignedfaculty="<%= room.assigned_faculty_name %>"
+                                            data-bleScanner="<%= room.is_ble_scanner_installed ? 'true' : 'false' %>"
+                                            data-status="<%= room.status%>">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                         </button>
-                                        <button class="btn-icon-action decline" title="Delete room" onclick="openDeleteRoom('<%= room.roomNumber %>', '<%= room.building %>')">
+                                        <button class="btn-icon-action decline" title="Delete room" onclick="openDeleteRoom('<%= room.id %>', '<%= room.room_number %>', '<%= room.building_name %>')">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                                         </button>
                                     </div>
@@ -159,7 +165,6 @@
                     <button class="btn-page" id="btnNext">Next &#8594;</button>
                 </div>
             </div>
-
         </div>
     </main>
 </div>
@@ -177,52 +182,53 @@
             <div class="form-row">
                 <div class="form-field">
                     <label>Room Number <span style="color:#e53e3e;">*</span></label>
-                    <input type="text" id="roomNumber" placeholder="Room 201">
+                    <input type="text" id="roomNumber" placeholder="Room 4">
                 </div>
-                <div class="form-field">
+                <!-- <div class="form-field">
                     <label>Building</label>
                     <input type="text" id="roomBuilding" placeholder="CCS Building">
-                </div>
-            </div>
-            <div class="form-row">
+                </div> -->
                 <div class="form-field">
                     <label>Department <span style="color:#e53e3e;">*</span></label>
                     <select id="roomDept">
                         <option value="">Select department...</option>
                         <% departments.forEach(d => { %>
-                        <option value="<%= d %>"><%= d %></option>
+                        <option value="<%= d.id %>"><%= d.full_name %></option>
                         <% }); %>
                     </select>
                 </div>
+            </div>
+            <div class="form-row">
                 <div class="form-field">
-                    <label>Room Type</label>
+                    <label>Room Type <span style="color:#e53e3e;">*</span></label>
                     <select id="roomType">
+                        <option value="Lecture">Lecture</option>
                         <option value="Faculty Office">Faculty Office</option>
                         <option value="Consultation Room">Consultation Room</option>
                         <option value="Laboratory">Laboratory</option>
                         <option value="Faculty Lounge">Faculty Lounge</option>
                     </select>
                 </div>
+                <div class="form-field">
+                    <label>Assigned Faculty</label>
+                    <input type="text" id="roomFaculty" placeholder="Enter faculty name">
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-field">
-                    <label>Assigned Faculty</label>
-                    <input type="text" id="roomFaculty" placeholder="Dr. Maria Santos">
-                </div>
-                <div class="form-field">
-                    <label>BLE Scanner (ESP32)</label>
+                    <label>BLE Scanner <span style="color:#e53e3e;">*</span></label>
                     <select id="roomBle">
                         <option value="false">Not Installed</option>
                         <option value="true">Installed / Active</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-field">
-                <label>Status</label>
+                <div class="form-field">
+                    <label>Status <span style="color:#e53e3e;">*</span></label>
                 <select id="roomStatus">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                 </select>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -261,18 +267,20 @@
 const roomData = <%- JSON.stringify(roomData) %>;
 let editingRoomIndex = null;
 let deletingRoom = null;
+let deletingId = null;
 const ROWS_PER_PAGE = 10;
 let currentPage = 1;
 let visibleRows = [];
 
-let roomFDept = 'all', roomFType = 'all', roomFSearch = '';
+let roomFDept = 'all', roomFType = 'all', roomFUnassigned = 'all', roomFSearch = '';
 
 function filterRooms() {
     visibleRows = Array.from(document.querySelectorAll('#roomTableBody tr')).filter(row => {
-        const matchDept = roomFDept === 'all' || row.dataset.dept === roomFDept;
-        const matchType = roomFType === 'all' || row.dataset.type === roomFType;
-        const matchQ    = !roomFSearch || row.dataset.name.includes(roomFSearch);
-        return matchDept && matchType && matchQ;
+        const matchDept       = roomFDept === 'all' || row.dataset.dept === roomFDept;
+        const matchType       = roomFType === 'all' || row.dataset.type === roomFType;
+        const matchUnassigned = roomFUnassigned === 'all' || row.dataset.assigned === 'unassigned';
+        const matchQ          = !roomFSearch || row.dataset.name.includes(roomFSearch);
+        return matchDept && matchType && matchUnassigned && matchQ;
     });
     currentPage = 1;
     renderPage();
@@ -280,8 +288,9 @@ function filterRooms() {
 
 document.addEventListener('fbChange', function(e) {
     if (e.detail.filterId !== 'room') return;
-    if (e.detail.section === 'dept') roomFDept = e.detail.value;
-    if (e.detail.section === 'type') roomFType = e.detail.value;
+    if (e.detail.section === 'dept')       roomFDept = e.detail.value;
+    if (e.detail.section === 'type')       roomFType = e.detail.value;
+    if (e.detail.section === 'unassigned') roomFUnassigned = e.detail.value;
     filterRooms();
 });
 document.addEventListener('fbSearch', function(e) {
@@ -302,17 +311,16 @@ function renderPage() {
     document.getElementById('roomCount').textContent = total;
 }
 
-function openEditRoom(index) {
-    const r = roomData[index];
+function openEditRoom(index, roomNumber, departmentId, roomType, assignedFaculty, bleScanner, status) {
     editingRoomIndex = index;
     document.getElementById('roomModalTitle').textContent = 'Edit Room';
-    document.getElementById('roomNumber').value = r.roomNumber;
-    document.getElementById('roomBuilding').value = r.building;
-    document.getElementById('roomDept').value = r.department;
-    document.getElementById('roomType').value = r.type;
-    document.getElementById('roomFaculty').value = r.assignedFaculty === 'Unassigned' ? '' : r.assignedFaculty;
-    document.getElementById('roomBle').value = String(r.bleScanner);
-    document.getElementById('roomStatus').value = r.status;
+    document.getElementById('roomNumber').value = roomNumber;
+    // document.getElementById('roomBuilding').value = building;
+    document.getElementById('roomDept').value = departmentId;
+    document.getElementById('roomType').value = roomType;
+    document.getElementById('roomFaculty').value = assignedFaculty || '';
+    document.getElementById('roomBle').value = bleScanner;
+    document.getElementById('roomStatus').value = status.charAt(0).toUpperCase() + status.slice(1);
     document.getElementById('roomModal').classList.add('show');
 }
 
@@ -320,37 +328,127 @@ function closeRoomModal() {
     editingRoomIndex = null;
     document.getElementById('roomModal').classList.remove('show');
     document.getElementById('roomModalTitle').textContent = 'Add Room';
-    ['roomNumber','roomBuilding','roomFaculty'].forEach(id => document.getElementById(id).value = '');
+    ['roomNumber','roomFaculty'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('roomDept').value = '';
     document.getElementById('roomType').value = 'Faculty Office';
     document.getElementById('roomBle').value = 'false';
     document.getElementById('roomStatus').value = 'active';
 }
 
-function saveRoom() {
-    const num = document.getElementById('roomNumber').value.trim();
-    const dept = document.getElementById('roomDept').value;
-    if (!num) { showToast('error', 'Required', 'Room number is required.'); return; }
-    if (!dept) { showToast('error', 'Required', 'Please select a department.'); return; }
-    const action = editingRoomIndex !== null ? 'updated' : 'added';
-    showToast('success', editingRoomIndex !== null ? 'Room Updated' : 'Room Added', `"${num}" has been ${action} successfully.`);
-    closeRoomModal();
+function getAllRows() {
+    return Array.from(document.querySelectorAll('#roomTableBody tr'));
 }
 
-function openDeleteRoom(roomNum, building) {
+async function saveRoom() {
+    const roomNumber = document.getElementById('roomNumber').value.trim();
+    const department = document.getElementById('roomDept').value;
+    const roomType = document.getElementById('roomType').value;
+    const bleStatus = document.getElementById('roomBle').value === 'true' ? 1 : 0;
+    const assignedFaculty = document.getElementById('roomFaculty').value;
+    const status = document.getElementById('roomStatus').value;
+
+    if (!roomNumber) { showToast('error', 'Required', 'Room number is required.'); return; }
+    if (!department) { showToast('error', 'Required', 'Please select a department.'); return; }
+    if (!roomType) { showToast('error', 'Required', 'Please select a room type.'); return; }
+    const action = editingRoomIndex !== null ? 'updated' : 'added';
+
+    const isEditing = editingRoomIndex !== null;
+
+    if (isEditing) {
+        const rows = getAllRows();
+        const row = rows[editingRoomIndex];
+
+        if (row) {
+            const newStatus = document.getElementById('roomStatus').value
+            row.dataset.status = newStatus;
+            
+            const statusCell = row.cells[6];
+            if (statusCell) {
+                statusCell.innerHTML = `<span class="table-badge ${newStatus==='active'?'confirmed':'declined'}">${newStatus==='active'?'Active':'Inactive'}</span>`;
+            }
+        }
+    }
+
+    const payload = { roomNumber, department, roomType, bleStatus, assignedFaculty, status };
+
+    try {
+        let res, data;
+        
+        if (isEditing) {
+            const roomId = getAllRows()[editingRoomIndex]?.dataset.roomid;
+            res = await fetch(`/admin/rooms/${roomId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            res = await fetch('/admin/rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        data = await res.json();
+
+        if (!res.ok || !data.success) {
+            // show first server-side validation error if it is present
+            const firstError = data.errors ? Object.values(data.errors)[0] : data.error;
+            showToast('error', 'Failed', firstError || 'Something went wrong.');r
+            return;
+        }
+
+        showToast('success', isEditing ? 'Room Updated' : 'Room Added', data.message);
+        closeRoomModal();
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    } catch (err) {
+        console.error('[saveRoom]', err);
+        showToast('error', 'Error', 'Could not reach the server.');
+    }
+}
+
+
+// Delete Room
+function openDeleteRoom(id, roomNum, building) {
+    deletingId = id;
     deletingRoom = `${roomNum}, ${building}`;
     document.getElementById('deleteRoomName').textContent = deletingRoom;
     document.getElementById('deleteRoomModal').classList.add('show');
 }
 
 function closeDeleteRoomModal() {
+    deletingId = null;
     deletingRoom = null;
     document.getElementById('deleteRoomModal').classList.remove('show');
 }
 
-function confirmDeleteRoom() {
-    showToast('success', 'Room Deleted', `"${deletingRoom}" has been removed.`);
-    closeDeleteRoomModal();
+async function confirmDeleteRoom() {
+   if (!deletingId) return;
+
+    try {
+        const res  = await fetch(`/admin/rooms/${deletingId}`, { method: 'DELETE' });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            showToast('error', 'Failed', data.error || 'Could not delete room.');
+            return;
+        }
+
+        showToast('success', 'Room Deleted', data.message);
+        document.getElementById('deleteRoomModal').classList.remove('show');
+
+        // Remove row from DOM
+        document.querySelector(`[data-roomid="${deletingId}"]`)?.closest('tr').remove();
+
+        deletingId = null;
+
+    } catch (err) {
+        console.error('[confirmDeleteRoom]', err);
+        showToast('error', 'Error', 'Could not reach the server.');
+    }
 }
 
 function showToast(type, title, message) {
@@ -366,6 +464,22 @@ document.getElementById('btnAddRoom').addEventListener('click', () => {
     editingRoomIndex = null;
     document.getElementById('roomModalTitle').textContent = 'Add Room';
     document.getElementById('roomModal').classList.add('show');
+});
+
+document.addEventListener('click', e => {
+    const btn = e.target.closest('.btn-edit-room');
+    if (!btn) return;
+
+    const d = btn.dataset;
+    openEditRoom(
+        d.index,
+        d.roomnumber,
+        d.department,
+        d.roomtype,
+        d.assignedfaculty,
+        d.blescanner,
+        d.status
+    );
 });
 document.getElementById('btnPrev').addEventListener('click', () => { currentPage--; renderPage(); });
 document.getElementById('btnNext').addEventListener('click', () => { currentPage++; renderPage(); });
