@@ -300,7 +300,12 @@
       <div class="mo-row">
         <div class="mo-field">
           <label>Room / Venue</label>
-          <input type="text" id="cmRoom" placeholder="e.g. Room 4">
+          <select id="cmRoom">
+            <option value="">Select a room...</option>
+              <% rooms.forEach(r => { %>
+                <option value="<%= r.room_id %>"><%= r.room_number %> (<%= r.room_type %>)</option>
+              <% }) %>
+          </select>
         </div>
         <div class="mo-field">
           <label>Section</label>
@@ -374,6 +379,7 @@
 <div class="toast-wrap" id="toastWrap"></div>
 <%- include('../../partials/script') %>
 <script>
+  window.__INSTRUCTOR_ID__ = '<%= instructor.id %>';
   window.__WORKLOAD_DATA__ = <%- workloadData %>;
 </script>
 <script src="/js/workload.js?v=<%= Date.now() %>"></script>
