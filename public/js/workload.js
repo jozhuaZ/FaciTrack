@@ -58,17 +58,6 @@ let touchStartY = 0;
 let touchMoved  = false;
 let pendingCell = null;
 
-/* ── Persistence ── */
-function lsSave(){
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(blocks)); }catch(e){}
-}
-function lsLoad(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ const d = JSON.parse(raw); if(d && typeof d==='object') blocks = d; }
-  }catch(e){}
-}
-
 /* ── Auto-save ── */
 let saveTimer = null;
 function autoSave(){
@@ -86,7 +75,7 @@ function autoSave(){
           subjects.push({ id: b.subjectCode, code: b.subjectCode, name: b.subjectName, color: typeColor(b.type), units: 0 });
         }
         serverBlocks[`${b.day}_${b.startSlot}`] = {
-          subjectId: b.subjectCode, room: b.room, section: b.section,
+          subjectId: b.subjectCode, roomId: b.roomId, room: b.room, section: b.section,
           type: b.type, duration: b.endSlot - b.startSlot, color: typeColor(b.type)
         };
       });
@@ -344,7 +333,7 @@ function openModal(key, day, startSlot, endSlot){
   document.getElementById('cmMetaText').textContent = `${day}  ·  ${rangeLabel(startSlot, endSlot)}`;
   document.getElementById('cmSubjectCode').value    = b ? b.subjectCode : '';
   document.getElementById('cmSubjectName').value    = b ? b.subjectName : '';
-  document.getElementById('cmRoom').value           = b ? (b.room    || '') : '';
+  document.getElementById('cmRoom').value           = b ? (b.roomId || '') : '';
   document.getElementById('cmSection').value        = b ? (b.section || '') : '';
   document.getElementById('cmType').value           = b ? (b.type    || 'Lecture') : 'Lecture';
   document.getElementById('cmRemove').style.display = (b && !isMakeUp) ? 'inline-flex' : 'none';
@@ -395,11 +384,17 @@ function saveCell(){
 
   if(editingKey) delete blocks[editingKey];
 
+  const roomSelect = document.getElementById('cmRoom');
+  const roomId = roomSelect.value;
+  const roomLabel = roomSelect.options[roomSelect.selectedIndex]?.text || '';
+
   const newKey = `${day}_${startSlot}`;
   blocks[newKey] = {
     day, startSlot, endSlot,
-    subjectCode: code, subjectName: name,
-    room: document.getElementById('cmRoom').value.trim(),
+    subjectCode: code, 
+    subjectName: name,
+    roomId,
+    room: roomLabel,
     section, type
   };
 
@@ -732,55 +727,16 @@ function wire(){
   });
 }
 
-/* ── Init ── */
-// async function init(){
-//   lsLoad();
-//   try{
-//     const r = await fetch('/instructor/workload/load');
-//     const j = await r.json();
-//     const subjectMap = {};
-//     (j.subjects || []).forEach(s => {
-//       if(s && s.code) subjectMap[s.code] = s.name || s.code;
-//     });
-//     // Merge server-side blocks into local blocks so approved make-up classes appear.
-//     // Server blocks are stored in the compact format { subjectId, room, section, type, duration, color }.
-//     // Convert them to the full client format before merging.
-//     if(j && j.blocks && typeof j.blocks === 'object'){
-//       Object.entries(j.blocks).forEach(([key, sb]) => {
-//         // Parse key: "${day}_${startSlot}"
-//         const under = key.indexOf('_');
-//         if(under < 0) return;
-//         const day       = key.slice(0, under);
-//         const startSlot = parseInt(key.slice(under + 1));
-//         const endSlot   = startSlot + (sb.duration || 1);
-//         // Only merge if not already present locally (server is authoritative for make-up classes)
-//         if(!blocks[key] || sb.type === 'Make Up Class'){
-//           const subjectCode = sb.subjectId || '';
-//           blocks[key] = {
-//             day, startSlot, endSlot,
-//             subjectCode: subjectCode,
-//             subjectName: subjectMap[subjectCode] || sb.subjectName || subjectCode,
-//             room:        sb.room    || '',
-//             section:     sb.section || '',
-//             type:        sb.type    || 'Lecture',
-//             color:       sb.color   || typeColor(sb.type)
-//           };
-//         }
-//       });
-//       lsSave();
-//     }
-//   }catch(e){}
-//   buildGrid();
-//   wire();
-// }
 async function init(){
-  lsLoad();
   try {
     const j = window.__WORKLOAD_DATA__ || { subjects: [], blocks: {} };
     const subjectMap = {};
     (j.subjects || []).forEach(s => {
       if (s && s.code) subjectMap[s.code] = s.name || s.code;
     });
+
+    blocks = {}; // start fresh from server data only
+
     if (j.blocks && typeof j.blocks === 'object') {
       Object.entries(j.blocks).forEach(([key, sb]) => {
         const under     = key.indexOf('_');
@@ -788,19 +744,17 @@ async function init(){
         const day       = key.slice(0, under);
         const startSlot = parseInt(key.slice(under + 1));
         const endSlot   = startSlot + (sb.duration || 1);
-        if (!blocks[key] || sb.type === 'Make Up Class') {
-          blocks[key] = {
-            day, startSlot, endSlot,
-            subjectCode: sb.subjectId || '',
-            subjectName: subjectMap[sb.subjectId] || sb.subjectName || '',
-            room:        sb.room    || '',
-            section:     sb.section || '',
-            type:        sb.type    || 'Lecture',
-            color:       sb.color   || typeColor(sb.type),
-          };
-        }
+        blocks[key] = {
+          day, startSlot, endSlot,
+          subjectCode: sb.subjectId || '',
+          subjectName: subjectMap[sb.subjectId] || sb.subjectName || '',
+          roomId:      sb.roomId,
+          room:        sb.room    || '',
+          section:     sb.section || '',
+          type:        sb.type    || 'Lecture',
+          color:       sb.color   || typeColor(sb.type),
+        };
       });
-      lsSave();
     }
   } catch(e) {
     console.warn('[init] Failed to parse workload data', e);
