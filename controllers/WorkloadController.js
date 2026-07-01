@@ -1,5 +1,6 @@
 const pool = require('../configs/db');
 const WorkloadModel = require('../models/WorkloadModel');
+const RoomModel = require('../models/RoomModel');
 
 const WorkloadController = {
 
@@ -7,28 +8,33 @@ const WorkloadController = {
     const instructorId = req.session.userId;
 
     const instructor = {
-        id: req.session?.instructorId,
-        name: req.session?.name,
-        firstName: req.session.firstName,
-        middleName: req.session.middleName,
-        lastName: req.session.lastName,
-        status: req.session.status,
-        email: req.session?.email,
-        position: req.session.position,
-        role: req.session.role,
-        profilePhoto: req.session?.profilePhoto || 'N/A',
-        department: req.session?.department,
+      id: req.session?.instructorId,
+      name: req.session?.name,
+      firstName: req.session.firstName,
+      middleName: req.session.middleName,
+      lastName: req.session.lastName,
+      status: req.session.status,
+      email: req.session?.email,
+      position: req.session.position,
+      role: req.session.role,
+      profilePhoto: req.session?.profilePhoto || 'N/A',
+      department: req.session?.department,
     };
 
-    const [subjects, blockRows] = await Promise.all([
+    const [subjects, blockRows, rooms] = await Promise.all([
       WorkloadModel.getSubjectsByInstructor(instructorId),
       WorkloadModel.getBlocksByInstructor(instructorId),
+      RoomModel.getRooms({
+        fields: 'r.id AS room_id, r.room_number, r.room_type, r.status',
+        filters: { status: 'Active' },
+        orderBy: 'room_number'
+      })
     ]);
 
     const subjectsOut = subjects.map(s => ({
-      id:    s.subject_code,
-      code:  s.subject_code,
-      name:  s.subject_name,
+      id: s.subject_code,
+      code: s.subject_code,
+      name: s.subject_name,
       color: s.color_hex,
       units: s.units,
     }));
@@ -37,28 +43,29 @@ const WorkloadController = {
     blockRows.forEach(b => {
       const key = `${b.day_of_week}_${b.start_slot}`;
       blocksOut[key] = {
-        subjectId:   b.subject_code,
+        subjectId: b.subject_code,
         subjectName: b.subject_name,
-        room:        b.room_name    || '',
-        section:     b.section_name || '',
-        type:        b.class_type   || 'Lecture',
-        duration:    b.end_slot - b.start_slot,
-        color:       b.color_hex,
+        roomId: b.room_id,
+        room: b.room_number || '',
+        section: b.section_name || '',
+        type: b.class_type || 'Lecture',
+        duration: b.end_slot - b.start_slot,
+        color: b.color_hex,
       };
-    });
+    }); 
 
     res.render('pages/instructor/workload', {
-      title:        'FaciTrack - Workload',
-      instructor:   instructor,
+      title: 'FaciTrack - Workload',
+      instructor: instructor,
       pendingCount: req.pendingCount ?? 0,
       workloadData: JSON.stringify({ subjects: subjectsOut, blocks: blocksOut }),
+      rooms: rooms
     });
   },
 
   async load(req, res) {
     try {
-      // const instructorId = req.session.userId;
-      const instructorId = 1;
+      const instructorId = req.session.userId;
 
       const [subjects, blockRows] = await Promise.all([
         WorkloadModel.getSubjectsByInstructor(instructorId),
@@ -66,9 +73,9 @@ const WorkloadController = {
       ]);
 
       const subjectsOut = subjects.map(s => ({
-        id:    s.subject_code,
-        code:  s.subject_code,
-        name:  s.subject_name,
+        id: s.subject_code,
+        code: s.subject_code,
+        name: s.subject_name,
         color: s.color_hex,
         units: s.units,
       }));
@@ -77,13 +84,13 @@ const WorkloadController = {
       blockRows.forEach(b => {
         const key = `${b.day_of_week}_${b.start_slot}`;
         blocksOut[key] = {
-          subjectId:   b.subject_code,
+          subjectId: b.subject_code,
           subjectName: b.subject_name,
-          room:        b.room_name    || '',
-          section:     b.section_name || '',
-          type:        b.class_type   || 'Lecture',
-          duration:    b.end_slot - b.start_slot,
-          color:       b.color_hex,
+          room: b.room_name || '',
+          section: b.section_name || '',
+          type: b.class_type || 'Lecture',
+          duration: b.end_slot - b.start_slot,
+          color: b.color_hex,
         };
       });
 
@@ -131,10 +138,10 @@ const WorkloadController = {
         if (b.type === 'Make Up Class') continue;
 
         // key format: "Monday_14", "Saturday_28" etc.
-        const under     = key.indexOf('_');
-        const day       = key.slice(0, under);
+        const under = key.indexOf('_');
+        const day = key.slice(0, under);
         const startSlot = parseInt(key.slice(under + 1));
-        const endSlot   = startSlot + (b.duration || 1);
+        const endSlot = startSlot + (b.duration || 1);
 
         // b.subjectId is the subject code string (set by workload.js autoSave)
         const subjectId = subjectIdMap[b.subjectId];
@@ -145,10 +152,10 @@ const WorkloadController = {
 
         await WorkloadModel.upsertBlock(instructorId, subjectId, {
           day, startSlot, endSlot,
-          room:     b.room    || null,
-          section:  b.section || null,
-          type:     b.type    || 'Lecture',
-          colorHex: b.color   || null,
+          roomId: b.roomId || null,
+          section: b.section || null,
+          type: b.type || 'Lecture',
+          colorHex: b.color || null,
         }, conn);
 
         keepKeys.push({ day, startSlot });
