@@ -15,16 +15,17 @@ const WorkloadModel = {
 
   async getBlocksByInstructor(instructorId) {
     const [rows] = await pool.query(
-      `SELECT wb.*, ws.subject_code, ws.subject_name
+        `SELECT wb.*, ws.subject_code, ws.subject_name, r.room_number
          FROM workload_blocks wb
          JOIN workload_subjects ws ON wb.subject_id = ws.id
          JOIN users u ON wb.instructor_id = u.id
+         LEFT JOIN rooms r ON wb.room_id = r.id
          WHERE u.public_id = ?
          ORDER BY wb.day_of_week, wb.start_slot`,
-      [instructorId]
+        [instructorId]
     );
     return rows;
-  },
+},
 
   async upsertSubject(instructorId, { code, name, colorHex, units }, conn = pool) {
     const [result] = await conn.query(
@@ -49,25 +50,25 @@ const WorkloadModel = {
     return row.id;
   },
 
-  async upsertBlock(instructorId, subjectId, { day, startSlot, endSlot, room, section, type, colorHex }, conn = pool) {
+  async upsertBlock(instructorId, subjectId, { day, startSlot, endSlot, roomId, section, type, colorHex }, conn = pool) {
     await conn.query(
-      `INSERT INTO workload_blocks
+        `INSERT INTO workload_blocks
              (instructor_id, subject_id, day_of_week, start_slot, end_slot,
-              room_name, section_name, class_type, color_hex)
+              room_id, section_name, class_type, color_hex)
          SELECT u.id, ?, ?, ?, ?, ?, ?, ?, ?
          FROM users u WHERE u.public_id = ?
          ON DUPLICATE KEY UPDATE
              subject_id   = VALUES(subject_id),
              end_slot     = VALUES(end_slot),
-             room_name    = VALUES(room_name),
+             room_id      = VALUES(room_id),
              section_name = VALUES(section_name),
              class_type   = VALUES(class_type),
              color_hex    = VALUES(color_hex)`,
-      [subjectId, day, startSlot, endSlot,
-        room ?? null, section ?? null, type ?? 'Lecture', colorHex ?? null,
-        instructorId]
+        [subjectId, day, startSlot, endSlot,
+         roomId ?? null, section ?? null, type ?? 'Lecture', colorHex ?? null,
+         instructorId]
     );
-  },
+},
 
   async pruneSubjects(instructorId, keepCodes, conn = pool) {
     if (!keepCodes.length) return;
