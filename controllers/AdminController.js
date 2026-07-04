@@ -9,7 +9,7 @@ const AdminController = {
     // USERS
     async renderUsersPage(req, res) {
         const admin = {
-            id: req.session?.instructorId,
+            id: req.session?.userId,
             name: req.session?.name,
             firstName: req.session.firstName,
             middleName: req.session.middleName,
