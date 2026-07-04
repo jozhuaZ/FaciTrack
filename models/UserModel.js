@@ -4,7 +4,7 @@ const pool = require('../configs/db');
 const UserModel = {
 
     async getUserByEmail(email) {
-        const query = 
+        const query =
             `SELECT
                 u.public_id AS id,
                 u.id AS internal_id,
@@ -29,8 +29,8 @@ const UserModel = {
 
         return rows[0] || null;
     },
-    
-    async getUsers({role, limit, offset, fields = '*'}) {
+
+    async getUsers({ role, limit, offset, fields = '*' }) {
         let query = `SELECT ${fields} FROM users WHERE 1=1`;
         const params = [];
 
@@ -52,7 +52,7 @@ const UserModel = {
         const [rows] = await pool.execute(query, params);
         return rows;
     },
-    
+
     async getUsersWithDepartment({ role, limit, offset } = {}) {
         let query = `
             SELECT
@@ -74,9 +74,9 @@ const UserModel = {
         `;
         const params = [];
 
-        if (role)   { query += ' AND u.role = ?';  params.push(role); }
-        if (limit)  { query += ' LIMIT ?';         params.push(Number(limit)); }
-        if (offset) { query += ' OFFSET ?';        params.push(Number(offset)); }
+        if (role) { query += ' AND u.role = ?'; params.push(role); }
+        if (limit) { query += ' LIMIT ?'; params.push(Number(limit)); }
+        if (offset) { query += ' OFFSET ?'; params.push(Number(offset)); }
 
         const [rows] = await pool.execute(query, params);
         return rows;
@@ -88,17 +88,33 @@ const UserModel = {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const [result] = await pool.execute(query, [
-            newUser.firstName, 
-            newUser.middleName,
+            newUser.firstName,
+            newUser.middleName ?? null,
             newUser.lastName,
             newUser.email,
-            newUser.role, 
-            newUser.departmentId,
+            newUser.role,
+            newUser.departmentId ?? null,
             newUser?.status || 'Active',
-            newUser.employmentType,
-            newUser.position,
+            newUser.employmentType ?? null,
+            newUser.position ?? null,
             newUser?.profilePicture || null,
-            newUser.hashedPassword
+            newUser.hashedPassword ?? null
+        ]);
+
+        return result.insertId;
+    },
+
+    async insertUserByOAuth(newUser) {
+        const query = `INSERT INTO users 
+            (first_name, last_name, email, role, status)
+            VALUES (?, ?, ?, ?, ?)`;
+
+        const [result] = await pool.execute(query, [
+            newUser.firstName,
+            newUser.lastName,
+            newUser.email,
+            newUser.role,
+            newUser.status
         ]);
 
         return result.insertId;
@@ -119,12 +135,12 @@ const UserModel = {
             WHERE public_id = ?`,
             [
                 data.firstName,
-                data.middleName     ?? null,
+                data.middleName ?? null,
                 data.lastName,
                 data.email,
                 data.role,
-                data.departmentId   ?? null,
-                data.status         ?? 'Active',
+                data.departmentId ?? null,
+                data.status ?? 'Active',
                 data.employmentType,
                 data.position,
                 publicId,
@@ -144,6 +160,32 @@ const UserModel = {
     async updateLastLogin(id) {
         const query = `UPDATE users SET last_login = NOW() WHERE id = ?`;
         await pool.execute(query, [id]);
+    },
+
+    async getUserByPublicId(publicId) {
+        const [rows] = await pool.execute(
+            `SELECT 
+            u.public_id AS id,
+            u.first_name, u.last_name, u.middle_name,
+            u.email, u.role, u.status,
+            u.position, u.employment_type,
+            u.profile_picture, u.department_id,
+            d.full_name AS department_name
+         FROM users u
+         LEFT JOIN departments d ON u.department_id = d.id
+         WHERE u.public_id = ?`,
+            [publicId]
+        );
+        return rows[0] || null;
+    },
+
+    async getUserById(internalId) {
+        const [rows] = await pool.execute(
+            `SELECT public_id AS id, id AS internal_id, first_name, last_name, email, role, status, profile_picture
+         FROM users WHERE id = ?`,
+            [internalId]
+        );
+        return rows[0] || null;
     },
 }
 
