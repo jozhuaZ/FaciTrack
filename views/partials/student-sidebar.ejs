@@ -5,8 +5,8 @@
                 <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Camarines_Sur_Polytechnic_Colleges_Logo.png" alt="CSPC Logo" class="cspc-logo-img">
             </div>
             <div class="profile-info-mini">
-                <h3 class="profile-name-mini">Welcome Student!</h3>
-                <p class="profile-role-mini">CSPC Student</p>
+                <h3 class="profile-name-mini">Welcome <%= student.firstName %>!</h3>
+                <p class="profile-role-mini"><%= student.email %></p>
             </div>
         </div>
         <!-- Mobile hamburger toggle -->
@@ -45,11 +45,11 @@
     </nav>
 
     <div class="sidebar-footer">
-        <a href="/" class="btn-logout-sidebar">
+        <a href="/logout" class="btn-logout-sidebar">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
-            <span>Back to Home</span>
+            <span>Logout</span>
         </a>
     </div>
 </aside>
