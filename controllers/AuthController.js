@@ -96,11 +96,35 @@ const AuthController = {
 
     redirectByRole(res, role) {
         const destinations = {
+            'Student': '/student/dashboard',
             'Admin': '/admin/dashboard',
             'Dean': '/dean/dashboard',
             'Instructor': '/instructor/dashboard',
         };
         res.redirect(destinations[role] || '/login');
+    },
+
+    handleGoogleCallback(req, res) {
+        // passport already verified the user — req.user is set
+        const user = req.user;
+
+        // Mirror the same session structure as manual login
+        req.session.userId = user.id;   // public_id
+        req.session.role = user.role;
+        req.session.name = `${user.first_name} ${user.last_name}`;
+        req.session.firstName = user.first_name;
+        req.session.middleName = user?.middleName || '';
+        req.session.lastName = user.last_name;
+        req.session.email = user.email;
+        req.session.department = user.department_name;
+        req.session.profilePhoto = user.profile_picture || null;
+
+        UserModel.updateLastLogin(user.internal_id).catch(() => { });
+
+        req.session.save((err) => {
+            if (err) return res.redirect('/login');
+            AuthController.redirectByRole(res, user.role);
+        });
     },
 
 };
