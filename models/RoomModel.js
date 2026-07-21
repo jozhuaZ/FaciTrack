@@ -44,6 +44,14 @@ const RoomModel = {
         return rows;
     },
 
+    async getRoomById(id) {
+        const [rows] = await pool.execute(
+            'SELECT id, room_number, room_type FROM rooms WHERE id = ?',
+            [id]
+        );
+        return rows[0] || null;
+    },
+
     async insertRoomByAdmin(newRoom) {
         let query = `INSERT INTO rooms (room_number, department_id, room_type, assigned_faculty, is_ble_scanner_installed, status) 
                     VALUES (?, ?, ?, ?, ?, ?)`;
