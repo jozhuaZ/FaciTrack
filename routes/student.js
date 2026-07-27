@@ -10,61 +10,8 @@ router.use((req, res, next) => {
     next();
 });
 
-// ── Student Login (Public Routes) ──
-// router.get('/login', (req, res) => {
-//     const errorMessages = {
-//         'oauth_not_configured': 'Google Sign-In is not configured. Please use email/password login.',
-//         'authentication_failed': 'Authentication failed. Please try again.',
-//         'missing_code': 'Authentication code missing. Please try again.',
-//         'not_a_student_account': 'This account is not registered as a student.',
-//         'account_inactive': 'Your account is inactive. Please contact support.'
-//     };
-
-//     const errorParam = req.query.error;
-//     const errorMessage = errorParam ? errorMessages[errorParam] || 'An error occurred. Please try again.' : null;
-
-//     res.render('pages/index', {
-//         title: 'FaciTrack - Student Login',
-//         error: errorMessage
-//     });
-// });
-
-router.post('/login', (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.render('pages/student/login', {
-            title: 'FaciTrack - Student Login',
-            error: 'Please enter your email and password.'
-        });
-    }
-
-    // Authenticate student
-    const user = authenticateUser(email, password);
-
-    if (!user || user.role !== 'student') {
-        return res.render('pages/student/login', {
-            title: 'FaciTrack - Student Login',
-            error: 'Invalid email or password.'
-        });
-    }
-
-    // Validate CSPC student email
-    if (!email.endsWith('@my.cspc.edu.ph')) {
-        return res.render('pages/student/login', {
-            title: 'FaciTrack - Student Login',
-            error: 'Please use your CSPC student email (@my.cspc.edu.ph).'
-        });
-    }
-
-    // Create session
-    const session = createSession(user, { ip: req.ip, userAgent: req.headers['user-agent'] || '' });
-    setSessionCookie(res, session.token);
-    res.redirect(getRoleRedirect(user.role));
-});
-
 // Protect all other student routes - require student role
-router.use(requireRole('student'));
+// router.use(requireRole('student'));
 
 // ── Faculty list ──
 const facultyList = [
@@ -82,8 +29,8 @@ const facultyList = [
         nextAvailable: 'Tomorrow, 10:00 AM', email: 'jdelacruz@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 105',
         consultationSlots: [
-            { day: 'Tuesday',  time: '9:00 AM – 10:00 AM', status: 'open', maxCapacity: 3 },
-            { day: 'Thursday', time: '1:00 PM – 2:00 PM',  status: 'open', maxCapacity: 3 }
+            { day: 'Tuesday', time: '9:00 AM – 10:00 AM', status: 'open', maxCapacity: 3 },
+            { day: 'Thursday', time: '1:00 PM – 2:00 PM', status: 'open', maxCapacity: 3 }
         ]
     },
     {
@@ -93,8 +40,8 @@ const facultyList = [
         nextAvailable: 'Today, 9:00 AM', email: 'avillanueva@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 203',
         consultationSlots: [
-            { day: 'Monday',    time: '9:00 AM – 10:00 AM', status: 'open', maxCapacity: 3 },
-            { day: 'Wednesday', time: '1:00 PM – 2:00 PM',  status: 'open', maxCapacity: 3 }
+            { day: 'Monday', time: '9:00 AM – 10:00 AM', status: 'open', maxCapacity: 3 },
+            { day: 'Wednesday', time: '1:00 PM – 2:00 PM', status: 'open', maxCapacity: 3 }
         ]
     },
     {
@@ -104,7 +51,7 @@ const facultyList = [
         nextAvailable: 'Tomorrow, 9:00 AM', email: 'cbautista@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 102',
         consultationSlots: [
-            { day: 'Tuesday',  time: '2:00 PM – 3:00 PM',  status: 'open', maxCapacity: 3 },
+            { day: 'Tuesday', time: '2:00 PM – 3:00 PM', status: 'open', maxCapacity: 3 },
             { day: 'Thursday', time: '9:00 AM – 10:00 AM', status: 'open', maxCapacity: 3 }
         ]
     },
@@ -115,7 +62,7 @@ const facultyList = [
         nextAvailable: 'Today, 3:00 PM', email: 'raquino@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 204',
         consultationSlots: [
-            { day: 'Monday',   time: '1:00 PM – 2:00 PM',   status: 'open', maxCapacity: 3 },
+            { day: 'Monday', time: '1:00 PM – 2:00 PM', status: 'open', maxCapacity: 3 },
             { day: 'Thursday', time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 }
         ]
     },
@@ -126,8 +73,8 @@ const facultyList = [
         nextAvailable: 'Today, 4:00 PM', email: 'lnavarro@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 106',
         consultationSlots: [
-            { day: 'Wednesday', time: '2:00 PM – 3:00 PM',   status: 'full', maxCapacity: 3 },
-            { day: 'Friday',    time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 }
+            { day: 'Wednesday', time: '2:00 PM – 3:00 PM', status: 'full', maxCapacity: 3 },
+            { day: 'Friday', time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 }
         ]
     },
     {
@@ -137,7 +84,7 @@ const facultyList = [
         nextAvailable: 'Today, 1:00 PM', email: 'eflores@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 202',
         consultationSlots: [
-            { day: 'Tuesday',  time: '1:00 PM – 2:00 PM', status: 'open', maxCapacity: 3 },
+            { day: 'Tuesday', time: '1:00 PM – 2:00 PM', status: 'open', maxCapacity: 3 },
             { day: 'Thursday', time: '2:00 PM – 3:00 PM', status: 'open', maxCapacity: 3 }
         ]
     },
@@ -149,7 +96,7 @@ const facultyList = [
         officeRoom: 'CCS Building, Room 107',
         consultationSlots: [
             { day: 'Monday', time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 },
-            { day: 'Friday', time: '2:00 PM – 3:00 PM',   status: 'open', maxCapacity: 3 }
+            { day: 'Friday', time: '2:00 PM – 3:00 PM', status: 'open', maxCapacity: 3 }
         ]
     },
     {
@@ -159,8 +106,8 @@ const facultyList = [
         nextAvailable: 'Today, 11:00 AM', email: 'breyes@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 205',
         consultationSlots: [
-            { day: 'Tuesday',   time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 },
-            { day: 'Wednesday', time: '3:00 PM – 4:00 PM',   status: 'open', maxCapacity: 3 }
+            { day: 'Tuesday', time: '10:00 AM – 11:00 AM', status: 'open', maxCapacity: 3 },
+            { day: 'Wednesday', time: '3:00 PM – 4:00 PM', status: 'open', maxCapacity: 3 }
         ]
     },
     {
@@ -170,19 +117,19 @@ const facultyList = [
         nextAvailable: 'Tomorrow, 1:00 PM', email: 'mcastro@cspc.edu.ph',
         officeRoom: 'CCS Building, Room 103',
         consultationSlots: [
-            { day: 'Monday',   time: '3:00 PM – 4:00 PM', status: 'open', maxCapacity: 3 },
+            { day: 'Monday', time: '3:00 PM – 4:00 PM', status: 'open', maxCapacity: 3 },
             { day: 'Thursday', time: '1:00 PM – 2:00 PM', status: 'full', maxCapacity: 3 }
         ]
     }
 ];
 
 const departments = [
-    { value: 'College of Computer Studies',        label: 'College of Computer Studies (CCS)' },
-    { value: 'College of Teacher Education',       label: 'College of Teacher Education (CTE)' },
-    { value: 'College of Engineering',             label: 'College of Engineering (COE)' },
-    { value: 'College of Agriculture',             label: 'College of Agriculture (CA)' },
+    { value: 'College of Computer Studies', label: 'College of Computer Studies (CCS)' },
+    { value: 'College of Teacher Education', label: 'College of Teacher Education (CTE)' },
+    { value: 'College of Engineering', label: 'College of Engineering (COE)' },
+    { value: 'College of Agriculture', label: 'College of Agriculture (CA)' },
     { value: 'College of Business Administration', label: 'College of Business Administration (CBA)' },
-    { value: 'College of Arts and Sciences',       label: 'College of Arts and Sciences (CAS)' },
+    { value: 'College of Arts and Sciences', label: 'College of Arts and Sciences (CAS)' },
 ];
 
 // ── Reference number store ──
@@ -324,7 +271,7 @@ function findNextAvailableSlot(faculty, afterDate) {
     const slots = faculty.consultationSlots.filter(s => s.status === 'open');
     if (!slots.length) return null;
 
-    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -377,7 +324,7 @@ function chopSlotServer(slotObj) {
     const parts = slotObj.time.split('–').map(s => s.trim());
     if (parts.length < 2) return [slotObj.time];
     const startMins = parseTimeServer(parts[0]);
-    const endMins   = parseTimeServer(parts[1]);
+    const endMins = parseTimeServer(parts[1]);
     const cap = slotObj.maxCapacity || 3;
     const slotMins = Math.floor((endMins - startMins) / cap);
     const result = [];
@@ -410,10 +357,10 @@ function getFaculty(id) {
 function computeNextAvailable(slots) {
     if (!slots || !slots.length) return 'No schedule set';
 
-    const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const now = new Date();
     const todayIdx = now.getDay(); // 0=Sun
-    const nowMins  = now.getHours() * 60 + now.getMinutes();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
 
     // Parse "9:00 AM" → minutes since midnight
     function parseMins(str) {
@@ -441,8 +388,8 @@ function computeNextAvailable(slots) {
     // Search up to 7 days ahead (current week + next week)
     for (let offset = 0; offset < 7; offset++) {
         const checkIdx = (todayIdx + offset) % 7;
-        const dayName  = DAY_NAMES[checkIdx];
-        const isToday  = offset === 0;
+        const dayName = DAY_NAMES[checkIdx];
+        const isToday = offset === 0;
 
         const daySlots = openSlots.filter(s => s.day === dayName);
         if (!daySlots.length) continue;
@@ -470,19 +417,31 @@ function getDisplayStatus(faculty) {
 }
 
 // ── Routes ──
-
 router.get('/dashboard', (req, res) => {
     const { search, dept } = req.query;
     let filtered = facultyList.map(f => getFaculty(f.id));
-    if (dept)   filtered = filtered.filter(f => f.department === dept);
+    if (dept) filtered = filtered.filter(f => f.department === dept);
     if (search) {
         const kw = search.toLowerCase();
         filtered = filtered.filter(f =>
             f.name.toLowerCase().includes(kw) || f.specialization.toLowerCase().includes(kw)
         );
     }
+
+    const student = {
+        id: req.session?.userId,
+        name: req.session?.name,
+        firstName: req.session.firstName,
+        lastName: req.session.lastName,
+        status: req.session.status,
+        email: req.session?.email,
+        role: req.session.role,
+        profilePhoto: req.session?.profilePhoto || 'N/A',
+    }
+
     res.render('pages/student/dashboard', {
         title: 'FaciTrack - Faculty Directory',
+        student: student,
         facultyList: filtered,
         searchQuery: search || '', activeDept: dept || '', departments
     });
@@ -498,7 +457,7 @@ router.get('/faculty/:id', (req, res) => {
         faculty,
         takenSlots,
         windowStart: windowStart.toISOString(),
-        windowEnd:   windowEnd.toISOString()
+        windowEnd: windowEnd.toISOString()
     });
 });
 
@@ -531,10 +490,10 @@ router.get('/faculty/:id/book', (req, res) => {
     if (!faculty) return res.redirect('/student/dashboard');
     const hasOpen = faculty.consultationSlots.some(s => s.status === 'open');
     if (!hasOpen) return res.redirect(`/student/faculty/${faculty.id}`);
-    
+
     // Get logged-in student info
     const student = req.currentUser;
-    
+
     res.render('pages/student/book', {
         title: `FaciTrack - Book Appointment with ${faculty.name}`,
         faculty,
@@ -550,7 +509,7 @@ router.post('/faculty/:id/book', (req, res) => {
     if (!faculty) return res.redirect('/student/dashboard');
 
     const { selectedSlot, consultTopic, consultNotes, selectedDate, reservationToken } = req.body;
-    
+
     // Get logged-in student info
     const student = req.currentUser;
     const studentName = student.name;
@@ -627,8 +586,8 @@ router.post('/faculty/:id/book', (req, res) => {
     });
 
     const backHref = `/student/faculty/${faculty.id}/book?` + new URLSearchParams({
-        slot:          selectedSlot,
-        date:          selectedDate || ''
+        slot: selectedSlot,
+        date: selectedDate || ''
     }).toString();
 
     res.render('pages/student/booking-confirm', {
@@ -638,9 +597,9 @@ router.post('/faculty/:id/book', (req, res) => {
         backHref,
         bookingData: {
             facultyName: faculty.name,
-            topic:       sanitizedTopic,
-            slot:        selectedSlot,
-            date:        selectedDate || ''
+            topic: sanitizedTopic,
+            slot: selectedSlot,
+            date: selectedDate || ''
         }
     });
 });
@@ -649,13 +608,13 @@ router.get('/appointments', (req, res) => {
     // Get logged-in student's appointments
     const student = req.currentUser;
     const studentEmail = student.email.toLowerCase();
-    
+
     // Filter appointments for this student
-    const myAppointments = Object.values(refStore).filter(apt => 
+    const myAppointments = Object.values(refStore).filter(apt =>
         apt.studentEmail === studentEmail
     );
-    
-    res.render('pages/student/appointments', { 
+
+    res.render('pages/student/appointments', {
         title: 'FaciTrack - My Appointments',
         appointments: myAppointments,
         student
@@ -670,7 +629,7 @@ router.get('/availability', (req, res) => {
 
 // Validate reference number
 router.get('/ref/validate', (req, res) => {
-    const ref   = (req.query.ref   || '').toUpperCase().trim();
+    const ref = (req.query.ref || '').toUpperCase().trim();
     const email = (req.query.email || '').toLowerCase().trim();
 
     if (!refStore[ref]) {
@@ -716,16 +675,16 @@ router.post('/reschedule/:refNumber', (req, res) => {
 
     // Update booking
     booking.slot = next.slot;
-    booking.day  = next.day;
+    booking.day = next.day;
     booking.date = next.dateStr;
     booking.rescheduledFrom = { date: originalDateStr, slot: originalSlot };
 
     // Send reschedule email
     emailService.sendRescheduleNotification({
         studentEmail: booking.studentEmail,
-        studentName:  booking.studentName,
-        refNumber:    ref,
-        facultyName:  faculty.name,
+        studentName: booking.studentName,
+        refNumber: ref,
+        facultyName: faculty.name,
         originalDate: originalDateStr,
         originalSlot,
         newDate: next.dateStr,
@@ -737,11 +696,11 @@ router.post('/reschedule/:refNumber', (req, res) => {
 });
 
 module.exports = router;
-module.exports.releaseSlot        = releaseSlot;
-module.exports.confirmSlot        = confirmSlot;
-module.exports.slotBookings       = slotBookings;
-module.exports.refStore           = refStore;
-module.exports.getDisplayStatus   = getDisplayStatus;
-module.exports.facultyList        = facultyList;
-module.exports.sendApprovalEmail  = emailService.sendApprovalNotification;
-module.exports.sendDeclineEmail   = emailService.sendDeclineNotification;
+module.exports.releaseSlot = releaseSlot;
+module.exports.confirmSlot = confirmSlot;
+module.exports.slotBookings = slotBookings;
+module.exports.refStore = refStore;
+module.exports.getDisplayStatus = getDisplayStatus;
+module.exports.facultyList = facultyList;
+module.exports.sendApprovalEmail = emailService.sendApprovalNotification;
+module.exports.sendDeclineEmail = emailService.sendDeclineNotification;

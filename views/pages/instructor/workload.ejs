@@ -300,11 +300,29 @@
       <div class="mo-row">
         <div class="mo-field">
           <label>Room / Venue</label>
-          <input type="text" id="cmRoom" placeholder="e.g. Room 4">
+          <select id="cmRoom">
+              <option value="">Select a room...</option>
+              <% rooms.forEach(r => { %>
+                  <option value="<%= r.room_id %>" 
+                          data-roomtype="<%= r.room_type %>">
+                      <%= r.room_number %> (<%= r.room_type %>)
+                  </option>
+              <% }) %>
+          </select>
         </div>
         <div class="mo-field">
           <label>Section</label>
           <input type="text" id="cmSection" placeholder="e.g. BSIT 3-A">
+        </div>
+      </div>
+      <div class="mo-row" id="cmTimeRow">
+        <div class="mo-field">
+          <label>Start Time</label>
+          <select id="cmStartSlot"></select>
+        </div>
+        <div class="mo-field">
+          <label>End Time</label>
+          <select id="cmEndSlot"></select>
         </div>
       </div>
       <div class="mo-field">
@@ -320,6 +338,22 @@
       <button class="btn btn-danger" id="cmRemove" style="margin-right:auto;display:none">Remove</button>
       <button class="btn btn-ghost" id="cmCancel">Cancel</button>
       <button class="btn btn-primary" id="cmSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete modal confirmation -->
+ <div class="mo" id="removeBlockModal">
+  <div class="mo-box" style="max-width:360px">
+    <div class="mo-head">
+      <div style="flex:1">
+        <h3>Remove Block?</h3>
+        <p class="mo-meta" id="removeBlockMeta"></p>
+      </div>
+    </div>
+    <div class="mo-foot">
+      <button class="btn btn-ghost" id="removeBlockCancel">Cancel</button>
+      <button class="btn btn-danger" id="removeBlockConfirm">Yes, Remove</button>
     </div>
   </div>
 </div>
@@ -374,6 +408,7 @@
 <div class="toast-wrap" id="toastWrap"></div>
 <%- include('../../partials/script') %>
 <script>
+  window.__INSTRUCTOR_ID__ = '<%= instructor.id %>';
   window.__WORKLOAD_DATA__ = <%- workloadData %>;
 </script>
 <script src="/js/workload.js?v=<%= Date.now() %>"></script>

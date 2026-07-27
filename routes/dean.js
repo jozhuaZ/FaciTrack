@@ -12,57 +12,6 @@ router.use((req, res, next) => {
     next();
 });
 
-// Dean Login page
-router.get('/login', (req, res) => {
-    res.render('pages/dean/login', { 
-        title: 'FaciTrack - Dean Login',
-        error: null 
-    });
-});
-
-// Dean Login POST handler
-router.post('/login', (req, res) => {
-    const { email } = req.body;
-    
-    // Input validation
-    if (!email || typeof email !== 'string' || email.trim().length === 0) {
-        return res.render('pages/dean/login', { 
-            title: 'FaciTrack - Dean Login',
-            error: 'Please enter your email address.' 
-        });
-    }
-    
-    // PROTOTYPE MODE: Accept any email without password verification
-    const { readData } = require('../services/data-store');
-    const db = readData();
-    const user = (db.users || []).find((u) => String(u.email || '').toLowerCase() === email.trim().toLowerCase());
-    
-    if (user && user.role === 'dean') {
-        const session = createSession(user, { ip: req.ip, userAgent: req.headers['user-agent'] || '' });
-        setSessionCookie(res, session.token);
-        res.redirect(getRoleRedirect(user.role));
-    } else {
-        res.render('pages/dean/login', { 
-            title: 'FaciTrack - Dean Login',
-            error: 'Dean user not found.' 
-        });
-    }
-});
-
-router.post('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-router.get('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-
-// PROTOTYPE MODE: Disabled role check to allow free navigation
-// router.use(requireRole('dean'));
-
 // Shared simulated data
 function getSharedData() {
     const dean = {
@@ -453,16 +402,6 @@ router.get('/building', (req, res) => {
     const data = getSharedData();
     res.render('pages/dean/building', {
         title: 'FaciTrack - 3D Building Viewer',
-        ...data,
-        pendingMakeupCount: getPendingMakeupCount()
-    });
-});
-
-// Rooms page
-router.get('/rooms', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/dean/rooms', {
-        title: 'FaciTrack - Room Management',
         ...data,
         pendingMakeupCount: getPendingMakeupCount()
     });
