@@ -5,6 +5,7 @@ const { createWorker } = require('tesseract.js');
 const WorkloadController = require('../controllers/WorkloadController');
 const { authenticateUser, createSession, getRoleRedirect, revokeSession } = require('../services/auth');
 const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
+const { bookingConflictsWithBlock, getBlockDateKeys, normalizeDateKey } = require('../services/scheduling');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── PDF upload middleware for make-up class requests ──
@@ -93,13 +94,68 @@ function checkInstructorAvailability(instructorId, day, reqStart, reqEnd) {
 }
 
 // ── Shared notifications list (module-level, persists for server session) ──
-const notificationsList = [
-    { id: 1, type: 'new-request',  message: 'New consultation request from Juan Dela Cruz',           time: '1 hour ago',  read: false },
-    { id: 2, type: 'cancellation', message: 'Maria Garcia cancelled appointment for March 25',         time: '2 hours ago', read: false },
-    { id: 3, type: 'reminder',     message: 'Upcoming consultation with Carlos Mendoza at 3:30 PM',   time: '3 hours ago', read: true  },
-    { id: 4, type: 'alert',        message: 'Presence not detected during scheduled hours yesterday',  time: '1 day ago',   read: true  }
-];
-let notifIdCounter = 5;
+const notificationsList = [];
+let notifIdCounter = 1;
+
+function formatRelativeTime(value) {
+    const timestamp = new Date(value).getTime();
+    if (Number.isNaN(timestamp)) return 'Just now';
+    const diffMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    const diffDays = Math.round(diffHours / 24);
+    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
+function createInstructorNotification({ type, title, message, read = false, createdAt = new Date().toISOString(), category = 'general' }) {
+    return {
+        id: notifIdCounter++,
+        type,
+        category,
+        title,
+        message,
+        read,
+        createdAt,
+        time: formatRelativeTime(createdAt)
+    };
+}
+
+function addInstructorNotification(payload) {
+    const entry = createInstructorNotification(payload);
+    notificationsList.unshift(entry);
+    return entry;
+}
+
+function seedSampleNotifications() {
+    if (notificationsList.length > 0) return;
+    notificationsList.push(
+        addInstructorNotification({
+            type: 'new-request',
+            title: 'New appointment request',
+            message: 'Juan Dela Cruz requested a consultation for today at 2:00 PM.',
+            category: 'appointment',
+            read: false
+        }),
+        addInstructorNotification({
+            type: 'cancellation',
+            title: 'Appointment cancelled',
+            message: 'Maria Garcia cancelled her appointment for March 25.',
+            category: 'appointment',
+            read: false
+        }),
+        addInstructorNotification({
+            type: 'reminder',
+            title: 'Upcoming appointment reminder',
+            message: 'Carlos Mendoza is due for a consultation at 3:30 PM.',
+            category: 'reminder',
+            read: true
+        })
+    );
+}
+
+seedSampleNotifications();
 
 function makeDemoPdf(title) {
     // Minimal valid PDF that displays a message
@@ -546,6 +602,18 @@ router.get('/consultations', (req, res) => {
         filterStatus: status || '',
         pendingCount: data.appointments.filter(a => a.status === 'pending').length
     });
+});
+
+// API endpoint for calendar data - consultations
+router.get('/consultations/data', (req, res) => {
+    const data = getSharedData();
+    res.json({ appointments: data.appointments });
+});
+
+// API endpoint for calendar data - schedules
+router.get('/schedule/data', (req, res) => {
+    const slots = getSchedule(1);
+    res.json({ slots: slots });
 });
 
 // Schedule
@@ -1045,12 +1113,12 @@ router.post('/makeup/request', (req, res, next) => {
         };
 
         // Add notification
-        notificationsList.unshift({
-            id:      notifIdCounter++,
-            type:    'makeup',
-            message: `Make-up class request submitted for ${subjectCode} on ${day} (${slotToLabel(startSlot)} – ${slotToLabel(endSlot)})`,
-            time:    'Just now',
-            read:    false
+        addInstructorNotification({
+            type: 'makeup',
+            title: 'Make-up request submitted',
+            message: `Make-up class request submitted for ${subjectCode} on ${day} (${slotToLabel(startSlot)} – ${slotToLabel(endSlot)}).`,
+            category: 'makeup',
+            read: false
         });
 
         flashStore.message = `Your make-up class request for ${subjectCode} has been submitted for dean review.`;
@@ -1079,10 +1147,209 @@ router.get('/makeup/requests', (req, res) => {
     });
 });
 
-router.requestStore       = requestStore;
-router.timetableStore     = timetableStore;
-router.notificationsList  = notificationsList;
-router.slotToLabel        = slotToLabel;
-router.getScheduleStore   = () => scheduleStore;
+// ── Unavailability Store ──
+// key: 'YYYY-MM-DD' → { date, reason, blockedAt, cancelledRefs: [] }
+const unavailabilityStore = {};
+
+// ── Normalise a date string or Date to 'YYYY-MM-DD' ──
+function toDateKey(d) {
+    const dt = typeof d === 'string' ? new Date(d) : d;
+    if (isNaN(dt)) return null;
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+// ── Check whether a booking's date matches a given YYYY-MM-DD key ──
+// Booking dates come in formats like "Monday, July 28, 2025" or "2025-07-28"
+function bookingMatchesDate(booking, dateKey) {
+    // Try direct ISO match first
+    if (booking.date) {
+        const isoKey = toDateKey(booking.date);
+        if (isoKey === dateKey) return true;
+    }
+    // Parse verbose format "Monday, July 28, 2025"
+    if (booking.date) {
+        const parsed = new Date(booking.date);
+        if (!isNaN(parsed)) {
+            if (toDateKey(parsed) === dateKey) return true;
+        }
+    }
+    return false;
+}
+
+// ── Core: cancel all pending/confirmed bookings that overlap with a block ──
+async function cancelBookingsForBlock(instructorId, block, dateKeys, reason) {
+    const emailService = require('../services/email');
+    const sr = getStudentRouter();
+    if (!sr || !sr.refStore) return [];
+
+    const cancelled = [];
+    for (const [refNumber, booking] of Object.entries(sr.refStore)) {
+        if (booking.facultyId !== instructorId) continue;
+        if (booking.status !== 'pending' && booking.status !== 'confirmed') continue;
+
+        const bookingDateKey = normalizeDateKey(booking.date);
+        const overlaps = dateKeys.some(dateKey => bookingConflictsWithBlock(booking, block, dateKey));
+        if (!bookingDateKey || !overlaps) continue;
+
+        booking.status = 'cancelled';
+        booking.cancellationReason = reason || 'Instructor unavailability';
+        booking.cancelledAt = new Date().toISOString();
+        booking.blockedSchedule = {
+            type: block.type,
+            date: bookingDateKey,
+            reason: booking.cancellationReason,
+            startTime: block.startTime || null,
+            endTime: block.endTime || null
+        };
+
+        if (booking.day && booking.slot) {
+            sr.releaseSlot(booking.facultyId, booking.day, booking.slot);
+        }
+
+        cancelled.push({
+            refNumber,
+            studentName: booking.studentName,
+            studentEmail: booking.studentEmail,
+            date: booking.date,
+            slot: booking.slot
+        });
+
+        console.log(`[Unavailability] Cancelled booking ${refNumber} for ${booking.studentName} on ${bookingDateKey}`);
+
+        emailService.sendUnavailabilityCancellation({
+            studentEmail: booking.studentEmail,
+            studentName: booking.studentName,
+            refNumber,
+            facultyName: booking.facultyName,
+            date: booking.date,
+            slot: booking.slot,
+            reason: booking.cancellationReason,
+            bookingUrl: `https://facitrack.cspc.edu.ph/student/faculty/${booking.facultyId}`
+        }).catch(err => console.error('[Unavailability] Email error:', err.message));
+    }
+    return cancelled;
+}
+
+// GET /instructor/unavailability/list — returns all unavailable dates for this instructor
+router.get('/unavailability/list', (req, res) => {
+    const list = Object.values(unavailabilityStore)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    res.json({ success: true, unavailableDates: list });
+});
+
+// POST /instructor/unavailability/set — mark one or more dates as unavailable + auto-cancel appointments
+router.post('/unavailability/set', async (req, res) => {
+    const { startDate, endDate, date, reason, type = 'full-day', startTime, endTime } = req.body;
+    const startKey = normalizeDateKey(startDate || date);
+    const endKey = normalizeDateKey(endDate || date);
+
+    if (!startKey || !endKey) {
+        return res.status(400).json({ success: false, error: 'Please select a valid start and end date.' });
+    }
+    if (new Date(endKey + 'T00:00:00') < new Date(startKey + 'T00:00:00')) {
+        return res.status(400).json({ success: false, error: 'The end date cannot be earlier than the start date.' });
+    }
+
+    if (type === 'time-range') {
+        if (!startTime || !endTime) {
+            return res.status(400).json({ success: false, error: 'Please provide a start and end time.' });
+        }
+        if (startTime >= endTime) {
+            return res.status(400).json({ success: false, error: 'The end time must be later than the start time.' });
+        }
+    }
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const targetStart = new Date(startKey + 'T00:00:00');
+    if (targetStart < today) {
+        return res.status(400).json({ success: false, error: 'Cannot mark a past date as unavailable.' });
+    }
+
+    const sanitisedReason = String(reason || '').trim().substring(0, 300) || 'Instructor unavailability';
+    const affectedDates = getBlockDateKeys(startKey, endKey);
+    const block = {
+        id: uuidv4(),
+        instructorId: 1,
+        startDate: startKey,
+        endDate: endKey,
+        type,
+        reason: sanitisedReason,
+        startTime: type === 'time-range' ? startTime : null,
+        endTime: type === 'time-range' ? endTime : null,
+        blockedAt: new Date().toISOString()
+    };
+
+    const cancelled = await cancelBookingsForBlock(1, block, affectedDates, sanitisedReason);
+
+    affectedDates.forEach(dateKey => {
+        unavailabilityStore[dateKey] = {
+            id: block.id,
+            instructorId: 1,
+            date: dateKey,
+            startDate: startKey,
+            endDate: endKey,
+            type,
+            reason: sanitisedReason,
+            startTime: type === 'time-range' ? startTime : null,
+            endTime: type === 'time-range' ? endTime : null,
+            blockedAt: new Date().toISOString(),
+            cancelledRefs: cancelled.filter(item => normalizeDateKey(item.date) === dateKey).map(item => item.refNumber)
+        };
+    });
+
+    const dayLabel = affectedDates.length > 1
+        ? `${affectedDates[0]} to ${affectedDates[affectedDates.length - 1]}`
+        : new Date(startKey + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    addInstructorNotification({
+        type: 'schedule-block-created',
+        title: 'Schedule block created',
+        message: `${type === 'time-range' ? 'Time block' : 'Full-day block'} saved for ${dayLabel}. ${cancelled.length} appointment${cancelled.length === 1 ? '' : 's'} ${cancelled.length === 1 ? 'was' : 'were'} cancelled and ${cancelled.length === 1 ? 'a student was' : 'students were'} notified.`,
+        category: 'schedule',
+        read: false
+    });
+
+    console.log(`[Unavailability] Set ${startKey}${startKey !== endKey ? ` to ${endKey}` : ''} – reason: "${sanitisedReason}" – cancelled: ${cancelled.length} booking(s)`);
+
+    res.json({
+        success: true,
+        startDate: startKey,
+        endDate: endKey,
+        type,
+        reason: sanitisedReason,
+        affectedDateCount: affectedDates.length,
+        cancelledCount: cancelled.length,
+        studentsNotified: cancelled.length,
+        cancelledRefs: cancelled.map(item => item.refNumber)
+    });
+});
+
+// DELETE /instructor/unavailability/:date — remove an unavailability block
+router.delete('/unavailability/:date', (req, res) => {
+    const dateKey = toDateKey(req.params.date);
+    if (!dateKey || !unavailabilityStore[dateKey]) {
+        return res.status(404).json({ success: false, error: 'Unavailability record not found.' });
+    }
+    delete unavailabilityStore[dateKey];
+    console.log(`[Unavailability] Removed block for ${dateKey}`);
+    res.json({ success: true, dateKey });
+});
+
+// GET /instructor/unavailability/check/:date — quick check used by student booking flow
+router.get('/unavailability/check/:date', (req, res) => {
+    const dateKey = toDateKey(req.params.date);
+    if (!dateKey) return res.status(400).json({ success: false, error: 'Invalid date.' });
+    const record = unavailabilityStore[dateKey];
+    res.json({ unavailable: !!record, reason: record ? record.reason : null });
+});
+
+router.requestStore         = requestStore;
+router.timetableStore       = timetableStore;
+router.notificationsList    = notificationsList;
+router.slotToLabel          = slotToLabel;
+router.getScheduleStore     = () => scheduleStore;
+router.unavailabilityStore  = unavailabilityStore;
 
 module.exports = router;
