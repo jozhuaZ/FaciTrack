@@ -1,28 +1,141 @@
 <%- include('../../partials/header') %>
 <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
 <style>
-/* Status Selector Styles */
-.status-selector-wrap{position:relative;margin-right:.75rem}
-.status-selector-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1rem;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);cursor:pointer;transition:all .2s;font-family:var(--font-body);font-size:.875rem;color:var(--gray-700);font-weight:500}
-.status-selector-btn:hover{border-color:var(--gray-300);background:var(--gray-50)}
-.status-selector-btn svg{transition:transform .2s}
-.status-selector-btn.open svg{transform:rotate(180deg)}
-.status-indicator{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.status-indicator.available{background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.2)}
-.status-indicator.dnd{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.2)}
-.status-indicator.meeting{background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.2)}
-.status-indicator.leave{background:#6b7280;box-shadow:0 0 0 2px rgba(107,114,128,.2)}
-.status-indicator.ot{background:#8b5cf6;box-shadow:0 0 0 2px rgba(139,92,246,.2)}
-.status-text{font-weight:600}
-.status-dropdown{position:absolute;top:calc(100% + .5rem);right:0;width:280px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);box-shadow:0 10px 25px -5px rgba(0,0,0,.1),0 8px 10px -6px rgba(0,0,0,.1);opacity:0;visibility:hidden;transform:translateY(-10px);transition:all .2s;z-index:1000;overflow:hidden}
-.status-dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
-.status-option{display:flex;align-items:center;gap:.75rem;padding:.875rem 1rem;cursor:pointer;transition:all .15s;border-bottom:1px solid var(--gray-100)}
-.status-option:last-child{border-bottom:none}
-.status-option:hover{background:var(--gray-50)}
-.status-option.active{background:rgba(10,61,98,.05)}
-.status-option-content{flex:1}
-.status-option-label{display:block;font-size:.875rem;font-weight:600;color:var(--gray-900);margin-bottom:.125rem}
-.status-option-desc{display:block;font-size:.75rem;color:var(--gray-500)}
+/* Status Selector */
+.status-selector-wrap{position:relative;}
+.status-selector-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .875rem;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);cursor:pointer;transition:all .2s;font-family:var(--font-body);font-size:.8125rem;color:var(--gray-700);font-weight:600;}
+.status-selector-btn:hover{border-color:var(--gray-300);background:var(--gray-50);}
+.status-indicator{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.status-indicator.available{background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.25);}
+.status-indicator.dnd{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.25);}
+.status-indicator.meeting{background:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25);}
+.status-indicator.leave{background:#6b7280;box-shadow:0 0 0 2px rgba(107,114,128,.25);}
+.status-indicator.ot{background:#8b5cf6;box-shadow:0 0 0 2px rgba(139,92,246,.25);}
+.status-dropdown{position:absolute;top:calc(100% + .4rem);right:0;width:270px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);box-shadow:0 10px 30px rgba(0,0,0,.12);opacity:0;visibility:hidden;transform:translateY(-8px);transition:all .2s;z-index:200;}
+.status-dropdown.show{opacity:1;visibility:visible;transform:translateY(0);}
+.status-option{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--gray-50);}
+.status-option:last-child{border-bottom:none;}
+.status-option:hover,.status-option.active{background:var(--gray-50);}
+.status-option-label{font-size:.8125rem;font-weight:600;color:var(--gray-900);display:block;margin-bottom:.1rem;}
+.status-option-desc{font-size:.71rem;color:var(--gray-500);display:block;}
+/* ── Dashboard Layout ── */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.375rem;}
+.dash-col{display:flex;flex-direction:column;gap:1.375rem;}
+
+/* ── Today Strip ── */
+.today-strip{background:linear-gradient(135deg,#0a3d62 0%,#1565c0 100%);border-radius:var(--radius-lg);padding:1rem 1.375rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;box-shadow:0 4px 16px rgba(10,61,98,.2);}
+.today-strip-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.65);margin:0 0 .2rem;}
+.today-strip-date{font-size:1rem;font-weight:700;color:#fff;margin:0;}
+.today-strip-divider{width:1px;height:36px;background:rgba(255,255,255,.2);flex-shrink:0;}
+.today-strip-items{display:flex;gap:.625rem;flex:1;flex-wrap:wrap;align-items:center;}
+.today-pill{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .75rem;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);border-radius:20px;font-size:.75rem;font-weight:600;color:#fff;white-space:nowrap;}
+.today-pill.confirmed{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.4);}
+.today-pill.pending{background:rgba(251,191,36,.2);border-color:rgba(251,191,36,.35);}
+.today-pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.today-pill.confirmed .today-pill-dot{background:#4ade80;}
+.today-pill.pending .today-pill-dot{background:#fbbf24;}
+.today-strip-empty{font-size:.8rem;color:rgba(255,255,255,.6);font-style:italic;}
+.today-strip-actions{margin-left:auto;display:flex;gap:.5rem;flex-shrink:0;}
+.btn-mark-unavail{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .9rem;background:rgba(239,68,68,.85);border:1px solid rgba(239,68,68,.5);border-radius:8px;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;font-family:var(--font-body);}
+.btn-mark-unavail:hover{background:#dc2626;box-shadow:0 3px 10px rgba(220,38,38,.4);}
+
+/* ── Pending requests ── */
+.apt-item{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border:1px solid var(--gray-200);border-radius:var(--radius-md);background:#fff;transition:all .2s;}
+.apt-item:hover{border-color:var(--primary-blue);background:rgba(10,61,98,.02);box-shadow:0 2px 8px rgba(10,61,98,.08);}
+.apt-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0a3d62,#1e88e5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;}
+.apt-info{flex:1;min-width:0;}
+.apt-name{font-size:.8125rem;font-weight:700;color:var(--gray-900);margin:0 0 .2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.apt-sid{font-size:.69rem;color:var(--gray-400);margin:0 0 .15rem;}
+.apt-meta{font-size:.71rem;color:var(--gray-500);margin:0;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
+.apt-actions{display:flex;gap:.375rem;flex-shrink:0;}
+.btn-apt-approve{width:32px;height:32px;border-radius:8px;border:none;background:rgba(34,197,94,.1);color:#16a34a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.btn-apt-approve:hover{background:#16a34a;color:#fff;box-shadow:0 3px 8px rgba(22,163,74,.3);}
+.btn-apt-decline{width:32px;height:32px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.btn-apt-decline:hover{background:#dc2626;color:#fff;box-shadow:0 3px 8px rgba(220,38,38,.3);}
+
+/* ── Decline presets ── */
+.decline-presets{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 .5rem;}
+.decline-preset-chip{padding:.3rem .7rem;border:1.5px solid var(--gray-200);border-radius:20px;font-size:.75rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .15s;background:#fff;font-family:var(--font-body);}
+.decline-preset-chip:hover{border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.04);}
+.decline-preset-chip.selected{border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.08);}
+
+/* ── Upcoming appointments ── */
+.upco-filter-tabs{display:flex;gap:0;background:var(--gray-100);padding:.2rem;border-radius:8px;width:fit-content;}
+.upco-tab{padding:.3rem .75rem;border:none;border-radius:6px;font-size:.75rem;font-weight:600;color:var(--gray-500);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font-body);white-space:nowrap;}
+.upco-tab:hover{color:var(--gray-800);}
+.upco-tab.active{background:#fff;color:var(--primary-blue);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.upco-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border-left:3px solid #1e88e5;background:#f8faff;border-radius:0 var(--radius-md) var(--radius-md) 0;transition:all .2s;}
+.upco-item.today-apt{border-left-color:#16a34a;background:#f0fdf4;}
+.upco-item:hover{box-shadow:0 2px 8px rgba(10,61,98,.08);transform:translateX(2px);}
+.upco-time{font-size:.7rem;font-weight:700;color:var(--primary-blue);min-width:56px;flex-shrink:0;line-height:1.3;}
+.upco-date-sub{font-size:.62rem;font-weight:500;color:var(--gray-400);display:block;margin-top:.05rem;}
+.upco-item.today-apt .upco-time{color:#15803d;}
+.upco-info{flex:1;min-width:0;}
+.upco-name{font-size:.8rem;font-weight:700;color:var(--gray-900);margin:0 0 .1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upco-topic{font-size:.69rem;color:var(--gray-500);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upco-badge{font-size:.65rem;font-weight:700;padding:.22rem .55rem;border-radius:5px;flex-shrink:0;}
+.upco-badge.confirmed{background:rgba(22,163,74,.12);color:#15803d;}
+.upco-badge.pending{background:rgba(234,88,12,.12);color:#c2410c;}
+
+/* ── Consultation slots with progress bars ── */
+.slot-strip{display:flex;flex-direction:column;gap:.5rem;}
+.slot-row{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border:1px solid var(--gray-100);border-radius:var(--radius-md);background:#fff;transition:border-color .15s;}
+.slot-row:hover{border-color:var(--gray-300);}
+.slot-day-pill{font-size:.65rem;font-weight:800;padding:.22rem .55rem;border-radius:6px;background:rgba(10,61,98,.08);color:var(--primary-blue);letter-spacing:.04em;flex-shrink:0;min-width:38px;text-align:center;}
+.slot-info{flex:1;min-width:0;}
+.slot-time{font-size:.78rem;font-weight:600;color:var(--gray-800);margin:0 0 .3rem;}
+.slot-progress-wrap{display:flex;align-items:center;gap:.5rem;}
+.slot-progress-bar{flex:1;height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;}
+.slot-progress-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.slot-progress-fill.low{background:#16a34a;}
+.slot-progress-fill.mid{background:#f59e0b;}
+.slot-progress-fill.high{background:#dc2626;}
+.slot-cap-label{font-size:.67rem;color:var(--gray-500);white-space:nowrap;flex-shrink:0;}
+.slot-badge{font-size:.65rem;font-weight:700;padding:.22rem .55rem;border-radius:5px;flex-shrink:0;}
+.slot-badge.open{background:rgba(22,163,74,.12);color:#15803d;}
+.slot-badge.full{background:rgba(107,114,128,.1);color:#374151;}
+.slot-badge.closed{background:rgba(239,68,68,.1);color:#dc2626;}
+
+/* ── Recent activity ── */
+.act-item{display:flex;align-items:flex-start;gap:.65rem;padding:.65rem .25rem;border-bottom:1px solid var(--gray-50);}
+.act-item:last-child{border-bottom:none;}
+.act-icon{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:.05rem;}
+.act-icon.new-request{background:rgba(34,197,94,.12);color:#16a34a;}
+.act-icon.cancellation{background:rgba(239,68,68,.12);color:#dc2626;}
+.act-icon.reminder{background:rgba(59,130,246,.12);color:#2563eb;}
+.act-icon.alert{background:rgba(234,88,12,.12);color:#ea580c;}
+.act-icon.unavailability{background:rgba(220,38,38,.08);color:#dc2626;}
+.act-icon.makeup{background:rgba(6,95,70,.1);color:#065f46;}
+.act-msg{font-size:.78rem;color:var(--gray-800);margin:0 0 .18rem;line-height:1.45;}
+.act-time{font-size:.67rem;color:var(--gray-400);}
+.act-dot{width:7px;height:7px;border-radius:50%;background:var(--primary-blue);flex-shrink:0;margin-top:.4rem;box-shadow:0 0 5px rgba(10,61,98,.35);}
+
+/* ── Empty states ── */
+.empty-dash{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.55rem;padding:2rem 1rem;color:var(--gray-400);text-align:center;}
+.empty-dash svg{opacity:.35;}
+.empty-dash p{font-size:.8125rem;margin:0;color:var(--gray-500);}
+.empty-dash strong{font-size:.9rem;color:var(--gray-700);}
+
+/* ── Unavailability modal ── */
+#unavailDashModal .modal-content{max-width:560px;}
+.unavail-presets{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0 .75rem;}
+.unavail-preset{padding:.3rem .7rem;border:1.5px solid var(--gray-200);border-radius:20px;font-size:.75rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .15s;background:#fff;font-family:var(--font-body);}
+.unavail-preset:hover,.unavail-preset.selected{border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.05);} 
+.unavail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+.unavail-mode{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;}
+.unavail-mode-btn{flex:1;min-width:120px;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-700);padding:.6rem .75rem;border-radius:10px;font-weight:600;font-size:.8rem;cursor:pointer;transition:all .15s;}
+.unavail-mode-btn.active{border-color:#0a3d62;background:#e8f2ff;color:#0a3d62;}
+.unavail-time-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem;}
+.unavail-summary{margin-top:.9rem;padding:.8rem .95rem;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff;color:#1d4ed8;font-size:.8rem;line-height:1.55;}
+.notif-card{display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .2rem;border-bottom:1px solid var(--gray-50);} .notif-card:last-child{border-bottom:none;} .notif-badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--gray-100);color:var(--gray-700);flex-shrink:0;} .notif-card.unread{background:rgba(10,61,98,.03);} .notif-title{font-size:.78rem;font-weight:700;color:var(--gray-900);margin:0 0 .18rem;} .notif-message{font-size:.74rem;color:var(--gray-600);margin:0;line-height:1.45;} .notif-meta{font-size:.66rem;color:var(--gray-400);margin-top:.2rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;} .notif-dot{width:7px;height:7px;border-radius:50%;background:#0a3d62;flex-shrink:0;margin-top:.35rem;}
+
+/* ── Auto-refresh indicator ── */
+.refresh-indicator{display:inline-flex;align-items:center;gap:.35rem;font-size:.69rem;color:var(--gray-400);margin-left:.5rem;}
+.refresh-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse-green 2s ease-in-out infinite;}
+@keyframes pulse-green{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+@media(max-width:900px){.dash-grid{grid-template-columns:1fr;}}
+@media(max-width:640px){.today-strip{flex-direction:column;align-items:flex-start;gap:.75rem;}.today-strip-divider{display:none;}.today-strip-actions{margin-left:0;}}
 </style>
 
 <div class="instructor-layout">
@@ -31,70 +144,44 @@
   <main class="instructor-main">
     <div class="main-container">
 
-      <!-- Page Header -->
+      <!-- ── Page Header ── -->
       <div class="page-header">
         <div>
           <h1 class="page-title">Dashboard</h1>
-          <p class="page-subtitle">Welcome back, <%= instructor.name %> · <%= instructor.department %></p>
+          <p class="page-subtitle">
+            Welcome back, <strong><%= instructor.name %></strong> · <%= instructor.department %>
+            <span class="refresh-indicator" id="refreshIndicator" title="Auto-refreshing every 45 seconds">
+              <span class="refresh-dot"></span>Live
+            </span>
+          </p>
         </div>
         <div class="header-actions">
-          <!-- Faculty Status Selector -->
+          <button type="button" class="btn-header-action" id="btnMarkUnavailHeader" style="color:#dc2626;border-color:#fecaca;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            Mark Date Unavailable
+          </button>
           <div class="status-selector-wrap">
-            <button class="status-selector-btn" id="statusSelectorBtn">
-              <span class="status-indicator available"></span>
-              <span class="status-text">Available</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            <button class="status-selector-btn" id="statusSelectorBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="status-indicator available" id="statusIndicator"></span>
+              <span id="statusText">Available</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div class="status-dropdown" id="statusDropdown">
-              <div class="status-option" data-status="available">
-                <span class="status-indicator available"></span>
-                <div class="status-option-content">
-                  <span class="status-option-label">Available</span>
-                  <span class="status-option-desc">Ready for consultations</span>
-                </div>
-              </div>
-              <div class="status-option" data-status="dnd">
-                <span class="status-indicator dnd"></span>
-                <div class="status-option-content">
-                  <span class="status-option-label">Do Not Disturb</span>
-                  <span class="status-option-desc">Busy, avoid interruptions</span>
-                </div>
-              </div>
-              <div class="status-option" data-status="meeting">
-                <span class="status-indicator meeting"></span>
-                <div class="status-option-content">
-                  <span class="status-option-label">In Meeting</span>
-                  <span class="status-option-desc">Currently in a meeting</span>
-                </div>
-              </div>
-              <div class="status-option" data-status="leave">
-                <span class="status-indicator leave"></span>
-                <div class="status-option-content">
-                  <span class="status-option-label">On Leave</span>
-                  <span class="status-option-desc">Out of office</span>
-                </div>
-              </div>
-              <div class="status-option" data-status="ot">
-                <span class="status-indicator ot"></span>
-                <div class="status-option-content">
-                  <span class="status-option-label">Official Travel</span>
-                  <span class="status-option-desc">On official business trip</span>
-                </div>
-              </div>
+            <div class="status-dropdown" id="statusDropdown" role="menu">
+              <div class="status-option" data-status="available" role="menuitem"><span class="status-indicator available"></span><div><span class="status-option-label">Available</span><span class="status-option-desc">Ready for consultations</span></div></div>
+              <div class="status-option" data-status="dnd" role="menuitem"><span class="status-indicator dnd"></span><div><span class="status-option-label">Do Not Disturb</span><span class="status-option-desc">Busy, avoid interruptions</span></div></div>
+              <div class="status-option" data-status="meeting" role="menuitem"><span class="status-indicator meeting"></span><div><span class="status-option-label">In Meeting</span><span class="status-option-desc">Currently in a meeting</span></div></div>
+              <div class="status-option" data-status="leave" role="menuitem"><span class="status-indicator leave"></span><div><span class="status-option-label">On Leave</span><span class="status-option-desc">Out of office</span></div></div>
+              <div class="status-option" data-status="ot" role="menuitem"><span class="status-indicator ot"></span><div><span class="status-option-label">Official Travel</span><span class="status-option-desc">On official business trip</span></div></div>
             </div>
           </div>
-          <a href="/instructor/consultations" class="btn-header-action">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Appointments
-          </a>
-          <a href="/instructor/workload" class="btn-header-action primary">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            My Workload
-          </a>
         </div>
       </div>
 
-      <!-- Stats Row -->
+      <!-- ── Stats Row ── -->
+      <% const pendingApts  = appointments.filter(a => a.status === 'pending'); %>
+      <% const confirmedApts = appointments.filter(a => a.status === 'confirmed'); %>
+      <% const totalSlots   = consultationSlots.length; %>
+      <% const openSlots    = consultationSlots.filter(s => s.status === 'open').length; %>
       <div class="stats-overview">
         <div class="stat-card-large pending">
           <div class="stat-card-icon">
@@ -102,208 +189,301 @@
           </div>
           <div class="stat-card-content">
             <p class="stat-card-label">Pending Requests</p>
-            <h2 class="stat-card-value"><%= appointments.filter(a => a.status === 'pending').length %></h2>
+            <h2 class="stat-card-value"><%= pendingApts.length %></h2>
             <p class="stat-card-sublabel">Awaiting your response</p>
           </div>
         </div>
-
         <div class="stat-card-large confirmed">
           <div class="stat-card-icon">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <div class="stat-card-content">
             <p class="stat-card-label">Confirmed</p>
-            <h2 class="stat-card-value"><%= appointments.filter(a => a.status === 'confirmed').length %></h2>
-            <p class="stat-card-sublabel">Total confirmed bookings</p>
+            <h2 class="stat-card-value"><%= confirmedApts.length %></h2>
+            <p class="stat-card-sublabel">Confirmed bookings</p>
           </div>
         </div>
-
         <div class="stat-card-large workload">
           <div class="stat-card-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div class="stat-card-content">
-            <p class="stat-card-label">Teaching Hours/Week</p>
-            <h2 class="stat-card-value"><%= workloadStats.thisWeek.hoursLogged %>h</h2>
-            <p class="stat-card-sublabel"><%= workloadStats.thisWeek.consultationsCompleted %> consultations done</p>
+            <p class="stat-card-label">Total Bookings</p>
+            <h2 class="stat-card-value"><%= appointments.length %></h2>
+            <p class="stat-card-sublabel">All appointments</p>
           </div>
         </div>
-
         <div class="stat-card-large presence">
           <div class="stat-card-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           </div>
           <div class="stat-card-content">
-            <p class="stat-card-label">BLE Status</p>
-            <h2 class="stat-card-value ble-val <%= instructor.bleStatus %>"><%= instructor.bleStatus === 'in-room' ? 'In Room' : 'Out' %></h2>
-            <p class="stat-card-sublabel">Last seen <%= instructor.bleLastDetected %></p>
+            <p class="stat-card-label">Open Slots</p>
+            <h2 class="stat-card-value"><%= openSlots %> / <%= totalSlots %></h2>
+            <p class="stat-card-sublabel">Available consultation slots</p>
           </div>
         </div>
       </div>
 
-      <!-- Dashboard Grid -->
-      <div class="dashboard-content-grid">
+      <!-- ── Today Strip ── -->
+      <%
+        const _todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+        const _todayLabel = new Date().toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+        const _todayApts = appointments.filter(a => a.isToday || (a.date && (new Date(a.date).toDateString() === new Date().toDateString())));
+        const _todayConfirmed = _todayApts.filter(a => a.status === 'confirmed');
+        const _todayPending   = _todayApts.filter(a => a.status === 'pending');
+      %>
+      <div class="today-strip">
+        <div>
+          <p class="today-strip-label">Today</p>
+          <p class="today-strip-date"><%= _todayLabel %></p>
+        </div>
+        <div class="today-strip-divider"></div>
+        <div class="today-strip-items">
+          <% if (_todayApts.length === 0) { %>
+            <span class="today-strip-empty">No consultations scheduled for today</span>
+          <% } else { %>
+            <% _todayConfirmed.slice(0, 4).forEach(apt => { %>
+            <span class="today-pill confirmed">
+              <span class="today-pill-dot"></span>
+              <%= apt.time %> · <%= apt.studentName %>
+            </span>
+            <% }); %>
+            <% _todayPending.slice(0, 2).forEach(apt => { %>
+            <span class="today-pill pending">
+              <span class="today-pill-dot"></span>
+              <%= apt.time %> · <%= apt.studentName %> (Pending)
+            </span>
+            <% }); %>
+            <% if (_todayApts.length > 6) { %>
+            <span class="today-pill" style="background:rgba(255,255,255,.1);">+<%= _todayApts.length - 6 %> more</span>
+            <% } %>
+          <% } %>
+        </div>
+        <div class="today-strip-actions">
+          <button type="button" class="btn-mark-unavail" id="btnMarkUnavailStrip">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            Mark Unavailable
+          </button>
+        </div>
+      </div>
 
-        <!-- Pending Requests — most actionable -->
-        <div class="content-card span-1">
-          <div class="card-header">
-            <h3 class="card-title">Pending Requests</h3>
-            <a href="/instructor/consultations" class="card-link">View All →</a>
-          </div>
-          <div class="card-body">
-            <% const pending = appointments.filter(a => a.status === 'pending'); %>
-            <% if (pending.length === 0) { %>
-            <div class="empty-state-card">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <p class="empty-title">All caught up!</p>
-              <p class="empty-text">No pending consultation requests</p>
+      <!-- ── Main Dashboard Grid ── -->
+      <div class="dash-grid">
+
+        <!-- LEFT COLUMN -->
+        <div class="dash-col">
+
+          <!-- Pending Requests -->
+          <div class="content-card">
+            <div class="card-header">
+              <h3 class="card-title">
+                Pending Requests
+                <% if (pendingApts.length > 0) { %><span class="card-count-badge"><%= pendingApts.length %></span><% } %>
+              </h3>
+              <a href="/instructor/consultations?status=pending" class="card-link">View all →</a>
             </div>
-            <% } else { %>
-            <div class="appointments-list-dashboard">
-              <% pending.slice(0, 4).forEach(apt => { %>
-              <div class="appointment-row">
-                <div class="apt-row-info">
-                  <h4 class="apt-row-name"><%= apt.studentName %></h4>
-                  <p class="apt-row-details">
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <%= apt.date %> · <%= apt.time %>
-                    <% if (apt.topic) { %> · <em><%= apt.topic %></em><% } %>
-                  </p>
-                </div>
-                <div class="apt-row-actions">
-                  <button class="btn-icon-action approve" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Approve">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  </button>
-                  <button class="btn-icon-action decline" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Decline">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  </button>
-                </div>
+            <div class="card-body">
+              <% if (pendingApts.length === 0) { %>
+              <div class="empty-dash">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <strong>All caught up!</strong>
+                <p>No pending consultation requests right now.</p>
               </div>
-              <% }); %>
-              <% if (pending.length > 4) { %>
-              <a href="/instructor/consultations?status=pending" class="view-more-link">+<%= pending.length - 4 %> more pending →</a>
+              <% } else { %>
+              <div style="display:flex;flex-direction:column;gap:.625rem;" id="pendingList">
+                <% pendingApts.slice(0, 5).forEach(apt => { %>
+                <div class="apt-item" data-student="<%= apt.studentName.toLowerCase() %>" data-topic="<%= (apt.topic||'').toLowerCase() %>">
+                  <div class="apt-avatar"><%= apt.studentName.split(' ').map(w=>w[0]).slice(0,2).join('') %></div>
+                  <div class="apt-info">
+                    <p class="apt-name"><%= apt.studentName %></p>
+                    <% if (apt.studentId) { %><p class="apt-sid"><%= apt.studentId %></p><% } %>
+                    <p class="apt-meta">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      <%= apt.date %> · <%= apt.time %>
+                      <% if (apt.topic) { %> · <em><%= apt.topic.substring(0,40) %><%= apt.topic.length>40?'…':'' %></em><% } %>
+                    </p>
+                  </div>
+                  <div class="apt-actions">
+                    <button class="btn-apt-approve" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Approve appointment">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                    <button class="btn-apt-decline" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Decline appointment">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <% }); %>
+                <% if (pendingApts.length > 5) { %>
+                <a href="/instructor/consultations?status=pending" class="view-more-link">+<%= pendingApts.length - 5 %> more pending requests →</a>
+                <% } %>
+              </div>
               <% } %>
             </div>
-            <% } %>
           </div>
-        </div>
 
-        <!-- Consultation Schedule -->
-        <div class="content-card span-1">
-          <div class="card-header">
-            <h3 class="card-title">Consultation Schedule</h3>
-            <a href="/instructor/schedule" class="card-link">Manage →</a>
-          </div>
-          <div class="card-body">
-            <% if (consultationSlots.length === 0) { %>
-            <div class="empty-state-card">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              <p class="empty-title">No slots set</p>
-              <p class="empty-text"><a href="/instructor/schedule" style="color:var(--primary-blue)">Set up your consultation hours</a></p>
+          <!-- Consultation Schedule -->
+          <div class="content-card">
+            <div class="card-header">
+              <h3 class="card-title">Consultation Slots</h3>
+              <a href="/instructor/schedule" class="card-link">Manage →</a>
             </div>
-            <% } else { %>
-            <div class="schedule-list-dashboard">
-              <% consultationSlots.forEach(slot => { %>
-              <div class="schedule-row">
-                <div class="schedule-day-pill"><%= slot.day.substring(0,3).toUpperCase() %></div>
-                <div class="schedule-row-time">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <%= slot.time %>
+            <div class="card-body">
+              <% if (!consultationSlots || consultationSlots.length === 0) { %>
+              <div class="empty-dash">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <strong>No slots set up yet</strong>
+                <p>Set your consultation availability so students can book appointments.</p>
+                <a href="/instructor/schedule" style="font-size:.8rem;color:var(--primary-blue);font-weight:700;">Set up slots →</a>
+              </div>
+              <% } else { %>
+              <div class="slot-strip">
+                <% consultationSlots.slice(0, 6).forEach(slot => { %>
+                <%
+                  const _booked = parseInt(slot.bookedCount) || 0;
+                  const _cap    = parseInt(slot.maxCapacity) || 1;
+                  const _pct    = Math.min(100, Math.round((_booked / _cap) * 100));
+                  const _fillClass = _pct >= 90 ? 'high' : _pct >= 50 ? 'mid' : 'low';
+                %>
+                <div class="slot-row">
+                  <span class="slot-day-pill"><%= slot.day.substring(0,3).toUpperCase() %></span>
+                  <div class="slot-info">
+                    <p class="slot-time"><%= slot.timeStart %> – <%= slot.timeEnd %></p>
+                    <div class="slot-progress-wrap">
+                      <div class="slot-progress-bar">
+                        <div class="slot-progress-fill <%= _fillClass %>" style="width:<%= _pct %>%"></div>
+                      </div>
+                      <span class="slot-cap-label"><%= _booked %>/<%= _cap %> booked</span>
+                    </div>
+                  </div>
+                  <span class="slot-badge <%= slot.status %>"><%= slot.status.charAt(0).toUpperCase() + slot.status.slice(1) %></span>
                 </div>
-                <div class="schedule-row-capacity"><%= slot.bookedCount %>/<%= slot.maxCapacity %> booked</div>
-                <span class="schedule-row-badge <%= slot.status %>"><%= slot.status === 'open' ? 'Open' : 'Full' %></span>
+                <% }); %>
+                <% if (consultationSlots.length > 6) { %>
+                <a href="/instructor/schedule" class="view-more-link">+<%= consultationSlots.length - 6 %> more slots →</a>
+                <% } %>
               </div>
-              <% }); %>
-            </div>
-            <% } %>
-
-            <!-- Quick stats below slots -->
-            <div class="schedule-quick-stats">
-              <div class="sqs-item">
-                <span class="sqs-val"><%= appointments.filter(a => a.status === 'confirmed').length %></span>
-                <span class="sqs-lbl">Confirmed</span>
-              </div>
-              <div class="sqs-divider"></div>
-              <div class="sqs-item">
-                <span class="sqs-val"><%= appointments.filter(a => a.status === 'declined').length %></span>
-                <span class="sqs-lbl">Declined</span>
-              </div>
-              <div class="sqs-divider"></div>
-              <div class="sqs-item">
-                <span class="sqs-val"><%= appointments.length %></span>
-                <span class="sqs-lbl">Total</span>
-              </div>
+              <% } %>
             </div>
           </div>
-        </div>
 
-        <!-- Workload Snapshot -->
-        <div class="content-card span-1">
-          <div class="card-header">
-            <h3 class="card-title">Workload Snapshot</h3>
-            <a href="/instructor/workload" class="card-link">Full Timetable →</a>
-          </div>
-          <div class="card-body">
-            <div class="workload-snapshot" id="workloadSnapshot">
-              <div class="wl-loading">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                Loading timetable...
-              </div>
-            </div>
-            <div class="workload-mini-stats">
-              <div class="wms-item blue">
-                <span class="wms-val" id="wmsBlocks">—</span>
-                <span class="wms-lbl">Blocks</span>
-              </div>
-              <div class="wms-item green">
-                <span class="wms-val" id="wmsHours">—</span>
-                <span class="wms-lbl">Hours/Week</span>
-              </div>
-              <div class="wms-item purple">
-                <span class="wms-val" id="wmsSubjects">—</span>
-                <span class="wms-lbl">Subjects</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </div><!-- /left col -->
 
-        <!-- Presence + Notifications -->
-        <div class="content-card span-1">
-          <div class="card-header">
-            <h3 class="card-title">Activity Feed</h3>
-            <a href="/instructor/presence" class="card-link">Presence Logs →</a>
-          </div>
-          <div class="card-body" style="padding:0">
+        <!-- RIGHT COLUMN -->
+        <div class="dash-col">
 
-            <!-- Presence section -->
-            <div class="feed-section-label">Recent Presence</div>
-            <div class="presence-list-dashboard">
-              <% presenceLogs.slice(0, 3).forEach(log => { %>
-              <div class="presence-row">
-                <div class="presence-row-icon <%= log.status %>">
-                  <% if (log.status === 'entered') { %>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                  <% } else { %>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                  <% } %>
+          <!-- Upcoming Appointments -->
+          <div class="content-card">
+            <div class="card-header" style="flex-wrap:wrap;gap:.625rem;">
+              <h3 class="card-title">Upcoming Appointments</h3>
+              <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                <div class="upco-filter-tabs" id="upcoFilterTabs">
+                  <button class="upco-tab active" data-filter="all">All</button>
+                  <button class="upco-tab" data-filter="today">Today</button>
+                  <button class="upco-tab" data-filter="week">This Week</button>
                 </div>
-                <div class="presence-row-info">
-                  <p class="presence-row-action"><%= log.status === 'entered' ? 'Entered' : 'Exited' %> <%= log.location %></p>
-                  <p class="presence-row-time"><%= log.timestamp %><% if (log.duration) { %> · <%= log.duration %><% } %></p>
-                </div>
+                <a href="/instructor/consultations" class="card-link">View all →</a>
               </div>
-              <% }); %>
             </div>
-
+            <div class="card-body">
+              <%
+                const _allUpcoming = appointments.filter(a => a.status === 'confirmed' || a.status === 'pending');
+                const _todayStr = new Date().toDateString();
+                const _weekEnd  = new Date(); _weekEnd.setDate(_weekEnd.getDate() + 7);
+              %>
+              <% if (_allUpcoming.length === 0) { %>
+              <div class="empty-dash">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <strong>No upcoming appointments</strong>
+                <p>Confirmed and pending bookings will appear here.</p>
+              </div>
+              <% } else { %>
+              <div style="display:flex;flex-direction:column;gap:.5rem;" id="upcoList">
+                <% _allUpcoming.slice(0, 8).forEach(apt => { %>
+                <%
+                  const _aptDateStr = apt.date ? new Date(apt.date).toDateString() : '';
+                  const _isToday    = _aptDateStr === _todayStr;
+                  const _isThisWeek = apt.date && new Date(apt.date) <= _weekEnd;
+                  const _dateFilter = _isToday ? 'today week all' : (_isThisWeek ? 'week all' : 'all');
+                %>
+                <div class="upco-item <%= _isToday ? 'today-apt' : '' %>" data-filter-groups="<%= _dateFilter %>">
+                  <div class="upco-time">
+                    <%= apt.time %>
+                    <% if (!_isToday && apt.date) { %>
+                    <span class="upco-date-sub"><%= new Date(apt.date).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) %></span>
+                    <% } else if (_isToday) { %>
+                    <span class="upco-date-sub" style="color:#15803d;">Today</span>
+                    <% } %>
+                  </div>
+                  <div class="upco-info">
+                    <p class="upco-name"><%= apt.studentName %></p>
+                    <p class="upco-topic"><%= apt.topic || '—' %></p>
+                  </div>
+                  <span class="upco-badge <%= apt.status %>"><%= apt.status.charAt(0).toUpperCase() + apt.status.slice(1) %></span>
+                </div>
+                <% }); %>
+                <% if (_allUpcoming.length > 8) { %>
+                <a href="/instructor/consultations" class="view-more-link">+<%= _allUpcoming.length - 8 %> more appointments →</a>
+                <% } %>
+              </div>
+              <% } %>
+            </div>
           </div>
-        </div>
 
-      </div><!-- /dashboard-content-grid -->
-    </div>
+          <!-- Recent Activity / Notifications -->
+          <div class="content-card">
+            <div class="card-header">
+              <h3 class="card-title">Notifications</h3>
+              <% const unreadCount = notifications.filter(n => !n.read).length; %>
+              <% if (unreadCount > 0) { %><span class="card-count-badge"><%= unreadCount %></span><% } %>
+            </div>
+            <div class="card-body" style="padding:0 .75rem .75rem;">
+              <% if (!notifications || notifications.length === 0) { %>
+              <div class="empty-dash" style="padding:2rem 1rem;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <p>No recent activity.</p>
+              </div>
+              <% } else { %>
+              <div>
+                <% notifications.slice(0, 6).forEach(notif => { %>
+                <div class="notif-card <%= notif.read ? '' : 'unread' %>">
+                  <div class="notif-badge">
+                    <% if (notif.type === 'new-request' || notif.type === 'appointment') { %>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    <% } else if (notif.type === 'cancellation') { %>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <% } else if (notif.type === 'schedule-block-created' || notif.type === 'unavailability') { %>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                    <% } else if (notif.type === 'reminder') { %>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <% } else { %>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+                    <% } %>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <p class="notif-title"><%= notif.title %></p>
+                    <p class="notif-message"><%= notif.message %></p>
+                    <div class="notif-meta">
+                      <span><%= notif.time %></span>
+                      <% if (!notif.read) { %><span>•</span><span>Unread</span><% } %>
+                    </div>
+                  </div>
+                  <% if (!notif.read) { %><span class="notif-dot"></span><% } %>
+                </div>
+                <% }); %>
+              </div>
+              <% } %>
+            </div>
+          </div>
+
+        </div><!-- /right col -->
+      </div><!-- /dash-grid -->
+
+    </div><!-- /main-container -->
   </main>
 </div>
 
-<!-- Decline Modal -->
+<!-- ── Decline Modal (with reason presets) ── -->
 <div class="modal-overlay" id="declineModal">
   <div class="modal-content">
     <div class="modal-header">
@@ -313,13 +493,84 @@
       </button>
     </div>
     <div class="modal-body">
-      <p class="modal-description">Provide a reason for declining <strong id="declineStudentName"></strong>'s request. They'll be notified.</p>
-      <label class="modal-label">Reason</label>
-      <textarea id="declineReason" class="modal-textarea" placeholder="e.g. Schedule conflict, already fully booked..." rows="4"></textarea>
+      <p class="modal-description">You are about to decline <strong id="declineStudentName"></strong>'s request. Provide a reason — they will be notified by email.</p>
+      <p style="font-size:.78rem;font-weight:600;color:var(--gray-700);margin:.75rem 0 .35rem;">Quick reasons</p>
+      <div class="decline-presets" id="declinePresets">
+        <button type="button" class="decline-preset-chip" data-reason="Schedule conflict on that date">Schedule conflict</button>
+        <button type="button" class="decline-preset-chip" data-reason="Consultation slots are fully booked">Fully booked</button>
+        <button type="button" class="decline-preset-chip" data-reason="I will be on leave on that date">On leave that day</button>
+        <button type="button" class="decline-preset-chip" data-reason="Please choose a different consultation slot">Different slot needed</button>
+        <button type="button" class="decline-preset-chip" data-reason="Please coordinate with the department office">Coordinate with department</button>
+      </div>
+      <label class="modal-label">Reason <span style="font-weight:400;color:var(--gray-400)">(or type your own)</span></label>
+      <textarea id="declineReason" class="modal-textarea" placeholder="Describe why you are declining this request…" rows="3"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn-modal btn-cancel" id="cancelDecline">Cancel</button>
-      <button class="btn-modal btn-confirm" id="confirmDecline">Decline & Notify</button>
+      <button class="btn-modal btn-confirm" id="confirmDecline">Decline &amp; Notify Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Mark Date Unavailable Modal (Dashboard shortcut) ── -->
+<div class="modal-overlay" id="unavailDashModal" onclick="if(event.target===this)closeUnavailDashModal()">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Create a Schedule Block</h3>
+      <button class="modal-close" type="button" onclick="closeUnavailDashModal()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.875rem;color:var(--gray-600);margin:0 0 1rem;line-height:1.6;">
+        Choose a full-day block or a specific time range. Any affected appointments will be cancelled automatically and students will receive a professional notification to book a new slot.
+      </p>
+      <div class="unavail-mode" id="unavailModeGroup">
+        <button type="button" class="unavail-mode-btn active" data-mode="full-day">Full day</button>
+        <button type="button" class="unavail-mode-btn" data-mode="time-range">Time range</button>
+      </div>
+      <div class="unavail-grid">
+        <div>
+          <label class="modal-label" for="unavailDashStartDate">Start date <span style="color:#dc2626;">*</span></label>
+          <input type="date" id="unavailDashStartDate" class="modal-input" style="width:100%;padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);">
+        </div>
+        <div>
+          <label class="modal-label" for="unavailDashEndDate">End date</label>
+          <input type="date" id="unavailDashEndDate" class="modal-input" style="width:100%;padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);">
+        </div>
+      </div>
+      <div class="unavail-time-row" id="unavailTimeRow" style="display:none;">
+        <div>
+          <label class="modal-label" for="unavailDashStartTime">Start time</label>
+          <input type="time" id="unavailDashStartTime" class="modal-input" style="width:100%;padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);">
+        </div>
+        <div>
+          <label class="modal-label" for="unavailDashEndTime">End time</label>
+          <input type="time" id="unavailDashEndTime" class="modal-input" style="width:100%;padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);">
+        </div>
+      </div>
+      <div style="margin-top:1rem;">
+        <label class="modal-label">Quick reasons</label>
+        <div class="unavail-presets" id="unavailPresets">
+          <button type="button" class="unavail-preset" data-reason="Faculty meeting">Faculty meeting</button>
+          <button type="button" class="unavail-preset" data-reason="Seminar or training">Seminar or training</button>
+          <button type="button" class="unavail-preset" data-reason="Official university activity">Official university activity</button>
+          <button type="button" class="unavail-preset" data-reason="Personal leave">Personal leave</button>
+          <button type="button" class="unavail-preset" data-reason="Emergency">Emergency</button>
+        </div>
+      </div>
+      <div>
+        <label class="modal-label" for="unavailDashReason">Reason <span style="font-weight:400;color:var(--gray-400)">(shown to students)</span></label>
+        <input type="text" id="unavailDashReason" class="modal-input" placeholder="Describe the reason for the schedule block" maxlength="300" style="width:100%;padding:.625rem .875rem;border:1.5px solid var(--gray-300);border-radius:var(--radius-md);font-size:.875rem;font-family:var(--font-body);">
+      </div>
+      <div id="unavailSummary" class="unavail-summary" style="display:none;"></div>
+      <p id="unavailDashDateErr" style="display:none;font-size:.75rem;color:#dc2626;margin:.75rem 0 0;"></p>
+      <div id="unavailDashSuccess" style="display:none;margin-top:.75rem;padding:.65rem .9rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:.8rem;color:#166534;"></div>
+      <div id="unavailDashError" style="display:none;margin-top:.75rem;padding:.65rem .9rem;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:.8rem;color:#dc2626;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal btn-cancel" type="button" onclick="closeUnavailDashModal()">Cancel</button>
+      <button class="btn-modal btn-confirm" id="unavailDashConfirmBtn" type="button" style="background:#dc2626;" onclick="confirmUnavailDash()">Create Schedule Block</button>
     </div>
   </div>
 </div>
@@ -327,85 +578,306 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <%- include('../../partials/script') %>
-<script src="/js/instructor-dashboard.js?v=<%= Date.now() %>"></script>
-
 <script>
-// Status Selector Functionality
-const statusSelector = document.getElementById('statusSelectorBtn');
-const statusDropdown = document.getElementById('statusDropdown');
-const statusOptions = document.querySelectorAll('.status-option');
-
+/* ══════════════════════════════════════
+   STATUS SELECTOR
+══════════════════════════════════════ */
+const statusBtn  = document.getElementById('statusSelectorBtn');
+const statusDrop = document.getElementById('statusDropdown');
+const statusInd  = document.getElementById('statusIndicator');
+const statusTxt  = document.getElementById('statusText');
 let currentStatus = 'available';
 
-// Toggle dropdown
-statusSelector.addEventListener('click', function(e) {
-    e.stopPropagation();
-    statusDropdown.classList.toggle('show');
-    this.classList.toggle('open');
+statusBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const isOpen = statusDrop.classList.toggle('show');
+  statusBtn.setAttribute('aria-expanded', isOpen);
 });
-
-// Close dropdown when clicking outside
-document.addEventListener('click', function() {
-    statusDropdown.classList.remove('show');
-    statusSelector.classList.remove('open');
+document.addEventListener('click', () => {
+  statusDrop.classList.remove('show');
+  statusBtn.setAttribute('aria-expanded', 'false');
 });
+statusDrop.addEventListener('click', e => e.stopPropagation());
 
-statusDropdown.addEventListener('click', function(e) {
-    e.stopPropagation();
+document.querySelectorAll('#statusDropdown .status-option').forEach(opt => {
+  opt.addEventListener('click', function () {
+    currentStatus = this.dataset.status;
+    document.querySelectorAll('#statusDropdown .status-option').forEach(o => o.classList.remove('active'));
+    this.classList.add('active');
+    statusTxt.textContent = this.querySelector('.status-option-label').textContent;
+    statusInd.className = 'status-indicator ' + currentStatus;
+    statusDrop.classList.remove('show');
+    statusBtn.setAttribute('aria-expanded', 'false');
+    showToast('success', 'Status Updated', 'Your status is now: ' + statusTxt.textContent);
+  });
 });
+document.querySelector('#statusDropdown .status-option[data-status="available"]').classList.add('active');
 
-// Status option selection
-statusOptions.forEach(option => {
-    option.addEventListener('click', function() {
-        const newStatus = this.dataset.status;
-        
-        // Update current status
-        currentStatus = newStatus;
-        
-        // Update active state
-        statusOptions.forEach(opt => opt.classList.remove('active'));
-        this.classList.add('active');
-        
-        // Update button display
-        const statusText = this.querySelector('.status-option-label').textContent;
-        statusSelector.querySelector('.status-text').textContent = statusText;
-        
-        // Update indicator color
-        const btnIndicator = statusSelector.querySelector('.status-indicator');
-        btnIndicator.className = 'status-indicator ' + newStatus;
-        
-        // Close dropdown
-        statusDropdown.classList.remove('show');
-        statusSelector.classList.remove('open');
-        
-        // Show toast notification
-        showToast('success', 'Status Updated', `Your status is now: ${statusText}`);
-        
-        // In production, this would send to backend
-        // fetch('/instructor/status', { method: 'POST', body: JSON.stringify({ status: newStatus }) })
-    });
-});
+/* ══════════════════════════════════════
+   APPROVE / DECLINE
+══════════════════════════════════════ */
+let pendingDeclineId   = null;
+let pendingDeclineName = null;
 
-function showToast(type, title, message) {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div class="toast-content">
-            <p class="toast-title">${title}</p>
-            <p class="toast-message">${message}</p>
-        </div>
-    `;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+function openDeclineModal(id, name) {
+  pendingDeclineId   = id;
+  pendingDeclineName = name;
+  document.getElementById('declineStudentName').textContent = name;
+  document.getElementById('declineReason').value = '';
+  document.querySelectorAll('.decline-preset-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('declineModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+function closeDeclineModal() {
+  document.getElementById('declineModal').classList.remove('show');
+  document.body.classList.remove('modal-open');
+  pendingDeclineId = pendingDeclineName = null;
 }
 
-// Set initial active state
-document.querySelector(`.status-option[data-status="${currentStatus}"]`).classList.add('active');
-</script>
+document.getElementById('closeModal').addEventListener('click', closeDeclineModal);
+document.getElementById('cancelDecline').addEventListener('click', closeDeclineModal);
+document.getElementById('declineModal').addEventListener('click', e => { if (e.target === document.getElementById('declineModal')) closeDeclineModal(); });
 
+// Decline reason preset chips
+document.querySelectorAll('.decline-preset-chip').forEach(chip => {
+  chip.addEventListener('click', function () {
+    document.querySelectorAll('.decline-preset-chip').forEach(c => c.classList.remove('selected'));
+    this.classList.add('selected');
+    document.getElementById('declineReason').value = this.dataset.reason;
+  });
+});
+
+document.getElementById('confirmDecline').addEventListener('click', function () {
+  if (!pendingDeclineId) return;
+  const reason = document.getElementById('declineReason').value.trim();
+  if (!reason) { showToast('error', 'Reason Required', 'Please provide a reason for declining.'); return; }
+  const btn = this;
+  btn.disabled = true;
+  btn.textContent = 'Declining…';
+  fetch('/instructor/consultations/' + pendingDeclineId + '/decline', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason })
+  })
+    .then(r => r.json())
+    .then(() => {
+      closeDeclineModal();
+      showToast('success', 'Appointment Declined', pendingDeclineName + ' has been notified by email.');
+      removePendingRow(pendingDeclineId);
+    })
+    .catch(() => showToast('error', 'Error', 'Could not decline appointment. Please try again.'))
+    .finally(() => { btn.disabled = false; btn.textContent = 'Decline & Notify Student'; });
+});
+
+// Approve buttons
+document.querySelectorAll('.btn-apt-approve').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const id      = this.dataset.id;
+    const student = this.dataset.student;
+    const row     = this.closest('.apt-item');
+    this.disabled = true;
+    fetch('/instructor/consultations/' + id + '/approve', { method: 'POST' })
+      .then(r => r.json())
+      .then(() => {
+        showToast('success', 'Appointment Approved', student + '\'s consultation has been confirmed.');
+        if (row) { row.style.opacity = '0'; row.style.transform = 'translateX(-12px)'; setTimeout(() => row.remove(), 300); }
+      })
+      .catch(() => { showToast('error', 'Error', 'Could not approve. Please try again.'); this.disabled = false; });
+  });
+});
+
+// Decline buttons
+document.querySelectorAll('.btn-apt-decline').forEach(btn => {
+  btn.addEventListener('click', function () {
+    openDeclineModal(this.dataset.id, this.dataset.student);
+  });
+});
+
+function removePendingRow(id) {
+  setTimeout(() => {
+    const row = document.querySelector('.apt-item [data-id="' + id + '"]');
+    const item = row ? row.closest('.apt-item') : null;
+    if (item) { item.style.opacity = '0'; item.style.transform = 'translateX(-12px)'; setTimeout(() => item.remove(), 320); }
+  }, 400);
+}
+
+/* ══════════════════════════════════════
+   UPCOMING FILTER TABS (All / Today / This Week)
+══════════════════════════════════════ */
+document.querySelectorAll('.upco-tab').forEach(tab => {
+  tab.addEventListener('click', function () {
+    document.querySelectorAll('.upco-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+    const filter = this.dataset.filter;
+    document.querySelectorAll('#upcoList .upco-item').forEach(item => {
+      const groups = (item.dataset.filterGroups || 'all').split(' ');
+      item.style.display = groups.includes(filter) ? '' : 'none';
+    });
+    // Show empty message if nothing visible
+    const visible = document.querySelectorAll('#upcoList .upco-item:not([style*="none"])');
+    const emptyMsg = document.getElementById('upcoEmptyFiltered');
+    if (emptyMsg) emptyMsg.style.display = visible.length === 0 ? '' : 'none';
+  });
+});
+
+/* ══════════════════════════════════════
+   MARK UNAVAILABLE (Dashboard modal)
+══════════════════════════════════════ */
+let currentUnavailMode = 'full-day';
+function openUnavailDashModal() {
+  const today = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = today.getFullYear() + '-' + pad(today.getMonth()+1) + '-' + pad(today.getDate());
+  document.getElementById('unavailDashStartDate').value = todayStr;
+  document.getElementById('unavailDashEndDate').value = todayStr;
+  document.getElementById('unavailDashStartTime').value = '';
+  document.getElementById('unavailDashEndTime').value = '';
+  document.getElementById('unavailDashReason').value = '';
+  document.getElementById('unavailDashDateErr').style.display = 'none';
+  document.getElementById('unavailDashSuccess').style.display = 'none';
+  document.getElementById('unavailDashError').style.display = 'none';
+  document.getElementById('unavailSummary').style.display = 'none';
+  document.getElementById('unavailDashConfirmBtn').disabled = false;
+  document.getElementById('unavailDashConfirmBtn').textContent = 'Create Schedule Block';
+  document.querySelectorAll('.unavail-preset').forEach(p => p.classList.remove('selected'));
+  document.getElementById('unavailDashModal').classList.add('show');
+  document.body.classList.add('modal-open');
+  setUnavailMode('full-day');
+}
+function closeUnavailDashModal() {
+  document.getElementById('unavailDashModal').classList.remove('show');
+  document.body.classList.remove('modal-open');
+}
+function setUnavailMode(mode) {
+  currentUnavailMode = mode;
+  document.querySelectorAll('.unavail-mode-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  document.getElementById('unavailTimeRow').style.display = mode === 'time-range' ? 'grid' : 'none';
+}
+function updateUnavailSummary() {
+  const startDate = document.getElementById('unavailDashStartDate').value;
+  const endDate = document.getElementById('unavailDashEndDate').value || startDate;
+  const summaryEl = document.getElementById('unavailSummary');
+  if (!startDate) { summaryEl.style.display = 'none'; return; }
+  const startLabel = new Date(startDate + 'T00:00:00').toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' });
+  const endLabel = endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' }) : startLabel;
+  const rangeText = startDate === endDate ? startLabel : `${startLabel} to ${endLabel}`;
+  const detailText = currentUnavailMode === 'time-range'
+    ? `Time block: ${document.getElementById('unavailDashStartTime').value || '—'} to ${document.getElementById('unavailDashEndTime').value || '—'}`
+    : 'Full-day block for the selected dates';
+  summaryEl.innerHTML = `<strong>Summary:</strong> ${detailText}. Appointments that overlap with ${rangeText} will be cancelled automatically and students will be prompted to book a new slot.`;
+  summaryEl.style.display = 'block';
+}
+
+// Preset chips for unavailability reason
+document.querySelectorAll('.unavail-preset').forEach(chip => {
+  chip.addEventListener('click', function () {
+    document.querySelectorAll('.unavail-preset').forEach(p => p.classList.remove('selected'));
+    this.classList.add('selected');
+    document.getElementById('unavailDashReason').value = this.dataset.reason;
+  });
+});
+document.querySelectorAll('.unavail-mode-btn').forEach(btn => {
+  btn.addEventListener('click', function () { setUnavailMode(this.dataset.mode); updateUnavailSummary(); });
+});
+['unavailDashStartDate','unavailDashEndDate','unavailDashStartTime','unavailDashEndTime','unavailDashReason'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateUnavailSummary);
+  if (el) el.addEventListener('change', updateUnavailSummary);
+});
+
+function confirmUnavailDash() {
+  const startDate = document.getElementById('unavailDashStartDate').value;
+  const endDate = document.getElementById('unavailDashEndDate').value || startDate;
+  const reasonVal = document.getElementById('unavailDashReason').value.trim();
+  const errEl = document.getElementById('unavailDashDateErr');
+  const successEl = document.getElementById('unavailDashSuccess');
+  const errorEl = document.getElementById('unavailDashError');
+  const btn = document.getElementById('unavailDashConfirmBtn');
+  errEl.style.display = 'none';
+  successEl.style.display = 'none';
+  errorEl.style.display = 'none';
+
+  if (!startDate) { errEl.textContent = 'Please select a start date.'; errEl.style.display = 'block'; return; }
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  if (start < today0) { errEl.textContent = 'Cannot mark a past date as unavailable.'; errEl.style.display = 'block'; return; }
+  if (end < start) { errEl.textContent = 'The end date cannot be earlier than the start date.'; errEl.style.display = 'block'; return; }
+  if (currentUnavailMode === 'time-range') {
+    const startTime = document.getElementById('unavailDashStartTime').value;
+    const endTime = document.getElementById('unavailDashEndTime').value;
+    if (!startTime || !endTime) { errEl.textContent = 'Please select both start and end times.'; errEl.style.display = 'block'; return; }
+    if (startTime >= endTime) { errEl.textContent = 'The end time must be later than the start time.'; errEl.style.display = 'block'; return; }
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Creating block…';
+
+  fetch('/instructor/unavailability/set', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      startDate,
+      endDate,
+      date: startDate,
+      reason: reasonVal || 'Instructor unavailability',
+      type: currentUnavailMode,
+      startTime: document.getElementById('unavailDashStartTime').value,
+      endTime: document.getElementById('unavailDashEndTime').value
+    })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) { errorEl.textContent = data.error || 'Failed to save the schedule block.'; errorEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create Schedule Block'; return; }
+      const rangeText = data.startDate === data.endDate ? data.startDate : `${data.startDate} to ${data.endDate}`;
+      const message = data.cancelledCount > 0
+        ? `${rangeText} blocked. ${data.cancelledCount} appointment(s) were cancelled and ${data.studentsNotified} student${data.studentsNotified === 1 ? '' : 's'} were notified.`
+        : `${rangeText} blocked. No appointments were affected.`;
+      successEl.textContent = message;
+      successEl.style.display = 'block';
+      btn.textContent = 'Saved ✓';
+      showToast(data.cancelledCount > 0 ? 'warning' : 'success', 'Schedule Block Created', message);
+      setTimeout(closeUnavailDashModal, 2200);
+    })
+    .catch(() => { errorEl.textContent = 'Network error. Please try again.'; errorEl.style.display = 'block'; btn.disabled = false; btn.textContent = 'Create Schedule Block'; });
+}
+
+// Wire both Mark Unavailable buttons to the modal
+['btnMarkUnavailHeader','btnMarkUnavailStrip'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', openUnavailDashModal);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeDeclineModal(); closeUnavailDashModal(); }
+});
+
+/* ══════════════════════════════════════
+   AUTO-REFRESH PENDING LIST (every 45s)
+══════════════════════════════════════ */
+setInterval(() => {
+  fetch('/instructor/consultations/data')
+    .then(r => r.json())
+    .then(data => {
+      const newPending = (data.appointments || []).filter(a => a.status === 'pending');
+      const oldCount   = document.querySelectorAll('.btn-apt-approve').length;
+      // Only reload if count changed — avoids disrupting the instructor mid-action
+      if (newPending.length !== oldCount) window.location.reload();
+    })
+    .catch(() => {}); // Silent fail — no toast on background polls
+}, 45000);
+
+/* ══════════════════════════════════════
+   TOAST
+══════════════════════════════════════ */
+function showToast(type, title, message) {
+  const c = document.getElementById('toastContainer');
+  if (!c) return;
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<div class="toast-content"><p class="toast-title">' + escHtml(title) + '</p><p class="toast-message">' + escHtml(message) + '</p></div>';
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
 <%- include('../../partials/footer') %>
