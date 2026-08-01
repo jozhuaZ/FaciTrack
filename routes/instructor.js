@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { createWorker } = require('tesseract.js');
 const WorkloadController = require('../controllers/WorkloadController');
+const InstructorController = require('../controllers/InstructorController');
 const { authenticateUser, createSession, getRoleRedirect, revokeSession } = require('../services/auth');
 const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
 const { bookingConflictsWithBlock, getBlockDateKeys, normalizeDateKey } = require('../services/scheduling');
@@ -381,72 +382,6 @@ function getSchedule(instructorId) {
     return scheduleStore[instructorId] || [];
 }
 
-// Save schedule POST — called from the schedule page via fetch
-router.post('/schedule/save', (req, res) => {
-    const { slots } = req.body;
-    if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data' });
-    // Validate: each must have day/timeStart/timeEnd/maxCapacity
-    const cleaned = slots.map(s => ({
-        day:         String(s.day || '').trim(),
-        timeStart:   String(s.timeStart || '').trim(),
-        timeEnd:     String(s.timeEnd || '').trim(),
-        maxCapacity: Math.max(1, parseInt(s.maxCapacity) || 3),
-        bookedCount: parseInt(s.bookedCount) || 0,
-        status:      ['open','full','closed'].includes(s.status) ? s.status : 'open'
-    })).filter(s => s.day && s.timeStart && s.timeEnd);
-    scheduleStore[1] = cleaned;
-    console.log('[Schedule] Saved:', JSON.stringify(cleaned));
-    res.json({ success: true, slots: cleaned });
-});
-
-// Instructor Login page
-router.get('/login', (req, res) => {
-    res.render('pages/instructor/login', { 
-        title: 'FaciTrack - Instructor Login',
-        error: null 
-    });
-});
-
-// Instructor Login POST handler
-router.post('/login', (req, res) => {
-    const { email } = req.body;
-    
-    // Input validation
-    if (!email || typeof email !== 'string' || email.trim().length === 0) {
-        return res.render('pages/instructor/login', { 
-            title: 'FaciTrack - Instructor Login',
-            error: 'Please enter your email address.' 
-        });
-    }
-    
-    // PROTOTYPE MODE: Accept any email without password verification
-    const { readData } = require('../services/data-store');
-    const db = readData();
-    const user = (db.users || []).find((u) => String(u.email || '').toLowerCase() === email.trim().toLowerCase());
-    
-    if (user && user.role === 'instructor') {
-        const session = createSession(user, { ip: req.ip, userAgent: req.headers['user-agent'] || '' });
-        setSessionCookie(res, session.token);
-        res.redirect(getRoleRedirect(user.role));
-    } else {
-        res.render('pages/instructor/login', { 
-            title: 'FaciTrack - Instructor Login',
-            error: 'Instructor user not found.'
-        });
-    }
-});
-
-router.post('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-router.get('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-
 // PROTOTYPE MODE: Disabled role check to allow free navigation
 // router.use(requireRole('instructor'));
 
@@ -616,16 +551,20 @@ router.get('/schedule/data', (req, res) => {
     res.json({ slots: slots });
 });
 
-// Schedule
-router.get('/schedule', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/instructor/schedule', {
-        title: 'FaciTrack - Schedule',
-        ...data,
-        pendingCount: data.appointments.filter(a => a.status === 'pending').length
-    });
-});
+// Schedule page
+router.get('/consultation-schedule', InstructorController.renderConsultationPage);
 
+// Slot management
+router.post('/schedule/save',       InstructorController.saveSlotBlock);
+router.delete('/schedule/:slotId',  InstructorController.deleteSlot);
+
+// Unavailability for consultation slots
+router.get('/unavailability/list',         InstructorController.getUnavailability);
+router.get('/unavailability/check/:date',  InstructorController.checkUnavailability);
+router.post('/unavailability/set',         InstructorController.setUnavailability);
+router.delete('/unavailability/:date',     InstructorController.removeUnavailability);
+
+// workload
 router.get('/workload', WorkloadController.renderPage);
 router.post('/workload/save', WorkloadController.save);
 // Workload — Load timetable
@@ -1232,118 +1171,6 @@ async function cancelBookingsForBlock(instructorId, block, dateKeys, reason) {
     }
     return cancelled;
 }
-
-// GET /instructor/unavailability/list — returns all unavailable dates for this instructor
-router.get('/unavailability/list', (req, res) => {
-    const list = Object.values(unavailabilityStore)
-        .sort((a, b) => a.date.localeCompare(b.date));
-    res.json({ success: true, unavailableDates: list });
-});
-
-// POST /instructor/unavailability/set — mark one or more dates as unavailable + auto-cancel appointments
-router.post('/unavailability/set', async (req, res) => {
-    const { startDate, endDate, date, reason, type = 'full-day', startTime, endTime } = req.body;
-    const startKey = normalizeDateKey(startDate || date);
-    const endKey = normalizeDateKey(endDate || date);
-
-    if (!startKey || !endKey) {
-        return res.status(400).json({ success: false, error: 'Please select a valid start and end date.' });
-    }
-    if (new Date(endKey + 'T00:00:00') < new Date(startKey + 'T00:00:00')) {
-        return res.status(400).json({ success: false, error: 'The end date cannot be earlier than the start date.' });
-    }
-
-    if (type === 'time-range') {
-        if (!startTime || !endTime) {
-            return res.status(400).json({ success: false, error: 'Please provide a start and end time.' });
-        }
-        if (startTime >= endTime) {
-            return res.status(400).json({ success: false, error: 'The end time must be later than the start time.' });
-        }
-    }
-
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const targetStart = new Date(startKey + 'T00:00:00');
-    if (targetStart < today) {
-        return res.status(400).json({ success: false, error: 'Cannot mark a past date as unavailable.' });
-    }
-
-    const sanitisedReason = String(reason || '').trim().substring(0, 300) || 'Instructor unavailability';
-    const affectedDates = getBlockDateKeys(startKey, endKey);
-    const block = {
-        id: uuidv4(),
-        instructorId: 1,
-        startDate: startKey,
-        endDate: endKey,
-        type,
-        reason: sanitisedReason,
-        startTime: type === 'time-range' ? startTime : null,
-        endTime: type === 'time-range' ? endTime : null,
-        blockedAt: new Date().toISOString()
-    };
-
-    const cancelled = await cancelBookingsForBlock(1, block, affectedDates, sanitisedReason);
-
-    affectedDates.forEach(dateKey => {
-        unavailabilityStore[dateKey] = {
-            id: block.id,
-            instructorId: 1,
-            date: dateKey,
-            startDate: startKey,
-            endDate: endKey,
-            type,
-            reason: sanitisedReason,
-            startTime: type === 'time-range' ? startTime : null,
-            endTime: type === 'time-range' ? endTime : null,
-            blockedAt: new Date().toISOString(),
-            cancelledRefs: cancelled.filter(item => normalizeDateKey(item.date) === dateKey).map(item => item.refNumber)
-        };
-    });
-
-    const dayLabel = affectedDates.length > 1
-        ? `${affectedDates[0]} to ${affectedDates[affectedDates.length - 1]}`
-        : new Date(startKey + 'T00:00:00').toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    addInstructorNotification({
-        type: 'schedule-block-created',
-        title: 'Schedule block created',
-        message: `${type === 'time-range' ? 'Time block' : 'Full-day block'} saved for ${dayLabel}. ${cancelled.length} appointment${cancelled.length === 1 ? '' : 's'} ${cancelled.length === 1 ? 'was' : 'were'} cancelled and ${cancelled.length === 1 ? 'a student was' : 'students were'} notified.`,
-        category: 'schedule',
-        read: false
-    });
-
-    console.log(`[Unavailability] Set ${startKey}${startKey !== endKey ? ` to ${endKey}` : ''} – reason: "${sanitisedReason}" – cancelled: ${cancelled.length} booking(s)`);
-
-    res.json({
-        success: true,
-        startDate: startKey,
-        endDate: endKey,
-        type,
-        reason: sanitisedReason,
-        affectedDateCount: affectedDates.length,
-        cancelledCount: cancelled.length,
-        studentsNotified: cancelled.length,
-        cancelledRefs: cancelled.map(item => item.refNumber)
-    });
-});
-
-// DELETE /instructor/unavailability/:date — remove an unavailability block
-router.delete('/unavailability/:date', (req, res) => {
-    const dateKey = toDateKey(req.params.date);
-    if (!dateKey || !unavailabilityStore[dateKey]) {
-        return res.status(404).json({ success: false, error: 'Unavailability record not found.' });
-    }
-    delete unavailabilityStore[dateKey];
-    console.log(`[Unavailability] Removed block for ${dateKey}`);
-    res.json({ success: true, dateKey });
-});
-
-// GET /instructor/unavailability/check/:date — quick check used by student booking flow
-router.get('/unavailability/check/:date', (req, res) => {
-    const dateKey = toDateKey(req.params.date);
-    if (!dateKey) return res.status(400).json({ success: false, error: 'Invalid date.' });
-    const record = unavailabilityStore[dateKey];
-    res.json({ unavailable: !!record, reason: record ? record.reason : null });
-});
 
 router.requestStore         = requestStore;
 router.timetableStore       = timetableStore;
