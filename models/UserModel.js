@@ -82,6 +82,59 @@ const UserModel = {
         return rows;
     },
 
+    async getFacultiesConsultation({ limit, offset } = {}) {
+        let query = `
+        SELECT
+            u.public_id          AS instructor_id,
+            CONCAT(u.last_name, ', ', u.first_name,
+                   IF(u.middle_name IS NOT NULL AND u.middle_name != '',
+                      CONCAT(' ', u.middle_name), '')) AS full_name,
+            u.position,
+            u.status,
+            u.department_id,
+            d.full_name          AS department_name,
+            u.profile_picture,
+            -- Next available slot fields
+            next_slot.consultation_date AS next_date,
+            next_slot.day_of_the_week   AS next_day,
+            next_slot.start_time        AS next_start_time
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN (
+            SELECT
+                instructor_id,
+                consultation_date,
+                day_of_the_week,
+                start_time
+            FROM consultation_hours
+            WHERE status = 'Available'
+            AND consultation_date > CURDATE()  -- ← was >=, now strictly greater than today
+            ORDER BY consultation_date ASC, start_time ASC
+        ) next_slot ON u.id = next_slot.instructor_id
+        WHERE u.role = 'Instructor'
+          AND u.status = 'Active'
+        GROUP BY u.id
+    `;
+
+        const params = [];
+
+        if (limit) {
+            query += ' LIMIT ?';
+            params.push(Number(limit));
+        }
+        if (offset) {
+            query += ' OFFSET ?';
+            params.push(Number(offset));
+        }
+
+        const [rows] = await pool.execute(query, params);
+        return rows;
+    },
+
+    async getFacultyWithConsultation() {
+        let query = `SELECT `
+    },
+
     async insertUserByAdmin(newUser) {
         const query = `INSERT INTO users
             (first_name, middle_name, last_name, email, role, department_id, status, employment_type, position, profile_picture, hashed_password)
@@ -181,7 +234,7 @@ const UserModel = {
 
     async getUserById(internalId) {
         const [rows] = await pool.execute(
-            `SELECT public_id AS id, id AS internal_id, first_name, last_name, email, role, status, profile_picture
+            `SELECT public_id AS id, id AS internal_id, first_name, last_name, email, role, status, profile_picture, position
          FROM users WHERE id = ?`,
             [internalId]
         );
