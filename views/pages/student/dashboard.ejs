@@ -36,7 +36,7 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Faculty Directory</h1>
-                    <p class="page-subtitle">Browse CCS faculty members and book a consultation appointment</p>
+                    <p class="page-subtitle">Browse faculty members by filtering on their department and book a consultation appointment</p>
                 </div>
             </div>
 
@@ -50,11 +50,10 @@
                         </div>
                         <select id="deptFilter" style="padding:0.6rem 0.875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer;flex-shrink:0;">
                             <option value="all">All Departments</option>
-                            <% departments.forEach(function(d) { %>
-                                <option value="<%= d.value %>" <%= activeDept === d.value ? 'selected' : '' %>><%= d.label %></option>
+                            <% departments.forEach(d => { %>
+                                <option value="<%= d.id %>"><%= d.full_name %></option>
                             <% }); %>
                         </select>
-
                     </div>
                 </div>
             </div>
@@ -70,7 +69,7 @@
                         </div>
 
                         <% facultyList.forEach((faculty, index) => { %>
-                        <a href="/student/faculty/<%= faculty.id %>" class="faculty-card" data-status="<%= faculty.status %>" data-name="<%= faculty.name.toLowerCase() %>" data-spec="<%= faculty.specialization.toLowerCase() %>" data-dept="<%= faculty.department %>">
+                        <a href="/student/faculty/<%= faculty.instructor_id %>" class="faculty-card" data-status="<%= faculty.status %>" data-name="<%= faculty.full_name.toLowerCase() %>" data-spec="<%= faculty.position.toLowerCase() %>" data-dept="<%= faculty.department_id %>">
                             <div class="card-top">
                                 <!-- Photo placeholder — replace with <img> when actual photo is available -->
                                 <div class="card-photo-placeholder">
@@ -78,15 +77,15 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <h3 class="card-name"><%= faculty.name %></h3>
+                                <h3 class="card-name"><%= faculty.full_name %></h3>
                                 <p class="card-position"><%= faculty.position %></p>
                                 <p class="card-college">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                    <%= faculty.department %>
+                                    <%= faculty.department_name %>
                                 </p>
                                 <p class="card-spec">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    <%= faculty.specialization %>
+                                    <%= faculty.position %>
                                 </p>
                             </div>
                             <div class="card-footer">
