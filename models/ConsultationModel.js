@@ -74,6 +74,42 @@ function addDays(dateStr, days) {
 }
 
 const ConsultationModel = {
+
+    async getSlotWithFaculty(slotId) {
+        const [[row]] = await pool.execute(
+            `SELECT
+            ch.id, ch.day_of_the_week AS day, ch.consultation_date AS date,
+            ch.start_time, ch.end_time,
+            a.id AS appointment_id,
+            u.public_id AS faculty_id, u.first_name, u.last_name, u.middle_name,
+            u.position, u.email, d.full_name AS department_name
+         FROM consultation_hours ch
+         JOIN users u ON ch.instructor_id = u.id
+         LEFT JOIN departments d ON u.department_id = d.id
+         LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status != 'cancelled'
+         WHERE ch.id = ?`,
+            [slotId]
+        );
+        if (!row) return null;
+
+        return {
+            id: row.id,
+            day: row.day,
+            date: row.date, // requires dateStrings:true on pool, per your earlier fix
+            timeStart: to12Hour(row.start_time),
+            timeEnd: to12Hour(row.end_time),
+            isBooked: !!row.appointment_id,
+            faculty: {
+                id: row.faculty_id,
+                first_name: row.first_name,
+                last_name: row.last_name,
+                middle_name: row.middle_name,
+                position: row.position,
+                department_name: row.department_name,
+            },
+        };
+    },
+
     async getSlotsByInstructor(publicId) {
         const [rows] = await pool.execute(
             `SELECT ch.*
