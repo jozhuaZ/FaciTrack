@@ -544,3 +544,77 @@
         display: none;
     }
 }
+
+/* ── Consultation Calendar ── */
+.consult-calendar-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+.cal-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid var(--gray-100); background:linear-gradient(135deg,rgba(10,61,98,.04),rgba(30,136,229,.05)); }
+.cal-title { font-size:1rem; font-weight:700; color:var(--gray-900); }
+.cal-nav { display:flex; gap:.375rem; }
+.cal-nav-btn { width:30px; height:30px; border:1.5px solid var(--gray-200); border-radius:var(--radius-md); background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--gray-600); transition:all .2s; }
+.cal-nav-btn:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+.cal-day-label { text-align:center; font-size:.6875rem; font-weight:700; color:var(--gray-500); text-transform:uppercase; padding:.5rem .25rem; border-bottom:1px solid var(--gray-100); }
+.cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:.8125rem; color:var(--gray-400); cursor:default; position:relative; border-radius:var(--radius-sm); margin:2px; }
+.cal-cell.other-month { color:var(--gray-300); }
+/* Today: highlighted box instead of dot */
+.cal-cell.today { font-weight:700; color:var(--primary-blue); background:rgba(10,61,98,.1); border:2px solid var(--primary-blue); border-radius:var(--radius-md); }
+.cal-cell.available { background:rgba(34,197,94,.12); color:#15803d; font-weight:700; cursor:pointer; border-radius:var(--radius-md); transition:all .18s; }
+.cal-cell.available:hover { background:rgba(34,197,94,.28); transform:scale(1.1); box-shadow:0 2px 8px rgba(22,163,74,.25); }
+.cal-cell.available.today { background:rgba(34,197,94,.2); border:2px solid #16a34a; color:#15803d; }
+.cal-cell.available.selected { background:#16a34a; color:#fff; box-shadow:0 2px 8px rgba(22,163,74,.35); border:none; }
+.cal-cell.past { opacity:0.35; cursor:not-allowed; pointer-events:none; }
+/* JS tooltip — single floating div, no pseudo-elements */
+#calTooltip {
+    position: fixed;
+    background: rgba(15,40,70,.93);
+    color: #fff;
+    font-size: .6875rem;
+    font-weight: 600;
+    padding: .375rem .75rem;
+    border-radius: 6px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity .15s;
+    max-width: 220px;
+    text-align: center;
+    line-height: 1.5;
+}
+#calTooltip.visible { opacity: 1; }
+#calTooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(15,40,70,.93);
+}
+.cal-legend { display:flex; gap:1rem; padding:.75rem 1.25rem; border-top:1px solid var(--gray-100); font-size:.75rem; color:var(--gray-500); flex-wrap:wrap; }
+.cal-legend-item { display:flex; align-items:center; gap:.375rem; }
+.cal-legend-dot { width:10px; height:10px; border-radius:3px; }
+.cal-legend-dot.available { background:rgba(34,197,94,.5); }
+.cal-legend-dot.today { background:var(--primary-blue); border-radius:3px; border:2px solid var(--primary-blue); }
+/* Slot detail panel */
+.slot-detail-panel { margin-top:.75rem; padding:1rem 1.25rem; background:rgba(34,197,94,.06); border:1.5px solid rgba(34,197,94,.25); border-radius:var(--radius-md); display:none; }
+.slot-detail-panel.show { display:block; }
+.no-schedule-panel { margin-top:.75rem; padding:1rem 1.25rem; background:#f8fafc; border:1px solid var(--gray-200); border-radius:var(--radius-md); }
+.no-schedule-title { font-size:.9rem; font-weight:700; color:var(--gray-800); margin:0 0 .35rem; }
+.no-schedule-text { font-size:.82rem; color:var(--gray-600); margin:0; }
+.slot-detail-title { font-size:.875rem; font-weight:700; color:#15803d; margin:0 0 .75rem; }
+.slot-detail-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.5rem; }
+.slot-detail-list li { font-size:.8125rem; color:var(--gray-700); display:flex; align-items:center; gap:.5rem; }
+/* Selectable slot items */
+.slot-select-btn { display:flex; align-items:center; gap:.625rem; width:100%; padding:.625rem .875rem; background:#fff; border:1.5px solid rgba(34,197,94,.3); border-radius:var(--radius-md); cursor:pointer; transition:all .18s; font-family:var(--font-body); font-size:.8125rem; color:var(--gray-800); text-align:left; }
+.slot-select-btn:hover { border-color:#16a34a; background:rgba(34,197,94,.06); }
+.slot-select-btn.selected { border-color:#16a34a; background:rgba(34,197,94,.12); font-weight:700; color:#15803d; }
+.slot-select-btn.full { opacity:.5; cursor:not-allowed; background:var(--gray-50); border-color:var(--gray-200); color:var(--gray-400); }
+.slot-num-badge { width:20px; height:20px; border-radius:50%; background:rgba(34,197,94,.2); color:#15803d; font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.slot-select-btn.selected .slot-num-badge { background:#16a34a; color:#fff; }
+.slot-avail-tag { margin-left:auto; font-size:.6875rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; flex-shrink:0; }
+.slot-avail-tag.full { background:var(--gray-100); color:var(--gray-400); border-color:var(--gray-200); }
+/* Book button with slot selected */
+.btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
+.btn-book-slot:hover { background:var(--primary-dark); }
+.btn-book-slot.disabled { background:var(--gray-300); cursor:not-allowed; pointer-events:none; }
