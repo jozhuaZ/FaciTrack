@@ -389,8 +389,7 @@
                                     Appointment</span>
                             </div>
                             <h1 class="page-title">Book an Appointment</h1>
-                            <p class="page-subtitle">Fill in the details below to request a consultation with <%=
-                                    faculty.name %>
+                            <p class="page-subtitle">Fill in the details below to request a consultation with <%= faculty.first_name%> <%= faculty.last_name %>
                             </p>
                         </div>
                     </div>
@@ -401,10 +400,11 @@
                             <!-- Faculty Summary -->
                             <div class="faculty-summary-card">
                                 <div class="faculty-summary-avatar">
-                                    <%= faculty.name.split(' ').map(n => n[0]).join('') %></div>
+                                    <%= faculty.first_name[0] + faculty.last_name[0] %>
+                                </div>
                         <div>
-                            <p style="font-weight:700;font-size:0.9375rem;color:var(--gray-900);margin:0 0 0.125rem;"><%= faculty.name %></p>
-                            <p style="font-size:0.8125rem;color:var(--gray-500);margin:0;"><%= faculty.position %> — <%= faculty.department %></p>
+                            <p style="font-weight:700;font-size:0.9375rem;color:var(--gray-900);margin:0 0 0.125rem;"><%= faculty.last_name %>, <%= faculty.first_name %> <%= faculty.middle_name ?? '' %></p>
+                            <p style="font-size:0.8125rem;color:var(--gray-500);margin:0;"><%= faculty.position %> — <%= faculty.department_name %></p>
                         </div>
                     </div>
 
@@ -417,23 +417,23 @@
                         </p>
 
                         <div class="form-group">
-                            <div class="slot-readonly-box" id="slotReadonlyBox">
+                            <div class="slot-readonly-box" id="slotReadonlyBox" style="border-color:rgba(22,163,74,.4);background:rgba(34,197,94,.05);">
                                 <div class="slot-readonly-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 </div>
                                 <div class="slot-readonly-text">
-                                    <div class="slot-readonly-time" id="slotReadonlyTime">No slot selected</div>
-                                    <div class="slot-readonly-date" id="slotReadonlyDate"></div>
+                                    <div class="slot-readonly-time"><%= slot.timeStart %> – <%= slot.timeEnd %></div>
+                                    <div class="slot-readonly-date"><%= slot.day %>, <%= toLocaleDate(slot.date) %></div>
                                 </div>
                                 <a href="/student/faculty/<%= faculty.id %>" class="slot-readonly-change">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                                     Change
                                 </a>
                             </div>
+                            <input type="hidden" name="slotId" id="selectedSlotInput" value="<%= slot.id %>">
                             <!-- Hidden input carries the selected slot to the server -->
                             <input type="hidden" name="selectedSlot" id="selectedSlotInput">
                             <input type="hidden" name="reservationToken" id="reservationTokenInput">
-                            <span class="form-hint" id="slotHint" style="color:#e53e3e;display:none;">Please go back and select a time slot first.</span>
                         </div>
 
                         <!-- Step 2: Student Details -->
@@ -539,133 +539,26 @@
 
     <div class="toast-container" id="toastContainer"></div>
     <%- include('../../partials/footer') %>
-                                        <%- include('../../partials/script') %>
-                                            <script>
-                                                // Read slot, date, token and prefill values from URL query params
-                                                (function () {
-                                                    const params = new URLSearchParams(window.location.search);
-                                                    const slot = params.get('slot');
-                                                    const date = params.get('date');
-                                                    const token = params.get('token');
+    <%- include('../../partials/script') %>
+<script>
+    const EXPIRES_AT = new Date('<%- expiresAt %>').getTime();
 
-                                                    const timeEl = document.getElementById('slotReadonlyTime');
-                                                    const dateEl = document.getElementById('slotReadonlyDate');
-                                                    const inputEl = document.getElementById('selectedSlotInput');
-                                                    const tokenEl = document.getElementById('reservationTokenInput');
-                                                    const hintEl = document.getElementById('slotHint');
-                                                    const box = document.getElementById('slotReadonlyBox');
+    (function() {
+        const timerEl = document.createElement('p');
+        timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
+        timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown"></span>`;
+        document.getElementById('slotReadonlyBox').insertAdjacentElement('afterend', timerEl);
 
-                                                    if (slot) {
-                                                        timeEl.textContent = slot;
-                                                        dateEl.textContent = date || '';
-                                                        inputEl.value = slot;
-                                                        if (tokenEl) tokenEl.value = token || '';
-                                                        box.style.borderColor = 'rgba(22,163,74,.4)';
-                                                        box.style.background = 'rgba(34,197,94,.05)';
-                                                    } else {
-                                                        timeEl.textContent = 'No slot selected';
-                                                        hintEl.style.display = 'block';
-                                                        box.style.borderColor = '#fca5a5';
-                                                        box.style.background = '#fef2f2';
-                                                    }
-
-                                                    // 5-minute countdown timer display
-                                                    if (token && slot) {
-                                                        const HOLD_MS = 5 * 60 * 1000;
-                                                        const startedAt = Date.now();
-                                                        const timerEl = document.createElement('p');
-                                                        timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
-                                                        timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown">Slot held for 5:00</span>`;
-                                                        box.parentNode.insertBefore(timerEl, box.nextSibling);
-
-                                                        const countdownEl = document.getElementById('holdCountdown');
-                                                        const interval = setInterval(() => {
-                                                            const elapsed = Date.now() - startedAt;
-                                                            const remaining = Math.max(0, HOLD_MS - elapsed);
-                                                            const mins = Math.floor(remaining / 60000);
-                                                            const secs = Math.floor((remaining % 60000) / 1000);
-                                                            countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
-                                                            if (remaining <= 0) {
-                                                                clearInterval(interval);
-                                                                // Release and redirect back
-                                                                fetch('/student/slot/release', {
-                                                                    method: 'POST',
-                                                                    headers: { 'Content-Type': 'application/json' },
-                                                                    body: JSON.stringify({ token })
-                                                                });
-                                                                window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
-                                                            }
-                                                        }, 1000);
-                                                    }
-
-                                                    // Restore form fields if coming back from a previous attempt
-                                                    const name = params.get('prefill_name');
-                                                    const id = params.get('prefill_id');
-                                                    const section = params.get('prefill_section');
-                                                    const course = params.get('prefill_course');
-                                                    const email = params.get('prefill_email');
-                                                    const topic = params.get('prefill_topic');
-                                                    const notes = params.get('prefill_notes');
-                                                    if (name) document.getElementById('studentName').value = name;
-                                                    if (id) document.getElementById('studentId').value = id;
-                                                    if (section) document.getElementById('studentSection').value = section;
-                                                    if (course) document.getElementById('courseSubject').value = course;
-                                                    if (email) document.getElementById('studentEmail').value = email;
-                                                    if (topic) document.getElementById('consultTopic').value = topic;
-                                                    if (notes) document.getElementById('consultNotes').value = notes;
-                                                })();
-
-                                                function showToast(type, title, message) {
-                                                    const c = document.getElementById('toastContainer');
-                                                    const t = document.createElement('div');
-                                                    t.className = `toast ${type}`;
-                                                    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
-                                                    c.appendChild(t);
-                                                    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
-                                                }
-
-                                                // ── Consultation mode toggle ──
-                                                const typeButtons = document.querySelectorAll('.consult-type-btn');
-                                                const typeInput = document.getElementById('consultTypeInput');
-                                                typeButtons.forEach(function (btn) {
-                                                    btn.addEventListener('click', function () {
-                                                        typeButtons.forEach(function (b) { b.classList.remove('active'); });
-                                                        this.classList.add('active');
-                                                        typeInput.value = this.dataset.type;
-                                                    });
-                                                });
-
-                                                document.getElementById('bookingForm').addEventListener('submit', function (e) {
-                                                    e.preventDefault();
-
-                                                    const slot = document.getElementById('selectedSlotInput').value;
-                                                    const name = document.getElementById('studentName').value.trim();
-                                                    const id = document.getElementById('studentId').value.trim();
-                                                    const section = document.getElementById('studentSection').value.trim();
-                                                    const course = document.getElementById('courseSubject').value.trim();
-                                                    const email = document.getElementById('studentEmail').value.trim();
-                                                    const topic = document.getElementById('consultTopic').value.trim();
-
-                                                    if (!slot) { showToast('error', 'No Slot Selected', 'Please go back and select a consultation time slot.'); return; }
-                                                    if (!name) { showToast('error', 'Required', 'Please enter your full name.'); return; }
-                                                    if (!id) { showToast('error', 'Required', 'Please enter your student ID.'); return; }
-                                                    if (!section) { showToast('error', 'Required', 'Please enter your section/group name.'); return; }
-                                                    if (!course) { showToast('error', 'Required', 'Please enter your course/subject.'); return; }
-                                                    if (!email || !email.endsWith('@my.cspc.edu.ph')) { showToast('error', 'Invalid Email', 'Please use your CSPC student email (@my.cspc.edu.ph).'); return; }
-                                                    if (!topic) { showToast('error', 'Required', 'Please enter a consultation topic.'); return; }
-                                                    // Also carry the selected date so the back-URL can restore it
-                                                    const params = new URLSearchParams(window.location.search);
-                                                    const dateVal = params.get('date') || '';
-                                                    let dateInput = document.getElementById('selectedDateInput');
-                                                    if (!dateInput) {
-                                                        dateInput = document.createElement('input');
-                                                        dateInput.type = 'hidden';
-                                                        dateInput.name = 'selectedDate';
-                                                        dateInput.id = 'selectedDateInput';
-                                                        this.appendChild(dateInput);
-                                                    }
-                                                    dateInput.value = dateVal;
-
-                                                    this.submit();
-                                                });
-                                            </script>
+        const countdownEl = document.getElementById('holdCountdown');
+        const interval = setInterval(() => {
+            const remaining = Math.max(0, EXPIRES_AT - Date.now());
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+            }
+        }, 1000);
+    })();
+</script>
