@@ -191,6 +191,9 @@ const StudentController = {
                 slot: {
                     id: slotDetails.id,
                     day: slotDetails.day,
+                    dateFormatted: slotDetails.date.toLocaleDateString('en-PH', {
+                        month: 'short', day: 'numeric', year: 'numeric'
+                    }),
                     date: slotDetails.date,
                     timeStart: slotDetails.timeStart,
                     timeEnd: slotDetails.timeEnd,
