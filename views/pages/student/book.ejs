@@ -423,7 +423,7 @@
                                 </div>
                                 <div class="slot-readonly-text">
                                     <div class="slot-readonly-time"><%= slot.timeStart %> – <%= slot.timeEnd %></div>
-                                    <div class="slot-readonly-date"><%= slot.day %>, <%= toLocaleDate(slot.date) %></div>
+                                    <div class="slot-readonly-date"><%= slot.day %>, <%= slot.dateFormatted %></div>
                                 </div>
                                 <a href="/student/faculty/<%= faculty.id %>" class="slot-readonly-change">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
