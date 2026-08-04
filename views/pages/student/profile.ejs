@@ -43,7 +43,7 @@
 
                     <!-- Faculty Info Sidebar -->
                     <aside class="prof-sidebar">
-                        <div class="sidebar-avatar"><%= (faculty.last_name?.[0] || '') + (faculty.first_name?.[0] || '') %></div>
+                        <div class="sidebar-avatar"><%= (faculty.first_name?.[0] || '') + (faculty.last_name?.[0] || '') %></div>
                         <h2 class="sidebar-name"><%= faculty.last_name %>, <%= faculty.first_name %><%= faculty.middle_name ? ' ' + faculty.middle_name : '' %></h2>
                         <p class="sidebar-position"><%= faculty.position %></p>
                         <div class="sidebar-divider"></div>
@@ -140,6 +140,8 @@
     </main>
 </div>
 
+<div class="toast-container" id="toastContainer"></div>
+
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 <script>
@@ -156,6 +158,7 @@ slots.forEach(group => {
     if (!hasOpenSub) return;
     availableByDate[group.date] = group;
 });
+
 // Parse "2:00 PM" → minutes
 function parseTime(str) {
     const [time, period] = str.trim().split(' ');
@@ -170,6 +173,15 @@ function formatTime(mins) {
     if (h > 12) h -= 12;
     if (h === 0) h = 12;
     return `${h}:${m.toString().padStart(2,'0')} ${p}`;
+}
+
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
 }
 
 function chopSlot(slotObj) {
@@ -193,6 +205,7 @@ const today = new Date();
 viewYear = today.getFullYear();
 viewMonth = today.getMonth();
 
+let selectedSlotId = null;
 let selectedSlotText = null;
 let selectedDate = null;
 
@@ -448,6 +461,21 @@ function hideTooltip() {
             const okBtn = document.getElementById('expiredOkBtn');
             if (okBtn) okBtn.addEventListener('click', resetAndClose);
         }
+    }
+})();
+
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    const bookingError = params.get('bookingError');
+    if (bookingError) {
+        const messages = {
+            slotTaken: 'That time slot has already been booked. Please choose another.',
+            reserveFailed: 'That slot is currently being reserved by another student. Please pick a different time.',
+            slotNotFound: 'That consultation slot no longer exists.',
+            noRoomAvailable: 'There is no room available for your consultation',
+        };
+        showToast('error', 'Unable to Book', messages[bookingError] || 'Something went wrong. Please try again.');
+        window.history.replaceState({}, '', window.location.pathname);
     }
 })();
 
