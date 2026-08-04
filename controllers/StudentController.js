@@ -1,8 +1,10 @@
 const DepartmentModel = require('../models/DepartmentModel');
 const UserModel = require('../models/UserModel');
+const AppointmentModel = require('../models/AppointmentModel');
 const ConsultationModel = require('../models/ConsultationModel');
 const SlotReservation = require('../models/SlotReservationModel');
 const { buildStudentUser } = require('../utils/sessionUser');
+const { to12Hour } = require('../utils/timeFormat');
 
 function getTwoWeekWindow() {
     const today = new Date();
@@ -173,11 +175,18 @@ const StudentController = {
             const studentPublicId = req.session.userId;
 
             const slotDetails = await ConsultationModel.getSlotWithFaculty(slotId);
-            if (!slotDetails) return res.redirect('/student/dashboard');
+            if (!slotDetails) {
+                return res.redirect('/student/dashboard?bookingError=slotTaken');
+            }
+
+            if (!slotDetails) {
+                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=slotNotFound`);
+            }
 
             if (slotDetails.isBooked) {
-                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?slotTaken=1`);
+                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=slotTaken`);
             }
+
 
             const result = await SlotReservation.reserveSlot(slotId, studentPublicId);
             if (!result.success) {
@@ -196,12 +205,52 @@ const StudentController = {
                     }),
                     date: slotDetails.date,
                     timeStart: slotDetails.timeStart,
-                    timeEnd: slotDetails.timeEnd,
+                    timeEnd: slotDetails.timeEnd
                 },
                 expiresAt: result.expiresAt.toISOString(),
             });
         } catch (err) {
             console.error('[StudentController.renderFacultyFormConsultationPage]', err);
+            res.status(500).send('Failed to load booking form.');
+        }
+    },
+
+    async renderAppointmentsPage(req, res) {
+        const student = buildStudentUser(req.session);
+
+        try {
+            const studentId = req.session.userId;
+            const user = await UserModel.getUserByPublicId(studentId);
+
+            const rawAppointments = await AppointmentModel.getAppointmentsByUser(user.internal_id);
+
+            const appointments = rawAppointments.map(row => ({
+                id: row.id,
+                status: row.status,
+                facultyName: `${row.last_name}, ${row.first_name}${row.middle_name ? ' ' + row.middle_name : ''}`,
+                position: row.position,
+                topic: row.topic,
+                mode: row.mode,
+                date: new Date(row.consultation_date).toLocaleDateString('en-PH', {
+                    month: 'long', day: 'numeric', year: 'numeric'
+                }),
+                rawDate: row.consultation_date,
+                dayOfWeek: row.day_of_the_week,
+                slot: `${to12Hour(row.start_time)} – ${to12Hour(row.end_time)}`,
+                roomNumber: row.room_number,
+                buildingName: row.building_name,
+                notes: row.notes,
+                sectionGroupName: row.section_group_name,
+                courseSubject: row.course_subject,
+            }));
+
+            res.render('pages/student/appointments', {
+                title: 'FaciTrack - My Appointments',
+                student,
+                appointments,
+            });
+        } catch (err) {
+            console.error('[StudentController.renderAppointmentsPage]', err);
             res.status(500).send('Failed to load booking form.');
         }
     },
@@ -220,31 +269,108 @@ const StudentController = {
     },
 
     async extendSlotReservation(req, res) {
-        router.post('/schedule/reserve/:slotId/extend', async (req, res) => {
-            try {
-                const ok = await SlotReservation.extendReservation(
-                    parseInt(req.params.slotId, 10),
-                    req.session.userId
-                );
-                if (!ok) return res.status(410).json({ success: false, error: 'Reservation expired.' });
-                res.json({ success: true });
-            } catch (err) {
-                res.status(500).json({ success: false, error: 'Failed to extend reservation.' });
-            }
-        });
+        try {
+            const result = await SlotReservation.extendReservation(
+                parseInt(req.params.slotId, 10),
+                req.session.userId
+            );
+            if (!result.success) return res.status(410).json({ success: false, error: 'Reservation expired.' });
+            res.json({ success: true, expiresAt: result.expiresAt.toISOString() });
+        } catch (err) {
+            res.status(500).json({ success: false, error: 'Failed to extend reservation.' });
+        }
     },
 
     async deleteSlotReservation(req, res) {
-        router.delete('/schedule/reserve/:slotId', async (req, res) => {
-            try {
-                await SlotReservation.releaseSlot(parseInt(req.params.slotId, 10), req.session.userId);
-                res.json({ success: true });
-            } catch (err) {
-                res.status(500).json({ success: false, error: 'Failed to release reservation.' });
-            }
-        });
+        try {
+            await SlotReservation.releaseSlot(parseInt(req.params.slotId, 10), req.session.userId);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ success: false, error: 'Failed to release reservation.' });
+        }
     },
 
+    async submitBooking(req, res) {
+        const student = buildStudentUser(req.session);
+
+        try {
+            const slotId = parseInt(req.params.slotId, 10);
+            const studentPublicId = req.session.userId;
+
+            const {
+                sectionGroup, courseSubject, studentEmail,
+                consultTopic, consultType, consultNotes,
+            } = req.body;
+
+            const slotDetails = await ConsultationModel.getSlotWithFaculty(slotId);
+            if (!slotDetails) {
+                return res.redirect('/student/dashboard?bookingError=slotNotFound');
+            }
+
+            const result = await AppointmentModel.createAppointment({
+                consultationHourId: slotId,
+                studentPublicId,
+                instructorId: slotDetails.instructorId,
+                sectionGroupName: sectionGroup,
+                courseSubject,
+                email: studentEmail,
+                topic: consultTopic,
+                mode: consultType,
+                notes: consultNotes,
+                departmentId: slotDetails.departmentId,
+                consultationDate: slotDetails.date,
+                timeStart: slotDetails.rawStartTime,
+                timeEnd: slotDetails.rawEndTime,
+            });
+
+            if (!result.success) {
+                const errorMap = {
+                    SLOT_ALREADY_BOOKED: 'slotTaken',
+                    NO_ROOM_AVAILABLE: 'noRoomAvailable',
+                };
+                return res.redirect(
+                    `/student/faculty/${slotDetails.faculty.id}?bookingError=${errorMap[result.reason] || 'unknown'}`
+                );
+            }
+
+            return res.render('pages/student/booking-confirm', {
+                title: 'FaciTrack - Booking Confirmed',
+                student: student,
+                status: 'success',
+                appointment: await AppointmentModel.getAppointmentDetails(result.appointmentId),
+            });
+        } catch (err) {
+            console.error('[StudentController.submitBooking]', err);
+            return res.render('pages/student/booking-confirm', {
+                title: 'FaciTrack - Booking Failed',
+                student,
+                status: 'error',
+                message: 'Something went wrong while processing your booking. Please try again.',
+            });
+        }
+    },
+
+    async cancelAppointment(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.id, 10);
+            const studentPublicId = req.session.userId;
+
+            const result = await AppointmentModel.cancelAppointment(appointmentId, studentPublicId);
+
+            if (!result.success) {
+                const status = result.reason === 'STUDENT_NOT_FOUND' ? 403 : 404;
+                const message = result.reason === 'STUDENT_NOT_FOUND'
+                    ? 'Not authorized.'
+                    : 'Appointment not found or already resolved.';
+                return res.status(status).json({ success: false, error: message });
+            }
+
+            res.json({ success: true });
+        } catch (err) {
+            console.error('[StudentController.cancelAppointment]', err);
+            res.status(500).json({ success: false, error: 'Failed to cancel appointment.' });
+        }
+    },
 };
 
 module.exports = StudentController;
