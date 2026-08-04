@@ -218,6 +218,7 @@ const UserModel = {
     async getUserByPublicId(publicId) {
         const [rows] = await pool.execute(
             `SELECT 
+            u.id AS internal_id,
             u.public_id AS id,
             u.first_name, u.last_name, u.middle_name,
             u.email, u.role, u.status,
