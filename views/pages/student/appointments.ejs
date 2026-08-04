@@ -15,7 +15,8 @@
     .apt-status-pill { padding:5px 14px;border-radius:var(--radius-full);font-size:.75rem;font-weight:700;letter-spacing:.3px; }
     .apt-status-pending   { background:#fffbeb;color:#b45309;border:1px solid #fde68a; }
     .apt-status-confirmed { background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0; }
-    .apt-status-declined  { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
+    .apt-status-completed { background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
+    .apt-status-cancelled { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
     .apt-list-body { padding:1rem 1.25rem; }
     .apt-list-row { display:flex;gap:.75rem;margin-bottom:.75rem; }
     .apt-list-row:last-child { margin-bottom:0; }
@@ -45,9 +46,10 @@
     .calendar-day-number { font-size:.875rem; font-weight:600; color:var(--gray-900); margin-bottom:.25rem; }
     .calendar-day-dots { display:flex; gap:2px; flex-wrap:wrap; justify-content:center; }
     .calendar-day-dot { width:6px; height:6px; border-radius:50%; }
-    .calendar-day-dot.pending { background:#f59e0b; }
+    .calendar-day-dot.pending   { background:#f59e0b; }
     .calendar-day-dot.confirmed { background:#16a34a; }
-    .calendar-day-dot.declined { background:#dc2626; }
+    .calendar-day-dot.completed { background:#1d4ed8; }
+    .calendar-day-dot.cancelled  { background:#dc2626; }
     .calendar-legend { display:flex; gap:1.5rem; padding:1rem 1.5rem; border-top:1px solid var(--gray-100); flex-wrap:wrap; }
     .calendar-legend-item { display:flex; align-items:center; gap:.5rem; font-size:.8125rem; color:var(--gray-600); }
     .calendar-legend-dot { width:10px; height:10px; border-radius:50%; }
@@ -158,6 +160,20 @@
                                     <p class="apt-list-value"><%= apt.date %> · <%= apt.slot %></p>
                                 </div>
                             </div>
+                            <div class="apt-list-row">
+                                <div class="apt-list-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                </div>
+                                <div>
+                                    <p class="apt-list-label">Mode</p>
+                                    <p class="apt-list-value">
+                                        <%= apt.mode %>
+                                        <% if (apt.mode === 'Face-to-Face' && apt.roomNumber) { %>
+                                            — <%= apt.roomNumber %><% if (apt.buildingName) { %>, <%= apt.buildingName %><% } %>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
                             <% if (apt.notes && apt.notes.trim()) { %>
                             <div class="apt-list-row">
                                 <div class="apt-list-icon">
@@ -172,7 +188,7 @@
                         </div>
                         <% if (apt.status === 'pending' || apt.status === 'confirmed') { %>
                         <div class="apt-list-actions">
-                            <button type="button" class="btn-decline-apt" onclick="showDeclineModal('<%= apt.id || apt.refNumber %>', '<%= apt.facultyName %>', '<%= apt.date %>', '<%= apt.slot %>')">
+                            <button type="button" class="btn-decline-apt" onclick="showDeclineModal(<%= apt.id %>, '<%= apt.facultyName %>', '<%= apt.date %>', '<%= apt.slot %>')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                 Cancel Appointment
                             </button>
@@ -253,8 +269,8 @@
 <script>
 let currentDeclineRef = null;
 
-function showDeclineModal(refNumber, facultyName, date, slot) {
-    currentDeclineRef = refNumber;
+function showDeclineModal(appointmentId, facultyName, date, slot) {
+    currentDeclineRef = appointmentId;
     const text = `You are about to cancel your appointment with ${facultyName} scheduled for ${date} at ${slot}. This action cannot be undone.`;
     document.getElementById('declineModalText').textContent = text;
     document.getElementById('declineModal').classList.add('show');
@@ -267,25 +283,24 @@ function hideDeclineModal() {
 
 async function confirmDecline() {
     if (!currentDeclineRef) return;
-    
+
     const btn = document.querySelector('.decline-modal-confirm');
     btn.disabled = true;
     btn.textContent = 'Canceling...';
-    
+
     try {
-        // TODO: Backend endpoint - For now, just show success message
-        // const response = await fetch(`/student/appointments/${currentDeclineRef}/cancel`, { method: 'POST' });
-        
-        // Simulate success
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
+        const response = await fetch(`/student/appointments/${currentDeclineRef}/cancel`, { method: 'POST' });
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to cancel appointment.');
+        }
+
         hideDeclineModal();
         showToast('success', 'Appointment Canceled', 'Your appointment has been canceled successfully. The instructor will be notified.');
-        
-        // Refresh page after short delay
         setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
-        showToast('error', 'Error', 'Failed to cancel appointment. Please try again.');
+        showToast('error', 'Error', error.message || 'Failed to cancel appointment. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Yes, Cancel';
     }
@@ -344,6 +359,7 @@ if (btnListView && btnCalendarView) {
 
 // ── Calendar View Functionality ──
 const appointments = <%- JSON.stringify(appointments) %>;
+const aptDate = new Date(apt.date);
 const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
