@@ -48,22 +48,34 @@ const SlotReservation = {
     },
 
     // Heartbeat — reset the 5-minute window on user activity
-    async extendReservation(slotId, studentId) {
+    async extendReservation(slotId, studentPublicId) {
+        const [[student]] = await pool.execute(
+            'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+        );
+        if (!student) return { success: false };
+
         const expiresAt = new Date(Date.now() + RESERVATION_MS);
         const [result] = await pool.execute(
             `UPDATE slot_reservations
-             SET expires_at = ?
-             WHERE slot_id = ? AND student_id = ? AND expires_at > NOW()`,
-            [expiresAt, slotId, studentId]
+         SET expires_at = ?
+         WHERE slot_id = ? AND student_id = ? AND expires_at > NOW()`,
+            [expiresAt, slotId, student.id]
         );
-        return result.affectedRows > 0; // false if hold already expired/doesn't belong to them
+
+        if (result.affectedRows === 0) return { success: false };
+        return { success: true, expiresAt };
     },
 
     // Release explicitly (booking confirmed, or student navigates away)
-    async releaseSlot(slotId, studentId) {
+    async releaseSlot(slotId, studentPublicId) {
+        const [[student]] = await pool.execute(
+            'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+        );
+        if (!student) return;
+
         await pool.execute(
             'DELETE FROM slot_reservations WHERE slot_id = ? AND student_id = ?',
-            [slotId, studentId]
+            [slotId, student.id]
         );
     },
 
