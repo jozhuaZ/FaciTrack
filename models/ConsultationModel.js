@@ -1,43 +1,6 @@
 const pool = require('../configs/db');
 const crypto = require('crypto');
-
-// Convert "8:00 AM" → "08:00:00" for MySQL TIME
-function to24Hour(str) {
-    const parts = str.trim().split(' ');
-    let [h, m] = parts[0].split(':').map(Number);
-    const p = parts[1];
-    if (p === 'PM' && h !== 12) h += 12;
-    if (p === 'AM' && h === 12) h = 0;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-}
-
-function to12Hour(timeStr) {
-    const [hStr, mStr] = timeStr.split(':');
-    let h = parseInt(hStr);
-    const m = mStr;
-    const p = h >= 12 ? 'PM' : 'AM';
-    if (h > 12) h -= 12;
-    if (h === 0) h = 12;
-    return `${h}:${m} ${p}`;
-}
-
-function toMins(str) {
-    const parts = str.trim().split(' ');
-    let [h, m] = parts[0].split(':').map(Number);
-    const p = parts[1];
-    if (p === 'PM' && h !== 12) h += 12;
-    if (p === 'AM' && h === 12) h = 0;
-    return h * 60 + m;
-}
-
-function fromMins(mins) {
-    let h = Math.floor(mins / 60);
-    const m = mins % 60;
-    const p = h >= 12 ? 'PM' : 'AM';
-    if (h > 12) h -= 12;
-    if (h === 0) h = 12;
-    return `${h}:${String(m).padStart(2, '0')} ${p}`;
-}
+const { to12Hour, to24Hour, toMins, fromMins } = require('../utils/timeFormat');
 
 function generateSubSlots(timeStart, timeEnd, maxCapacity) {
     const start = toMins(timeStart);
@@ -78,16 +41,18 @@ const ConsultationModel = {
     async getSlotWithFaculty(slotId) {
         const [[row]] = await pool.execute(
             `SELECT
-            ch.id, ch.day_of_the_week AS day, ch.consultation_date AS date,
-            ch.start_time, ch.end_time,
-            a.id AS appointment_id,
-            u.public_id AS faculty_id, u.first_name, u.last_name, u.middle_name,
-            u.position, u.email, d.full_name AS department_name
-         FROM consultation_hours ch
-         JOIN users u ON ch.instructor_id = u.id
-         LEFT JOIN departments d ON u.department_id = d.id
-         LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status != 'cancelled'
-         WHERE ch.id = ?`,
+                ch.id, ch.day_of_the_week AS day, ch.consultation_date AS date,
+                ch.start_time AS raw_start_time, ch.end_time AS raw_end_time,
+                a.id AS appointment_id,
+                u.id AS instructor_id, u.public_id AS faculty_id,
+                u.first_name, u.last_name, u.middle_name,
+                u.position, u.email, u.department_id,
+                d.full_name AS department_name
+            FROM consultation_hours ch
+            JOIN users u ON ch.instructor_id = u.id
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status != 'cancelled'
+            WHERE ch.id = ?`,
             [slotId]
         );
         if (!row) return null;
@@ -95,10 +60,14 @@ const ConsultationModel = {
         return {
             id: row.id,
             day: row.day,
-            date: row.date, // requires dateStrings:true on pool, per your earlier fix
-            timeStart: to12Hour(row.start_time),
-            timeEnd: to12Hour(row.end_time),
+            date: row.date,
+            timeStart: to12Hour(row.raw_start_time),
+            timeEnd: to12Hour(row.raw_end_time),
+            rawStartTime: row.raw_start_time,
+            rawEndTime: row.raw_end_time,
             isBooked: !!row.appointment_id,
+            instructorId: row.instructor_id,
+            departmentId: row.department_id,
             faculty: {
                 id: row.faculty_id,
                 first_name: row.first_name,
