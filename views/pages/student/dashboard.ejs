@@ -44,11 +44,11 @@
             <div class="content-card" style="margin-bottom:1rem;">
                 <div class="card-body" style="padding:0.875rem 1.25rem;">
                     <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
-                        <div style="position:relative;flex:1;min-width:160px;">
+                        <div style="position:relative;flex:.75;min-width:160px;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray-400);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                             <input type="text" id="searchInput" placeholder="Search name or specialization..." style="width:100%;padding:0.6rem 1rem 0.6rem 2.4rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--secondary-teal)'" onblur="this.style.borderColor='var(--gray-200)'">
                         </div>
-                        <select id="deptFilter" style="padding:0.6rem 0.875rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);font-size:0.875rem;font-family:var(--font-body);background:#fff;color:var(--gray-800);outline:none;cursor:pointer;flex-shrink:0;">
+                        <select id="deptFilter" class="form-select" style="flex:.25">
                             <option value="all">All Departments</option>
                             <% departments.forEach(d => { %>
                                 <option value="<%= d.id %>"><%= d.full_name %></option>
@@ -107,9 +107,19 @@
     </main>
 </div>
 
+<div class="toast-container" id="toastContainer"></div>
+
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 <script>
+function showToast(type, title, message) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+}
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('searchInput');
     const deptFilter = document.getElementById('deptFilter');
@@ -137,4 +147,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyFilters();
 });
+
+(function() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('bookingError') === 'slotTaken') {
+        showToast('error', 'Slot Unavailable', 'That consultation slot no longer exists. Please pick another available consultation slot of the faculty member.');
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+})();
 </script>
