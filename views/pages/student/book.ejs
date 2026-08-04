@@ -1,370 +1,6 @@
 <%- include('../../partials/header') %>
     <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
     <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
-    <style>
-        .book-scroll {
-            padding: 1.5rem 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .book-form-card {
-            background: #fff;
-            border: 1px solid var(--gray-200);
-            border-radius: var(--radius-lg);
-            padding: 1.75rem;
-            box-shadow: var(--shadow-sm);
-            max-width: 680px;
-            width: 100%;
-        }
-
-        .form-section-title {
-            font-size: 0.9375rem;
-            font-weight: 700;
-            color: var(--primary-blue);
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--gray-100);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.375rem;
-            margin-bottom: 1rem;
-        }
-
-        .form-label {
-            font-size: 0.8125rem;
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        .form-input,
-        .form-select,
-        .form-textarea {
-            padding: 0.625rem 0.875rem;
-            border: 1.5px solid var(--gray-300);
-            border-radius: var(--radius-md);
-            font-size: 0.875rem;
-            color: var(--gray-900);
-            background: white;
-            transition: border-color 0.2s;
-            width: 100%;
-            box-sizing: border-box;
-            font-family: var(--font-body);
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(10, 61, 98, 0.08);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .form-hint {
-            font-size: 0.75rem;
-            color: var(--gray-500);
-        }
-
-        .slot-readonly-box {
-            display: flex;
-            align-items: center;
-            gap: .75rem;
-            padding: .875rem 1rem;
-            background: rgba(10, 61, 98, .04);
-            border: 1.5px solid rgba(10, 61, 98, .15);
-            border-radius: var(--radius-md);
-        }
-
-        .slot-readonly-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--primary-blue);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .slot-readonly-text {
-            flex: 1;
-        }
-
-        .slot-readonly-time {
-            font-size: .9375rem;
-            font-weight: 700;
-            color: var(--gray-900);
-        }
-
-        .slot-readonly-date {
-            font-size: .8125rem;
-            color: var(--gray-500);
-            margin-top: .125rem;
-        }
-
-        .slot-readonly-change {
-            font-size: .75rem;
-            color: var(--primary-blue);
-            text-decoration: none;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-
-        .slot-readonly-change:hover {
-            text-decoration: underline;
-        }
-
-        .slot-day-label {
-            font-weight: 700;
-            font-size: 0.875rem;
-            color: var(--gray-900);
-            min-width: 80px;
-        }
-
-        .slot-time-label {
-            font-size: 0.8125rem;
-            color: var(--gray-600);
-        }
-
-        .slot-avail-badge {
-            margin-left: auto;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 3px 10px;
-            border-radius: var(--radius-full);
-        }
-
-        .slot-avail-badge.open {
-            background: #f0fdf4;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
-        }
-
-        .slot-avail-badge.full {
-            background: var(--gray-100);
-            color: var(--gray-400);
-            border: 1px solid var(--gray-200);
-        }
-
-        .consult-type-toggle {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-        }
-
-        .consult-type-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
-            border: 1.5px solid var(--gray-300);
-            border-radius: var(--radius-md);
-            background: white;
-            color: var(--gray-600);
-            font-size: 0.875rem;
-            font-weight: 600;
-            font-family: var(--font-body);
-            cursor: pointer;
-            transition: all 0.18s;
-        }
-
-        .consult-type-btn:hover {
-            border-color: var(--gray-400);
-            background: var(--gray-50);
-        }
-
-        .consult-type-btn.active {
-            border-color: var(--primary-blue);
-            background: rgba(10, 61, 98, .07);
-            color: var(--primary-blue);
-        }
-
-        .btn-submit-book {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.75rem;
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 0.9375rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-family: var(--font-body);
-        }
-
-        .btn-submit-book:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-cancel-book {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            background: white;
-            color: var(--gray-700);
-            border: 1.5px solid var(--gray-300);
-            border-radius: var(--radius-md);
-            font-size: 0.9375rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: var(--font-body);
-            text-decoration: none;
-        }
-
-        .btn-cancel-book:hover {
-            border-color: var(--gray-400);
-            background: var(--gray-50);
-        }
-
-        .faculty-summary-card {
-            background: var(--gray-50);
-            border: 1px solid var(--gray-200);
-            border-radius: var(--radius-md);
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .faculty-summary-avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--primary-blue);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-
-        .success-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .success-overlay.show {
-            display: flex;
-        }
-
-        .success-card {
-            background: white;
-            border-radius: var(--radius-xl);
-            padding: 2.5rem;
-            text-align: center;
-            max-width: 420px;
-            width: 100%;
-            box-shadow: var(--shadow-xl);
-        }
-
-        .success-icon {
-            width: 72px;
-            height: 72px;
-            background: #f0fdf4;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1.25rem;
-        }
-
-        .success-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary-blue);
-            margin-bottom: 0.5rem;
-        }
-
-        .success-desc {
-            font-size: 0.875rem;
-            color: var(--gray-600);
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-
-        .book-actions-row {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-            margin-top: 1.75rem;
-            padding-top: 1.25rem;
-            border-top: 1px solid var(--gray-100);
-        }
-
-        @media (max-width: 480px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-
-            .book-form-card {
-                padding: 1.25rem;
-            }
-
-            .faculty-summary-card {
-                align-items: flex-start;
-            }
-
-            .slot-readonly-box {
-                flex-wrap: wrap;
-            }
-
-            .slot-readonly-change {
-                width: 100%;
-                text-align: left;
-            }
-
-            .book-actions-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .success-card {
-                padding: 1.5rem;
-            }
-
-            .success-card>div:last-child {
-                flex-direction: column;
-            }
-
-            .btn-submit-book,
-            .btn-cancel-book {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
 
     <div class="instructor-layout">
         <%- include('../../partials/student-sidebar', { activePage: 'dashboard' , appointmentCount: 0 }) %>
@@ -408,7 +44,7 @@
                         </div>
                     </div>
 
-                    <form id="bookingForm" action="/student/faculty/<%= faculty.id %>/book" method="POST">
+                    <form id="bookingForm" action="/student/faculty/schedule/<%= slot.id %>/book" method="POST">
 
                         <!-- Step 1: Consultation Slot (read-only — selected from profile page) -->
                         <p class="form-section-title">
@@ -445,7 +81,10 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Full Name <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="studentName" name="studentName" placeholder="e.g. Juan Dela Cruz" required>
+                                <input type="text" class="form-input" id="studentName" name="studentName" 
+                                    placeholder="e.g. Juan Dela Cruz" 
+                                    value="<%= student.firstName %> <%= student.lastName %><%= student.middleName ? ' ' + student.middle_name : '' %>"
+                                    required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Student ID <span style="color:#e53e3e;">*</span></label>
@@ -456,7 +95,7 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Section/Group Name <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="studentSection" name="studentSection" placeholder="e.g. BSIT-3E" required>
+                                <input type="text" class="form-input" id="sectionGroup" name="sectionGroup" placeholder="e.g. BSIT-3E" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Course/Subject <span style="color:#e53e3e;">*</span></label>
@@ -466,9 +105,10 @@
 
                         <div class="form-group">
                             <label class="form-label">CSPC Email Address <span style="color:#e53e3e;">*</span></label>
-                            <input type="email" class="form-input" id="studentEmail" name="studentEmail" placeholder="student@my.cspc.edu.ph" required>
+                            <input type="email" class="form-input" id="studentEmail" name="studentEmail" value="<%= student.email %>" placeholder="student@my.cspc.edu.ph" required>
                             <span class="form-hint">Use your official CSPC student email</span>
                         </div>
+
                             <!-- Step 3: Consultation Details -->
                             <p class="form-section-title" style="margin-top:1.5rem;">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -538,27 +178,67 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
-    <%- include('../../partials/footer') %>
-    <%- include('../../partials/script') %>
+
+<%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+
 <script>
-    const EXPIRES_AT = new Date('<%- expiresAt %>').getTime();
+    const SLOT_ID = <%= slot.id %>;
+    let EXPIRES_AT = new Date('<%- expiresAt %>').getTime();
 
-    (function() {
-        const timerEl = document.createElement('p');
-        timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
-        timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown"></span>`;
-        document.getElementById('slotReadonlyBox').insertAdjacentElement('afterend', timerEl);
+    // ── Countdown display ──
+    const timerEl = document.createElement('p');
+    timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
+    timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown"></span>`;
+    document.getElementById('slotReadonlyBox').insertAdjacentElement('afterend', timerEl);
 
-        const countdownEl = document.getElementById('holdCountdown');
-        const interval = setInterval(() => {
-            const remaining = Math.max(0, EXPIRES_AT - Date.now());
-            const mins = Math.floor(remaining / 60000);
-            const secs = Math.floor((remaining % 60000) / 1000);
-            countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
-            if (remaining <= 0) {
-                clearInterval(interval);
-                window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
-            }
-        }, 1000);
-    })();
+    const countdownEl = document.getElementById('holdCountdown');
+    const countdownInterval = setInterval(() => {
+        const remaining = Math.max(0, EXPIRES_AT - Date.now());
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
+        if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+        }
+    }, 1000);
+
+    // ── Extend on activity, debounced ──
+    let extendTimeout = null;
+    let lastExtendAt = 0;
+    const EXTEND_COOLDOWN_MS = 20 * 1000;
+
+    function scheduleExtend() {
+        const now = Date.now();
+        if (now - lastExtendAt < EXTEND_COOLDOWN_MS) return; // throttle
+        lastExtendAt = now;
+
+        fetch(`/student/schedule/reserve/${SLOT_ID}/extend`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.expiresAt) {
+                    EXPIRES_AT = new Date(data.expiresAt).getTime();
+                } else {
+                    // Reservation already expired server-side — stop pretending it's alive
+                    clearInterval(countdownInterval);
+                    window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+                }
+            })
+            .catch(() => { /* network hiccup — next activity will retry */ });
+    }
+
+    ['mousemove', 'keydown', 'input', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, scheduleExtend, { passive: true });
+    });
+
+    const typeButtons = document.querySelectorAll('.consult-type-btn');
+    const typeInput = document.getElementById('consultTypeInput');
+    typeButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            typeButtons.forEach(function (b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            typeInput.value = this.dataset.type;
+        });
+    });
 </script>
