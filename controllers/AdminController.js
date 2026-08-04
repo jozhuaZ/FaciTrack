@@ -207,6 +207,11 @@ const AdminController = {
                 return res.status(422).json({ success: false, errors })
             }
 
+            let capacity = null;
+            if (roomType === 'Consultation Room') {
+                capacity = 5;
+            }
+
             // await for the room model to finish inserting new room
             await RoomModel.insertRoomByAdmin({
                 roomNumber,
@@ -214,7 +219,8 @@ const AdminController = {
                 roomType,
                 bleStatus,
                 assignedFaculty,
-                status
+                status,
+                capacity
             });
 
             return res.status(200).json({
