@@ -359,29 +359,13 @@ function getDisplayStatus(faculty) {
 // ── Routes ──
 router.get('/dashboard', StudentController.renderDashboardPage);
 router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
+
 router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
 router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);
 router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservation);
+
 router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);
-
-router.get('/faculty/:id/book', (req, res) => {
-    const faculty = getFaculty(parseInt(req.params.id));
-    if (!faculty) return res.redirect('/student/dashboard');
-    const hasOpen = faculty.consultationSlots.some(s => s.status === 'open');
-    if (!hasOpen) return res.redirect(`/student/faculty/${faculty.id}`);
-
-    // Get logged-in student info
-    const student = req.currentUser;
-
-    res.render('pages/student/book', {
-        title: `FaciTrack - Book Appointment with ${faculty.name}`,
-        faculty,
-        student,
-        selectedSlot: req.query.slot || null,
-        selectedDate: req.query.date || null,
-        reservationToken: req.query.token || null
-    });
-});
+router.post('/faculty/schedule/:slotId/book', StudentController.submitBooking);
 
 router.post('/faculty/:id/book', (req, res) => {
     const faculty = getFaculty(parseInt(req.params.id));
@@ -483,52 +467,12 @@ router.post('/faculty/:id/book', (req, res) => {
     });
 });
 
-router.get('/appointments', (req, res) => {
-    // Get logged-in student's appointments
-    const student = req.currentUser;
-    const studentEmail = student.email.toLowerCase();
-
-    // Filter appointments for this student
-    const myAppointments = Object.values(refStore).filter(apt =>
-        apt.studentEmail === studentEmail
-    );
-
-    res.render('pages/student/appointments', {
-        title: 'FaciTrack - My Appointments',
-        appointments: myAppointments,
-        student
-    });
-});
+router.get('/appointments', StudentController.renderAppointmentsPage);
+router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
 
 router.get('/availability', (req, res) => {
     res.render('pages/student/availability', {
         title: 'FaciTrack - Faculty Availability', facultyList
-    });
-});
-
-// Validate reference number
-router.get('/ref/validate', (req, res) => {
-    const ref = (req.query.ref || '').toUpperCase().trim();
-    const email = (req.query.email || '').toLowerCase().trim();
-
-    if (!refStore[ref]) {
-        return res.json({ valid: false });
-    }
-
-    const apt = refStore[ref];
-
-    // Validate email matches the booking
-    if (email && apt.studentEmail && apt.studentEmail.toLowerCase() !== email) {
-        return res.json({ valid: false, reason: 'email_mismatch' });
-    }
-
-    const faculty = getFaculty(apt.facultyId);
-    return res.json({
-        valid: true,
-        appointment: {
-            ...apt,
-            facultyDept: faculty ? faculty.department : ''
-        }
     });
 });
 
