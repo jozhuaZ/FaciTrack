@@ -31,6 +31,11 @@ async function assignConsultationRoom(conn, departmentId, consultationDate, time
 }
 
 const AppointmentModel = {
+    async getCount() {
+        const [[{ count }]] = await pool.execute('SELECT COUNT(*) AS count FROM appointments');
+
+        return count;
+    },
 
     // userId could be studentId or instructorId
     async getAppointmentsByUser(userId) {
@@ -40,7 +45,7 @@ const AppointmentModel = {
             ch.consultation_date, ch.day_of_the_week, ch.start_time, ch.end_time,
             u.first_name, u.last_name, u.middle_name, u.position,
             r.room_number,
-            d.building AS building_name
+            d.building AS building_name, d.full_name as department_name
          FROM appointments ap
          JOIN consultation_hours ch ON ap.consultation_hour_id = ch.id
          JOIN users u ON ap.instructor_id = u.id
