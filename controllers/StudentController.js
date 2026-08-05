@@ -231,9 +231,9 @@ const StudentController = {
                 status: row.status,
                 facultyName: `${row.last_name}, ${row.first_name}${row.middle_name ? ' ' + row.middle_name : ''}`,
                 position: row.position,
-                departmentName: row.department_name,
                 topic: row.topic,
                 mode: row.mode,
+                departmentName: row.department_name,
                 date: new Date(row.consultation_date).toLocaleDateString('en-PH', {
                     month: 'long', day: 'numeric', year: 'numeric'
                 }),
@@ -245,6 +245,22 @@ const StudentController = {
                 notes: row.notes,
                 sectionGroupName: row.section_group_name,
                 courseSubject: row.course_subject,
+                rescheduledToId: row.rescheduled_to_id,
+                rescheduledInfo: row.rescheduled_to_id ? {
+                    date: new Date(row.rescheduled_date).toLocaleDateString('en-PH', {
+                        month: 'long', day: 'numeric', year: 'numeric'
+                    }),
+                    dayOfWeek: row.rescheduled_day,
+                    slot: `${to12Hour(row.rescheduled_start_time)} – ${to12Hour(row.rescheduled_end_time)}`,
+                } : null,
+                rescheduledFromId: row.rescheduled_from_id,
+                rescheduledFromInfo: row.rescheduled_from_id ? {
+                    date: new Date(row.rescheduled_from_date).toLocaleDateString('en-PH', {
+                        month: 'long', day: 'numeric', year: 'numeric'
+                    }),
+                    dayOfWeek: row.rescheduled_from_day,
+                    slot: `${to12Hour(row.rescheduled_from_start_time)} – ${to12Hour(row.rescheduled_from_end_time)}`,
+                } : null,
             }));
 
             res.render('pages/student/appointments', {
@@ -355,7 +371,7 @@ const StudentController = {
 
     async cancelAppointment(req, res) {
         try {
-            const appointmentId = parseInt(req.params.id, 10);
+            const appointmentId = parseInt(req.params.appointmentId, 10);
             const studentPublicId = req.session.userId;
 
             const result = await AppointmentModel.cancelAppointment(appointmentId, studentPublicId);
