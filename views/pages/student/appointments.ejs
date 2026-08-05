@@ -135,7 +135,7 @@
                         <div class="apt-list-header">
                             <div>
                                 <p class="apt-list-faculty"><%= apt.facultyName %></p>
-                                <p class="apt-list-position">Faculty Member</p>
+                                <p class="apt-list-position"><%= apt.departmentName %></p>
                             </div>
                             <span class="apt-status-pill apt-status-<%= apt.status %>">
                                 <%= apt.status.charAt(0).toUpperCase() + apt.status.slice(1) %>
