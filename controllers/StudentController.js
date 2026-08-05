@@ -70,11 +70,12 @@ const StudentController = {
     async renderDashboardPage(req, res) {
         const student = buildStudentUser(req.session);
 
-        const [departments, faculties] = await Promise.all([
+        const [departments, faculties, appointmentCount] = await Promise.all([
             DepartmentModel.getDepartments(),
             UserModel.getFacultiesConsultation({
                 limit: 10
             }),
+            AppointmentModel.getCount(),
         ]);
 
         const formattedFaculties = faculties.map(f => {
@@ -105,10 +106,12 @@ const StudentController = {
 
             return { ...f, nextAvailable };
         });
+        console.log(appointmentCount)
 
         res.render('pages/student/dashboard', {
             title: 'FaciTrack - Faculty Directory',
             student: student,
+            appointmentCount: appointmentCount,
             departments: departments,
             facultyList: formattedFaculties,
         });
@@ -229,6 +232,7 @@ const StudentController = {
                 status: row.status,
                 facultyName: `${row.last_name}, ${row.first_name}${row.middle_name ? ' ' + row.middle_name : ''}`,
                 position: row.position,
+                departmentName: row.department_name,
                 topic: row.topic,
                 mode: row.mode,
                 date: new Date(row.consultation_date).toLocaleDateString('en-PH', {
