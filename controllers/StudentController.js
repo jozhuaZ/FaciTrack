@@ -106,7 +106,6 @@ const StudentController = {
 
             return { ...f, nextAvailable };
         });
-        console.log(appointmentCount)
 
         res.render('pages/student/dashboard', {
             title: 'FaciTrack - Faculty Directory',
