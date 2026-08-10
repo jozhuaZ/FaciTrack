@@ -165,6 +165,25 @@
     text-align: center; padding: 1px 0; cursor: pointer;
 }
 .apt-badge-more:hover { color: #0a3d62; }
+.apt-badge.completed, .day-panel-status.completed, .day-panel-dot.completed,
+.pop-status-pill.completed, .pop-stripe.completed, .apt-lv-status.completed,
+.apt-legend-dot.completed {
+    background: #1d4ed8; /* adjust to match whatever pattern your existing pending/confirmed/declined rules use — pill vs dot vs stripe may need different property (background vs border) */
+}
+
+/* ── Rescheduled ── */
+.apt-badge.rescheduled,
+.day-panel-status.rescheduled,
+.pop-status-pill.rescheduled,
+.apt-lv-status.rescheduled {
+    background: #e0f2fe; border-color: #38bdf8; color: #0c4a6e;
+}
+.day-panel-dot.rescheduled,
+.pop-stripe.rescheduled,
+.apt-legend-dot.rescheduled {
+    background: #0369a1;
+}
+
 
 /* ── Calendar Legend ── */
 .apt-cal-legend {
