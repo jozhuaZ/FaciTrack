@@ -30,7 +30,7 @@
     .apt-list-icon { width:32px;height:32px;border-radius:var(--radius-md);background:rgba(10,61,98,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary-blue); }
     .apt-list-label { font-size:.75rem;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:0 0 .2rem; }
     .apt-list-value { font-size:.875rem;font-weight:600;color:var(--gray-900);margin:0; }
-    .apt-list-actions { padding:0 1.25rem 1rem;border-top:1px solid var(--gray-100);padding-top:1rem;margin-top:.5rem; }
+    .apt-list-actions { padding:0 1.25rem 1rem;border-top:1px solid var(--gray-100);padding-top:1rem; }
     .btn-decline-apt { display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;background:#fff;color:#dc2626;border:1.5px solid #fecaca;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body); }
     .btn-decline-apt:hover { border-color:#dc2626;background:#fef2f2; }
     .btn-decline-apt:disabled { opacity:.5;cursor:not-allowed; }
@@ -200,6 +200,7 @@
                                     <p class="apt-list-value"><%= apt.date %> · <%= apt.slot %></p>
                                 </div>
                             </div>
+                            <% if (apt.status !== 'declined') { %>
                             <div class="apt-list-row">
                                 <div class="apt-list-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -214,7 +215,8 @@
                                     </p>
                                 </div>
                             </div>
-                            <% if (apt.notes && apt.notes.trim()) { %>
+                            <% } %>
+                            <% if (apt.notes && apt.notes.trim() && apt.status !== 'declined') { %>
                             <div class="apt-list-row">
                                 <div class="apt-list-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -222,6 +224,16 @@
                                 <div>
                                     <p class="apt-list-label">Notes</p>
                                     <p class="apt-list-value" style="font-weight:400;"><%= apt.notes %></p>
+                                </div>
+                            </div>
+                            <% } else if (apt.status === 'declined') { %>
+                                <div class="apt-list-row">
+                                <div class="apt-list-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                </div>
+                                <div>
+                                    <p class="apt-list-label">Reason for declining</p>
+                                    <p class="apt-list-value" style="font-weight:400;"><%= apt.declineReason %></p>
                                 </div>
                             </div>
                             <% } %>
