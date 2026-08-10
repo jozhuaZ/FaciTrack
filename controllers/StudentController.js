@@ -202,9 +202,7 @@ const StudentController = {
                 slot: {
                     id: slotDetails.id,
                     day: slotDetails.day,
-                    dateFormatted: slotDetails.date.toLocaleDateString('en-PH', {
-                        month: 'short', day: 'numeric', year: 'numeric'
-                    }),
+                    dateFormatted: slotDetails.date,
                     date: slotDetails.date,
                     timeStart: slotDetails.timeStart,
                     timeEnd: slotDetails.timeEnd
@@ -233,10 +231,9 @@ const StudentController = {
                 position: row.position,
                 topic: row.topic,
                 mode: row.mode,
+                declineReason: row.decline_reason,
                 departmentName: row.department_name,
-                date: new Date(row.consultation_date).toLocaleDateString('en-PH', {
-                    month: 'long', day: 'numeric', year: 'numeric'
-                }),
+                date: row.consultation_date,
                 rawDate: row.consultation_date,
                 dayOfWeek: row.day_of_the_week,
                 slot: `${to12Hour(row.start_time)} – ${to12Hour(row.end_time)}`,
@@ -247,17 +244,13 @@ const StudentController = {
                 courseSubject: row.course_subject,
                 rescheduledToId: row.rescheduled_to_id,
                 rescheduledInfo: row.rescheduled_to_id ? {
-                    date: new Date(row.rescheduled_date).toLocaleDateString('en-PH', {
-                        month: 'long', day: 'numeric', year: 'numeric'
-                    }),
+                    date: row.rescheduled_date,
                     dayOfWeek: row.rescheduled_day,
                     slot: `${to12Hour(row.rescheduled_start_time)} – ${to12Hour(row.rescheduled_end_time)}`,
                 } : null,
                 rescheduledFromId: row.rescheduled_from_id,
                 rescheduledFromInfo: row.rescheduled_from_id ? {
-                    date: new Date(row.rescheduled_from_date).toLocaleDateString('en-PH', {
-                        month: 'long', day: 'numeric', year: 'numeric'
-                    }),
+                    date: row.rescheduled_from_date,
                     dayOfWeek: row.rescheduled_from_day,
                     slot: `${to12Hour(row.rescheduled_from_start_time)} – ${to12Hour(row.rescheduled_from_end_time)}`,
                 } : null,
@@ -317,7 +310,7 @@ const StudentController = {
             const studentPublicId = req.session.userId;
 
             const {
-                sectionGroup, courseSubject, studentEmail,
+                studentNumber, sectionGroup, courseSubject, studentEmail,
                 consultTopic, consultType, consultNotes,
             } = req.body;
 
@@ -331,6 +324,7 @@ const StudentController = {
                 studentPublicId,
                 instructorId: slotDetails.instructorId,
                 sectionGroupName: sectionGroup,
+                studentNumber: studentNumber,
                 courseSubject,
                 email: studentEmail,
                 topic: consultTopic,
