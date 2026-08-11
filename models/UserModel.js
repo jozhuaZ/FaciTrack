@@ -108,7 +108,7 @@ const UserModel = {
                 start_time
             FROM consultation_hours
             WHERE status = 'Available'
-            AND consultation_date > CURDATE()  -- ← was >=, now strictly greater than today
+            AND consultation_date > CURDATE() 
             ORDER BY consultation_date ASC, start_time ASC
         ) next_slot ON u.id = next_slot.instructor_id
         WHERE u.role = 'Instructor'
