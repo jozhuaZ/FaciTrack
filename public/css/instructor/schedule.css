@@ -41,7 +41,11 @@
 .w-slot.closed{background:#9ca3af}
 .week-empty{text-align:center;padding:1.2rem .3rem;color:var(--gray-500);font-size:.7rem;}
 .week-empty a{font-size:.82rem;color:#1a73e8;text-decoration:none}
-
+.dsp-subslot-card.closed {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    opacity: 0.65;
+}
 /* compact modal style aligned with system */
 #slotModal,
 #slotViewOverlay {
