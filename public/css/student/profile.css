@@ -687,6 +687,12 @@
             box-shadow: 0 0 0 3px rgba(10, 61, 98, 0.08);
         }
 
+        .cal-cell.blocked {
+            background: #fef2f2;
+            color: #dc2626;
+            cursor: not-allowed;
+        }
+
         .form-textarea {
             resize: vertical;
             min-height: 100px;
