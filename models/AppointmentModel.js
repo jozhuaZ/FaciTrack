@@ -30,6 +30,14 @@ async function assignConsultationRoom(conn, departmentId, consultationDate, time
     return null; // every consultation room is full for this time slot
 }
 
+async function freeSlotIfNotClosed(conn, consultationHourId) {
+    await conn.execute(
+        `UPDATE consultation_hours SET status = 'Available', is_booked = 0
+         WHERE id = ? AND status != 'closed'`,
+        [consultationHourId]
+    );
+}
+
 const AppointmentModel = {
     async getCount() {
         const [[{ count }]] = await pool.execute('SELECT COUNT(*) AS count FROM appointments');
@@ -41,7 +49,7 @@ const AppointmentModel = {
     async getAppointmentsByUser(userId) {
         const query = `SELECT
                 ap.id, ap.status, ap.mode, ap.topic, ap.section_group_name, ap.course_subject,
-                ap.email, ap.notes, ap.created_at, ap.rescheduled_to_id, ap.rescheduled_from_id,
+                ap.email, ap.notes, ap.created_at, ap.rescheduled_to_id, ap.rescheduled_from_id, ap.decline_reason,
                 ch.consultation_date, ch.day_of_the_week, ch.start_time, ch.end_time,
                 u.first_name, u.last_name, u.middle_name, u.position,
                 r.room_number,
@@ -73,8 +81,8 @@ const AppointmentModel = {
     },
 
     async createAppointment({
-        consultationHourId, studentPublicId, instructorId, sectionGroupName,
-        courseSubject, email, topic, mode, notes,
+        consultationHourId, studentPublicId, instructorId, studentNumber,
+        sectionGroupName, courseSubject, email, topic, mode, notes,
         departmentId, consultationDate, timeStart, timeEnd,
     }) {
         const conn = await pool.getConnection();
@@ -110,11 +118,11 @@ const AppointmentModel = {
 
             const [result] = await conn.execute(
                 `INSERT INTO appointments
-                    (consultation_hour_id, student_id, instructor_id, section_group_name,
+                    (consultation_hour_id, student_id, instructor_id, student_number, section_group_name,
                      course_subject, email, topic, mode, notes, status, room_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
                 [
-                    consultationHourId, student.id, instructorId, sectionGroupName,
+                    consultationHourId, student.id, instructorId, studentNumber, sectionGroupName,
                     courseSubject, email, topic, mode, notes || null, roomId,
                 ]
             );
@@ -156,21 +164,121 @@ const AppointmentModel = {
     },
 
     async cancelAppointment(appointmentId, studentPublicId) {
-        const [[student]] = await pool.execute(
-            'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [[student]] = await conn.execute(
+                'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+            );
+            if (!student) { await conn.rollback(); return { success: false, reason: 'STUDENT_NOT_FOUND' }; }
+
+            const [[appointment]] = await conn.execute(
+                `SELECT consultation_hour_id FROM appointments
+             WHERE id = ? AND student_id = ? AND status IN ('pending','confirmed')
+             FOR UPDATE`,
+                [appointmentId, student.id]
+            );
+            if (!appointment) { await conn.rollback(); return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' }; }
+
+            await conn.execute(
+                `UPDATE appointments SET status = 'cancelled' WHERE id = ?`,
+                [appointmentId]
+            );
+
+            // Free the slot back up, but don't touch it if it was soft-closed
+            await freeSlotIfNotClosed(conn, appointment.consultation_hour_id);
+
+            await conn.commit();
+            return { success: true };
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    },
+
+    // AppointmentModel.js
+    async getAppointmentsByInstructor(instructorPublicId) {
+        const [[instructor]] = await pool.execute(
+            'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
         );
-        if (!student) return { success: false, reason: 'STUDENT_NOT_FOUND' };
+        if (!instructor) return [];
+
+        const query = `SELECT
+                ap.id, ap.status, ap.mode, ap.topic, ap.section_group_name, ap.course_subject,
+                ap.email, ap.notes, ap.created_at, ap.decline_reason,
+                ch.consultation_date, ch.day_of_the_week, ch.start_time, ch.end_time,
+                s.first_name AS student_first_name, s.last_name AS student_last_name,
+                ap.student_number,
+                r.room_number,
+                d.building AS building_name
+            FROM appointments ap
+            JOIN consultation_hours ch ON ap.consultation_hour_id = ch.id
+            JOIN users s ON ap.student_id = s.id
+            LEFT JOIN rooms r ON ap.room_id = r.id
+            LEFT JOIN departments d ON r.department_id = d.id
+            WHERE ap.instructor_id = ?
+            ORDER BY
+                FIELD(ap.status, 'pending', 'confirmed', 'rescheduled', 'declined', 'completed', 'cancelled'),
+                ch.consultation_date ASC,
+                ch.start_time ASC`;
+
+        const [rows] = await pool.execute(query, [instructor.id]);
+        return rows;
+    },
+
+    async approveAppointment(appointmentId, instructorPublicId) {
+        const [[instructor]] = await pool.execute(
+            'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
+        );
+        if (!instructor) return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' };
 
         const [result] = await pool.execute(
-            `UPDATE appointments SET status = 'cancelled'
-         WHERE id = ? AND student_id = ? AND status IN ('pending','confirmed')`,
-            [appointmentId, student.id]
+            `UPDATE appointments SET status = 'confirmed'
+         WHERE id = ? AND instructor_id = ? AND status = 'pending'`,
+            [appointmentId, instructor.id]
         );
 
-        if (result.affectedRows === 0) {
-            return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' };
-        }
+        if (result.affectedRows === 0) return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' };
         return { success: true };
+    },
+
+    async declineAppointment(appointmentId, instructorPublicId, reason) {
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [[instructor]] = await conn.execute(
+                'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
+            );
+            if (!instructor) { await conn.rollback(); return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' }; }
+
+            const [[appointment]] = await conn.execute(
+                `SELECT consultation_hour_id FROM appointments
+             WHERE id = ? AND instructor_id = ? AND status = 'pending'
+             FOR UPDATE`,
+                [appointmentId, instructor.id]
+            );
+            if (!appointment) { await conn.rollback(); return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' }; }
+
+            await conn.execute(
+                `UPDATE appointments SET status = 'declined', decline_reason = ? WHERE id = ?`,
+                [reason, appointmentId]
+            );
+
+            // Free the slot back up, but leave soft-closed slots alone
+            await freeSlotIfNotClosed(conn, appointment.consultation_hour_id);
+
+            await conn.commit();
+            return { success: true };
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
     },
 };
 
