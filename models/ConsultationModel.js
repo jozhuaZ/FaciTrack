@@ -41,18 +41,20 @@ const ConsultationModel = {
     async getSlotWithFaculty(slotId) {
         const [[row]] = await pool.execute(
             `SELECT
-                ch.id, ch.day_of_the_week AS day, ch.consultation_date AS date,
-                ch.start_time AS raw_start_time, ch.end_time AS raw_end_time,
-                a.id AS appointment_id,
-                u.id AS instructor_id, u.public_id AS faculty_id,
-                u.first_name, u.last_name, u.middle_name,
-                u.position, u.email, u.department_id,
-                d.full_name AS department_name
-            FROM consultation_hours ch
-            JOIN users u ON ch.instructor_id = u.id
-            LEFT JOIN departments d ON u.department_id = d.id
-            LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status != 'cancelled'
-            WHERE ch.id = ?`,
+            ch.id, ch.day_of_the_week AS day, ch.consultation_date AS date,
+            ch.start_time AS raw_start_time, ch.end_time AS raw_end_time,
+            a.id AS appointment_id,
+            u.id AS instructor_id, u.public_id AS faculty_id,
+            u.first_name, u.last_name, u.middle_name,
+            u.position, u.email, u.department_id,
+            d.name AS department_name,
+            iu.id AS unavail_id
+         FROM consultation_hours ch
+         JOIN users u ON ch.instructor_id = u.id
+         LEFT JOIN departments d ON u.department_id = d.id
+         LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status IN ('pending','confirmed')
+         LEFT JOIN instructor_unavailability iu ON iu.instructor_id = u.id AND iu.unavail_date = ch.consultation_date
+         WHERE ch.id = ?`,
             [slotId]
         );
         if (!row) return null;
@@ -66,6 +68,7 @@ const ConsultationModel = {
             rawStartTime: row.raw_start_time,
             rawEndTime: row.raw_end_time,
             isBooked: !!row.appointment_id,
+            isUnavailable: !!row.unavail_id,
             instructorId: row.instructor_id,
             departmentId: row.department_id,
             faculty: {
@@ -101,19 +104,25 @@ const ConsultationModel = {
     async getSlotsByInstructorGrouped(publicId) {
         const [rows] = await pool.execute(
             `SELECT
-                cs.id,
-                cs.day_of_the_week,
-                cs.consultation_date,
-                cs.start_time,
-                cs.end_time,
-                cs.status,
-                cs.is_booked,
-                a.id AS appointment_id
-             FROM consultation_hours cs
-             LEFT JOIN appointments a ON cs.id = a.consultation_hour_id AND a.status != 'cancelled'
-             JOIN users u ON cs.instructor_id = u.id
-             WHERE u.public_id = ?
-             ORDER BY cs.consultation_date, cs.start_time`,
+                    cs.id,
+                    cs.day_of_the_week,
+                    cs.consultation_date,
+                    cs.start_time,
+                    cs.end_time,
+                    cs.status,
+                    cs.is_booked,
+                    a.id AS appointment_id
+                FROM consultation_hours cs
+                LEFT JOIN appointments a ON cs.id = a.consultation_hour_id AND a.status IN ('pending','confirmed')
+                JOIN users u ON cs.instructor_id = u.id
+                WHERE u.public_id = ?
+                AND cs.status != 'closed'
+                AND NOT EXISTS (
+                    SELECT 1 FROM instructor_unavailability iu
+                    WHERE iu.instructor_id = u.id
+                        AND iu.unavail_date = cs.consultation_date
+                )
+                ORDER BY cs.consultation_date, cs.start_time`,
             [publicId]
         );
 
@@ -189,20 +198,41 @@ const ConsultationModel = {
         }
     },
 
-    async deleteSlotBlock(publicId, slotId) {
+    async deleteSlot(publicId, slotId) {
         const [[user]] = await pool.execute(
             'SELECT id FROM users WHERE public_id = ?', [publicId]
         );
         if (!user) throw new Error('Instructor not found');
 
+        const [[history]] = await pool.execute(
+            `SELECT
+            SUM(status IN ('pending','confirmed')) AS activeCount,
+            COUNT(*) AS totalCount
+         FROM appointments
+         WHERE consultation_hour_id = ?`,
+            [slotId]
+        );
+
+        if (history.activeCount > 0) {
+            return { success: false, reason: 'ACTIVE_APPOINTMENT' };
+        }
+
+        if (history.totalCount > 0) {
+            // soft-close appointments with history
+            const [result] = await pool.execute(
+                `UPDATE consultation_hours SET status = 'closed'
+             WHERE id = ? AND instructor_id = ?`,
+                [slotId, user.id]
+            );
+            return { success: result.affectedRows > 0, softClosed: true };
+        }
+
+        // if appointment has no history then safe to hard delete
         const [result] = await pool.execute(
-            `DELETE FROM consultation_hours
-             WHERE id = ?
-               AND instructor_id = ?
-               AND status = 'Available'`,
+            `DELETE FROM consultation_hours WHERE id = ? AND instructor_id = ?`,
             [slotId, user.id]
         );
-        return result.affectedRows;
+        return { success: result.affectedRows > 0, softClosed: false };
     },
 
     async getUnavailability(publicId) {
@@ -249,18 +279,18 @@ const ConsultationModel = {
     async checkAppointmentsOnDate(publicId, date) {
         const [rows] = await pool.execute(
             `SELECT COUNT(*) AS count
-             FROM appointments a
-             JOIN consultation_hours ch ON a.slot_id = ch.id
-             JOIN users u ON ch.instructor_id = u.id
-             WHERE u.public_id = ?
-               AND ch.consultation_date = ?
-               AND a.status != 'cancelled'`,
+         FROM appointments a
+         JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+         JOIN users u ON ch.instructor_id = u.id
+         WHERE u.public_id = ?
+           AND ch.consultation_date = ?
+           AND a.status != 'cancelled'`,
             [publicId, date]
         );
         return rows[0].count;
     },
 
-    async cancelAppointmentsOnDate(publicId, date) {
+    async cancelAppointmentsOnDate(publicId, date, reason) {
         const [[user]] = await pool.execute(
             'SELECT id FROM users WHERE public_id = ?', [publicId]
         );
@@ -268,32 +298,31 @@ const ConsultationModel = {
 
         const [affected] = await pool.execute(
             `SELECT a.id, a.student_id
-             FROM appointments a
-             JOIN consultation_hours ch ON a.slot_id = ch.id
-             WHERE ch.instructor_id = ?
-               AND ch.consultation_date = ?
-               AND a.status != 'cancelled'`,
+         FROM appointments a
+         JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+         WHERE ch.instructor_id = ?
+           AND ch.consultation_date = ?
+           AND a.status IN ('pending','confirmed')`,
             [user.id, date]
         );
 
         if (affected.length) {
             await pool.execute(
                 `UPDATE appointments a
-                 JOIN consultation_hours ch ON a.slot_id = ch.id
-                 SET a.status = 'cancelled',
-                     a.cancelled_by = 'instructor',
-                     a.cancel_reason = 'Instructor marked this date as unavailable.'
-                 WHERE ch.instructor_id = ?
-                   AND ch.consultation_date = ?
-                   AND a.status != 'cancelled'`,
-                [user.id, date]
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             SET a.status = 'declined',
+                 a.decline_reason = ?
+             WHERE ch.instructor_id = ?
+               AND ch.consultation_date = ?
+               AND a.status IN ('pending','confirmed')`,
+                [reason, user.id, date]
             );
 
             await pool.execute(
                 `UPDATE consultation_hours
-                 SET status = 'Available'
-                 WHERE instructor_id = ?
-                   AND consultation_date = ?`,
+             SET status = 'Available'
+             WHERE instructor_id = ?
+               AND consultation_date = ?`,
                 [user.id, date]
             );
         }
