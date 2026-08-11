@@ -70,50 +70,53 @@ const StudentController = {
     async renderDashboardPage(req, res) {
         const student = buildStudentUser(req.session);
 
-        const [departments, faculties, appointmentCount] = await Promise.all([
-            DepartmentModel.getDepartments(),
-            UserModel.getFacultiesConsultation({
-                limit: 10
-            }),
-            AppointmentModel.getCount(),
-        ]);
+        try {
+            const [departments, faculties, appointmentCount] = await Promise.all([
+                DepartmentModel.getDepartments(),
+                UserModel.getFacultiesConsultation({
+                    limit: 10
+                }),
+                AppointmentModel.getCount(),
+            ]);
 
-        const formattedFaculties = faculties.map(f => {
-            let nextAvailable = 'No upcoming slots';
+            const { windowStart, windowEnd } = getTwoWeekWindow();
+            const toKey = d => d.toISOString().split('T')[0];
+            const startKey = toKey(windowStart);
+            const endKey = toKey(windowEnd);
 
-            if (f.next_date && f.next_start_time) {
-                const date = f.next_date instanceof Date
-                    ? f.next_date
-                    : new Date(f.next_date + 'T00:00:00');
+            const formattedFaculties = await Promise.all(faculties.map(async f => {
+                const grouped = await ConsultationModel.getSlotsByInstructorGrouped(f.instructor_id);
 
-                const dateStr = date.toLocaleDateString('en-PH', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                });
+                const consultationSlots = grouped
+                    .filter(g => g.date >= startKey && g.date <= endKey)
+                    .map(g => ({
+                        day: g.day,
+                        date: g.date,
+                        subSlots: g.subSlots.map(sub => ({
+                            id: sub.id,
+                            timeStart: sub.timeStart,
+                            timeEnd: sub.timeEnd,
+                            isBooked: sub.isBooked,
+                            isReservedByOther: false, // directory-level preview doesn't need per-student reservation state
+                        })),
+                    }));
 
-                // Convert TIME "08:00:00" → "8:00 AM"
-                const [hStr, mStr] = f.next_start_time.split(':');
-                let h = parseInt(hStr);
-                const m = mStr;
-                const period = h >= 12 ? 'PM' : 'AM';
-                if (h > 12) h -= 12;
-                if (h === 0) h = 12;
-                const timeStr = `${h}:${m} ${period}`;
+                const nextAvailable = findNextAvailable(consultationSlots) || 'No upcoming slots';
 
-                nextAvailable = `${f.next_day}, ${dateStr} · ${timeStr}`;
-            }
+                return { ...f, nextAvailable };
+            }));
 
-            return { ...f, nextAvailable };
-        });
-
-        res.render('pages/student/dashboard', {
-            title: 'FaciTrack - Faculty Directory',
-            student: student,
-            appointmentCount: appointmentCount,
-            departments: departments,
-            facultyList: formattedFaculties,
-        });
+            res.render('pages/student/dashboard', {
+                title: 'FaciTrack - Faculty Directory',
+                student: student,
+                appointmentCount: appointmentCount,
+                departments: departments,
+                facultyList: formattedFaculties,
+            });
+        } catch (err) {
+            console.error('[StudentController.renderDashboardPage]', err);
+            res.status(500).send('Failed to load dashboard.');
+        }
     },
 
     async renderFacultyConsultationPage(req, res) {
@@ -129,15 +132,14 @@ const StudentController = {
             const { windowStart, windowEnd } = getTwoWeekWindow();
             const grouped = await ConsultationModel.getSlotsByInstructorGrouped(facultyPublicId);
             const activeReservations = await SlotReservation.getActiveReservationsForInstructor(facultyPublicId);
+            const unavailability = await ConsultationModel.getUnavailability(facultyPublicId);
 
             const toKey = d => d.toISOString().split('T')[0];
             const startKey = toKey(windowStart);
             const endKey = toKey(windowEnd);
 
             const reservedByOther = new Set(
-                activeReservations
-                    .filter(r => r.student_id !== studentId)
-                    .map(r => r.slot_id)
+                activeReservations.filter(r => r.student_id !== studentId).map(r => r.slot_id)
             );
 
             const consultationSlots = grouped
@@ -161,11 +163,12 @@ const StudentController = {
                 student: student,
                 faculty,
                 consultationSlots,
+                unavailableDates: unavailability.map(u => u.date),
                 windowStart: windowStart.toISOString(),
                 windowEnd: windowEnd.toISOString(),
             });
         } catch (err) {
-            console.error('[StudentController.renderFacultyProfilePage]', err);
+            console.error('[StudentController.renderFacultyConsultationPage]', err);
             res.status(500).send('Failed to load faculty schedule.');
         }
     },
@@ -189,6 +192,9 @@ const StudentController = {
                 return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=slotTaken`);
             }
 
+            if (slotDetails.isUnavailable) {
+                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=dateUnavailable`);
+            }
 
             const result = await SlotReservation.reserveSlot(slotId, studentPublicId);
             if (!result.success) {
