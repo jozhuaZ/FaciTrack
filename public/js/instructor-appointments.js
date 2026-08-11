@@ -105,7 +105,7 @@ function renderCalendar() {
         visible.slice(0, 3).forEach(apt => {
             const b = document.createElement('span');
             b.className = `apt-badge ${apt.status}`;
-            b.textContent = apt.studentName.split(' ')[0];
+            b.textContent = apt.studentName;
             b.dataset.aptId = apt.id;
             b.addEventListener('click', e => { e.stopPropagation(); openPopover(apt.id, b); });
             eventsEl.appendChild(b);
@@ -146,7 +146,7 @@ function handleCellDblClick(dateStr, cellEl, e) {
     const dayApts = (filterStatus==='all') ? aptsByDate(dateStr) : aptsByDate(dateStr).filter(a=>a.status===filterStatus);
     const visible = searchQ ? dayApts.filter(a => {
         const q = searchQ.toLowerCase();
-        return (a.studentName||'').toLowerCase().includes(q)||(a.studentId||'').toLowerCase().includes(q)||(a.topic||'').toLowerCase().includes(q);
+        return (a.studentName || '').toLowerCase().includes(q)||(a.studentId||'').toLowerCase().includes(q)||(a.topic||'').toLowerCase().includes(q);
     }) : dayApts;
     if (visible.length === 0) { showCellHint(cellEl, 'No appointments scheduled'); }
     else if (visible.length === 1) { openPopover(visible[0].id, cellEl); }
@@ -184,7 +184,7 @@ function openPopover(aptId, anchor) {
     $('popWhen').textContent      = `${apt.date}  ·  ${apt.time}`;
     $('popDuration').textContent  = apt.duration || '—';
     $('popTopic').textContent     = apt.topic;
-    $('popRequested').textContent = (apt.requestedAt && apt.requestedAt !== '—') ? apt.requestedAt : '—';
+    $('popNotes').textContent     = apt.notes ?? '---';
 
     $('popStripe').className    = 'pop-stripe ' + apt.status;
     $('popStatusPill').className = 'pop-status-pill ' + apt.status;
@@ -257,7 +257,13 @@ function initPopover() {
 
     $('popApprove').addEventListener('click', () => {
         if (!activePopAptId) return;
-        doApprove(activePopAptId, () => showPopResolved('approved','✓ Appointment confirmed'));
+        const btn = $('popApprove');
+        btn.disabled = true;
+        doApprove(
+            activePopAptId,
+            () => showPopResolved('approved', '✓ Appointment confirmed'),
+            () => { btn.disabled = false; }
+        );
     });
 
     $('popDeclineBtn').addEventListener('click', () => {
@@ -281,7 +287,14 @@ function initPopover() {
             return;
         }
         if (!activePopAptId) return;
-        doDecline(activePopAptId, reason, () => showPopResolved('declined','✗ Student notified'));
+        const btn = $('popDeclineConfirm');
+        btn.disabled = true;
+        doDecline(
+            activePopAptId,
+            reason,
+            () => showPopResolved('declined', '✗ Student notified'),
+            () => { btn.disabled = false; }
+        );
     });
 
     document.addEventListener('keydown', e => { if (e.key==='Escape') { closePopover(); closeDayPanel(); } });
@@ -365,9 +378,11 @@ function openDayPanel(dateStr, apts, anchor) {
             appBtn.addEventListener('click', e => {
                 e.stopPropagation();
                 appBtn.disabled = true;
-                doApprove(apt.id, () => {
-                    markRowDone(wrap, 'confirmed', '✓ Confirmed');
-                });
+                doApprove(
+                    apt.id,
+                    () => { markRowDone(wrap, 'confirmed', '✓ Confirmed'); },
+                    () => { appBtn.disabled = false; }
+                );
             });
             actions.appendChild(appBtn);
 
@@ -409,10 +424,14 @@ function openDayPanel(dateStr, apts, anchor) {
                     setTimeout(() => { ta.style.borderColor = ''; }, 1400);
                     return;
                 }
-                decPanel.querySelector('.day-panel-df-confirm').disabled = true;
-                doDecline(apt.id, reason, () => {
-                    markRowDone(wrap, 'declined', '✗ Notified');
-                });
+                const confirmBtn = decPanel.querySelector('.day-panel-df-confirm');
+                confirmBtn.disabled = true;
+                doDecline(
+                    apt.id,
+                    reason,
+                    () => { markRowDone(wrap, 'declined', '✗ Notified'); },
+                    () => { confirmBtn.disabled = false; }
+                );
             });
 
             actions.appendChild(decBtn);
@@ -499,8 +518,8 @@ function renderListView() {
     }
 }
 
-function getInitials(name) {
-    return (name || '?').split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+function getInitials(firstName, lastName) {
+    return firstName[0] + lastName[0];
 }
 
 function buildCard(apt) {
@@ -511,7 +530,7 @@ function buildCard(apt) {
 
     const isPending  = apt.status === 'pending';
     const isDeclined = apt.status === 'declined';
-    const initials   = getInitials(apt.studentName);
+    const initials   = getInitials(apt.firstName, apt.lastName);
 
     // Avatar col
     const avatarCol = document.createElement('div');
@@ -562,9 +581,11 @@ function buildCard(apt) {
         approveBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Approve`;
         approveBtn.addEventListener('click', () => {
             approveBtn.disabled = true;
-            doApprove(apt.id, () => {
-                showToast('success', 'Approved', `${apt.studentName}'s appointment confirmed.`);
-            });
+            doApprove(
+                apt.id,
+                () => { showToast('success', 'Approved', `${apt.studentName}'s appointment confirmed.`); },
+                () => { approveBtn.disabled = false; }
+            );
         });
 
         const declineBtn = document.createElement('button');
@@ -601,10 +622,14 @@ function buildCard(apt) {
                 setTimeout(() => { ta.style.borderColor = ''; }, 1400);
                 return;
             }
-            declineForm.querySelector('.apt-lv-df-confirm').disabled = true;
-            doDecline(apt.id, reason, () => {
-                showToast('success', 'Declined', `${apt.studentName} has been notified.`);
-            });
+            const confirmBtn = declineForm.querySelector('.apt-lv-df-confirm');
+            confirmBtn.disabled = true;
+            doDecline(
+                apt.id,
+                reason,
+                () => { showToast('success', 'Declined', `${apt.studentName} has been notified.`); },
+                () => { confirmBtn.disabled = false; }
+            );
         });
 
         actions.appendChild(approveBtn);
@@ -629,39 +654,91 @@ function buildCard(apt) {
 }
 
 /* ── API calls ── */
-function doApprove(aptId, cb) {
-    fetch(`/instructor/consultations/${encodeURIComponent(aptId)}/approve`,{method:'POST',headers:{'Content-Type':'application/json'}})
-    .then(r=>r.json()).then(d => {
-        const apt = appointments.find(a=>a.id===aptId); if(apt) apt.status='confirmed';
-        refreshStats(); renderCalendar(); if(currentView==='list') renderListView(); if(cb) cb();
-    }).catch(() => {
-        const apt = appointments.find(a=>a.id===aptId); if(apt) apt.status='confirmed';
-        refreshStats(); renderCalendar(); if(currentView==='list') renderListView(); if(cb) cb();
+function doApprove(aptId, onSuccess, onError) {
+    fetch(`/instructor/appointments/${encodeURIComponent(aptId)}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) {
+            showToast('error', 'Error', d.error || 'Failed to approve appointment.');
+            if (onError) onError();
+            return;
+        }
+        const apt = appointments.find(a => a.id === aptId);
+        if (apt) apt.status = 'confirmed';
+        refreshStats();
+        renderCalendar();
+        if (currentView === 'list') renderListView();
+        if (onSuccess) onSuccess();
+    })
+    .catch(() => {
+        showToast('error', 'Error', 'Network error. Please try again.');
+        if (onError) onError();
     });
 }
-function doDecline(aptId, reason, cb) {
-    fetch(`/instructor/consultations/${encodeURIComponent(aptId)}/decline`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason})})
-    .then(r=>r.json()).then(d => {
-        const apt = appointments.find(a=>a.id===aptId); if(apt){apt.status='declined';apt.declineReason=reason;}
-        refreshStats(); renderCalendar(); if(currentView==='list') renderListView(); if(cb) cb();
-    }).catch(() => {
-        const apt = appointments.find(a=>a.id===aptId); if(apt){apt.status='declined';apt.declineReason=reason;}
-        refreshStats(); renderCalendar(); if(currentView==='list') renderListView(); if(cb) cb();
+
+function doDecline(aptId, reason, onSuccess, onError) {
+    fetch(`/instructor/appointments/${encodeURIComponent(aptId)}/decline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) {
+            showToast('error', 'Error', d.error || 'Failed to decline appointment.');
+            if (onError) onError();
+            return;
+        }
+        const apt = appointments.find(a => a.id === aptId);
+        if (apt) {
+            apt.status = 'declined';
+            apt.declineReason = reason;
+        }
+        refreshStats();
+        renderCalendar();
+        if (currentView === 'list') renderListView();
+        if (onSuccess) onSuccess();
+    })
+    .catch(() => {
+        showToast('error', 'Error', 'Network error. Please try again.');
+        if (onError) onError();
     });
 }
 
 /* ── Search / filter / view toggle / toast / init ── */
 function initSearchFilter() {
-    $('aptSearch').addEventListener('input', function() { searchQ=this.value.trim(); currentPage=1; renderCalendar(); if(currentView==='list') renderListView(); });
-    $('aptStatusFilter').addEventListener('change', function() { filterStatus=this.value; currentPage=1; renderCalendar(); if(currentView==='list') renderListView(); });
+    $('aptSearch').addEventListener('input', function() { 
+        searchQ=this.value.trim(); 
+        currentPage=1; 
+        renderCalendar(); 
+        if(currentView==='list') renderListView(); 
+    });
+    $('aptStatusFilter').addEventListener('change', function() { 
+        filterStatus=this.value; 
+        currentPage=1; 
+        renderCalendar(); 
+        if(currentView==='list') renderListView(); 
+    });
 }
 function initViewToggle() {
     document.querySelectorAll('.apt-view-btn').forEach(btn => btn.addEventListener('click', function() {
         document.querySelectorAll('.apt-view-btn').forEach(b=>b.classList.remove('active'));
-        this.classList.add('active'); currentView=this.dataset.view; currentPage=1;
-        if (currentView==='calendar') { $('aptCalView').style.display='block'; $('aptListView').style.display='none'; }
-        else { $('aptCalView').style.display='none'; $('aptListView').style.display='block'; renderListView(); }
-        closePopover(); closeDayPanel();
+        this.classList.add('active'); 
+        currentView=this.dataset.view; 
+        currentPage=1;
+        if (currentView==='calendar') { 
+            $('aptCalView').style.display='block'; 
+            $('aptListView').style.display='none'; 
+        } else { 
+            $('aptCalView').style.display='none'; 
+            $('aptListView').style.display='block'; 
+            renderListView(); 
+        }
+        closePopover(); 
+        closeDayPanel();
     }));
 }
 function showToast(type, title, msg) {
@@ -669,7 +746,11 @@ function showToast(type, title, msg) {
     const t = document.createElement('div'); t.className=`toast ${type}`;
     t.innerHTML=`<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${msg}</p></div>`;
     c.appendChild(t);
-    setTimeout(()=>{ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),320); },4000);
+    setTimeout(()=>{ 
+        t.style.opacity ='0'; 
+        t.style.transition ='opacity .3s'; 
+        setTimeout(() => t.remove(), 320); 
+    }, 4000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
