@@ -1,5 +1,28 @@
 const pool = require('../configs/db');
 const ConsultationModel = require('../models/ConsultationModel');
+const AppointmentModel = require('../models/AppointmentModel');
+const { to12Hour } = require('../utils/timeFormat');
+const { buildInstructorUser } = require('../utils/sessionUser');
+
+function computeDuration(startTime, endTime) {
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const mins = (eh * 60 + em) - (sh * 60 + sm);
+    return `${mins} min`;
+}
+
+function formatRequestedAt(createdAt) {
+    if (!createdAt) return '—';
+    return new Date(createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function toDateKey(d) {
+    const date = new Date(d);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
 
 const InstructorController = {
 
@@ -7,19 +30,7 @@ const InstructorController = {
         try {
             const instructorId = req.session.userId;
 
-            const instructor = {
-                id: req.session?.userId,
-                name: req.session?.name,
-                firstName: req.session.firstName,
-                middleName: req.session.middleName,
-                lastName: req.session.lastName,
-                status: req.session.status,
-                email: req.session?.email,
-                position: req.session.position,
-                role: req.session.role,
-                profilePhoto: req.session?.profilePhoto || null,
-                department: req.session?.department,
-            };
+            const instructor = buildInstructorUser(req.session);
 
             const grouped = await ConsultationModel.getSlotsByInstructorGrouped(instructorId);
 
@@ -54,11 +65,11 @@ const InstructorController = {
     async saveSlotBlock(req, res) {
         try {
             const { date, day, timeStart, timeEnd, maxCapacity, repeatWeeks } = req.body;
-            
+
             const result = await ConsultationModel.saveSlotBlock(req.session.userId, {
                 date, day, timeStart, timeEnd,
                 maxCapacity: parseInt(maxCapacity, 10) || 1,
-                repeatWeeks: Math.max(1, Math.min(52, parseInt(repeatWeeks, 10) || 1)), 
+                repeatWeeks: Math.max(1, Math.min(52, parseInt(repeatWeeks, 10) || 1)),
             });
 
             res.json({ success: true, message: `Saved ${result.count} slot(s) across ${req.body.repeatWeeks || 1} week(s).` });
@@ -70,14 +81,23 @@ const InstructorController = {
 
     async deleteSlot(req, res) {
         try {
-            const { slotId } = req.params;
-            const affected = await ConsultationModel.deleteSlotBlock(req.session.userId, slotId);
+            const slotId = parseInt(req.params.slotId, 10);
+            const result = await ConsultationModel.deleteSlot(req.session.userId, slotId);
 
-            if (!affected) {
-                return res.status(404).json({ success: false, error: 'Slot not found or already booked.' });
+            if (!result.success) {
+                const message = result.reason === 'ACTIVE_APPOINTMENT'
+                    ? 'This slot has an active appointment and cannot be deleted.'
+                    : 'Slot not found or could not be deleted.';
+                return res.status(409).json({ success: false, error: message });
             }
 
-            res.json({ success: true, message: 'Slot deleted.' });
+            res.json({
+                success: true,
+                softClosed: result.softClosed,
+                message: result.softClosed
+                    ? 'Slot closed (kept for appointment history).'
+                    : 'Slot deleted.',
+            });
         } catch (err) {
             console.error('[InstructorController.deleteSlot]', err);
             res.status(500).json({ success: false, error: 'Failed to delete slot.' });
@@ -109,7 +129,7 @@ const InstructorController = {
             }
 
             // Cancel appointments on this date
-            const affected = await ConsultationModel.cancelAppointmentsOnDate(req.session.userId, date);
+            const affected = await ConsultationModel.cancelAppointmentsOnDate(req.session.userId, date, reason);
 
             // Mark date as unavailable
             await ConsultationModel.setUnavailability(req.session.userId, date, reason);
@@ -147,6 +167,83 @@ const InstructorController = {
         } catch (err) {
             console.error('[InstructorController.removeUnavailability]', err);
             res.status(500).json({ success: false, error: 'Failed to remove block.' });
+        }
+    },
+
+    async renderAppointmentsPage(req, res) {
+        try {
+            const instructor = buildInstructorUser(req.session);
+
+            const instructorPublicId = req.session.userId;
+            const rawAppointments = await AppointmentModel.getAppointmentsByInstructor(instructorPublicId);
+
+            const appointments = rawAppointments.map(row => ({
+                id: row.id,
+                status: row.status,
+                firstName: row.student_first_name,
+                lastName: row.student_last_name,
+                studentName: `${row.student_last_name}, ${row.student_first_name}`,
+                studentId: row.student_number,
+                topic: row.topic,
+                mode: row.mode,
+                date: row.consultation_date,
+                dayOfWeek: row.day_of_the_week,
+                time: `${to12Hour(row.start_time)} – ${to12Hour(row.end_time)}`,
+                duration: computeDuration(row.start_time, row.end_time),
+                roomNumber: row.room_number,
+                buildingName: row.building_name,
+                notes: row.notes,
+                sectionGroupName: row.section_group_name,
+                courseSubject: row.course_subject,
+                email: row.email,
+                createdAt: row.created_at,
+            }));
+
+            res.render('pages/instructor/appointments', {
+                title: 'FaciTrack - Appointments',
+                instructor,
+                appointments,
+            });
+        } catch (err) {
+            console.error('[InstructorController.renderAppointmentsPage]', err);
+            res.status(500).send('Failed to load appointments.');
+        }
+    },
+
+    async approveAppointment(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.id, 10);
+            const instructorPublicId = req.session.userId;
+
+            const result = await AppointmentModel.approveAppointment(appointmentId, instructorPublicId);
+            if (!result.success) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or already resolved.' });
+            }
+            res.json({ success: true });
+        } catch (err) {
+            console.error('[InstructorController.approveAppointment]', err);
+            res.status(500).json({ success: false, error: 'Failed to approve appointment.' });
+        }
+    },
+
+    async declineAppointment(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.id, 10);
+            const instructorPublicId = req.session.userId;
+            const { reason } = req.body;
+
+            if (!reason || !reason.trim()) {
+                return res.status(400).json({ success: false, error: 'A reason is required to decline.' });
+            }
+
+            const result = await AppointmentModel.declineAppointment(appointmentId, instructorPublicId, reason.trim());
+            if (!result.success) {
+                return res.status(404).json({ success: false, error: 'Appointment not found or already resolved.' });
+            }
+            res.json({ success: true });
+        } catch (err) {
+            console.error('[InstructorController.declineAppointment]', err);
+            res.status(500).json({ success: false, error: 'Failed to decline appointment.' });
         }
     },
 };
