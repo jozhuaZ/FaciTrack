@@ -146,6 +146,7 @@
 <%- include('../../partials/script') %>
 <script>
 const slots = <%- JSON.stringify(consultationSlots) %>; 
+const unavailableDates = new Set(<%- JSON.stringify(unavailableDates || []) %>);
 const facultyId = '<%= faculty.id %>';
 const WINDOW_START = new Date('<%- windowStart %>');
 const WINDOW_END   = new Date('<%- windowEnd %>');
@@ -154,6 +155,7 @@ const monthNames = ['January','February','March','April','May','June','July','Au
 
 const availableByDate = {};
 slots.forEach(group => {
+    if (unavailableDates.has(group.date)) return;
     const hasOpenSub = group.subSlots.some(s => !s.isBooked && !s.isReservedByOther);
     if (!hasOpenSub) return;
     availableByDate[group.date] = group;
@@ -261,12 +263,21 @@ function renderCalendar() {
             continue;
         }
 
-         const y = date.getFullYear();
+        const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
         const dateKey = `${y}-${m}-${dd}`;
 
-        const dayGroup = availableByDate[dateKey];   // ← single group for THIS exact date, or undefined
+        if (unavailableDates.has(dateKey)) {
+            cell.classList.add('blocked');
+            cell.addEventListener('mouseenter', function() { showTooltip(this, 'Instructor unavailable this day'); });
+            cell.addEventListener('mouseleave', hideTooltip);
+            cell.addEventListener('mousemove', function(e) { positionTooltip(e.clientX, e.clientY); });
+            grid.appendChild(cell);
+            continue;
+        }
+
+        const dayGroup = availableByDate[dateKey]; 
         if (dayGroup) {
             cell.classList.add('available');
             const tooltipText = 'Available for consultation';
@@ -473,6 +484,7 @@ function hideTooltip() {
             reserveFailed: 'That slot is currently being reserved by another student. Please pick a different time.',
             slotNotFound: 'That consultation slot no longer exists.',
             noRoomAvailable: 'There is no room available for your consultation',
+            dateUnavailable: 'The instructor has marked this date as unavailable. Please choose another slot.',
         };
         showToast('error', 'Unable to Book', messages[bookingError] || 'Something went wrong. Please try again.');
         window.history.replaceState({}, '', window.location.pathname);
