@@ -519,31 +519,10 @@ function getSharedData() {
     return { instructor, appointments, consultationSlots, presenceLogs, workloadStats, notifications, workloadLogs };
 }
 
-// Consultations
-// Supports query parameters: ?status=pending|confirmed|declined&page=N
-router.get('/consultations', (req, res) => {
-    const data = getSharedData();
-    const { status } = req.query;
-
-    let filteredAppointments = data.appointments;
-    if (status) {
-        filteredAppointments = filteredAppointments.filter(a => a.status === status);
-    }
-
-    res.render('pages/instructor/consultations', {
-        title: 'FaciTrack - Consultations',
-        ...data,
-        appointments: filteredAppointments,
-        filterStatus: status || '',
-        pendingCount: data.appointments.filter(a => a.status === 'pending').length
-    });
-});
-
-// API endpoint for calendar data - consultations
-router.get('/consultations/data', (req, res) => {
-    const data = getSharedData();
-    res.json({ appointments: data.appointments });
-});
+// Appointments
+router.get('/appointments', InstructorController.renderAppointmentsPage);
+router.post('/appointments/:id/approve', InstructorController.approveAppointment);
+router.post('/appointments/:id/decline', InstructorController.declineAppointment);
 
 // API endpoint for calendar data - schedules
 router.get('/schedule/data', (req, res) => {
