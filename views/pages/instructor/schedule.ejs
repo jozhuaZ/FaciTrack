@@ -416,11 +416,6 @@ function hasConflict(startMins, endMins) {
   return findConflict(timePickerState.selectedDay, startMins, endMins, editIdx) >= 0;
 }
 
-function checkAndDisableArrows() {
-  // No restrictions: instructor can choose any time freely.
-}
-
-
 function validateTimeSelection() {
   const saveBtn = document.getElementById('confirmSlot');
   const minusBtn = document.getElementById('stepperMinus');
@@ -767,8 +762,9 @@ function refreshDayPanel() {
 
     groups.forEach(function(group) {
         const bookedCount = group.subSlots.filter(s => s.isBooked).length;
+        const closedCount = group.subSlots.filter(s => s.status === 'closed').length;
         const totalCount  = group.subSlots.length;
-        const isFull      = bookedCount >= totalCount;
+        const isFull      = bookedCount >= (totalCount - closedCount) && (totalCount - closedCount) > 0;
         const statusKey   = isFull ? 'full' : 'open';
         const statusLabel = isFull ? 'Full' : 'Open';
 
@@ -779,9 +775,10 @@ function refreshDayPanel() {
         const header = document.createElement('div');
         header.className = 'dsp-slot-group-header';
         header.innerHTML =
-            '<span class="dsp-slot-range">' + esc(group.timeStart) + ' &ndash; ' + esc(group.timeEnd) + '</span>' +
-            '<div style="display:flex;align-items:center;gap:.5rem">' +
-                '<span style="font-size:.72rem;color:#6b7280;">' + bookedCount + '/' + totalCount + ' booked</span>' +
+        '<span class="dsp-slot-range">' + esc(group.timeStart) + ' &ndash; ' + esc(group.timeEnd) + '</span>' +
+        '<div style="display:flex;align-items:center;gap:.5rem">' +
+            '<span style="font-size:.72rem;color:#6b7280;">' + bookedCount + '/' + totalCount + ' booked' +
+                (closedCount > 0 ? ' · ' + closedCount + ' closed' : '') + '</span>' +
                 (statusKey !== 'open' ? '<span class="dsp-slot-badge ' + statusKey + '">' + statusLabel + '</span>' : '') +
                 '<button class="dsp-slot-action-btn delete" onclick="deleteSlotGroupByIds([' +
                     group.subSlots.map(s => s.id).join(',') +
@@ -795,21 +792,24 @@ function refreshDayPanel() {
         const grid = document.createElement('div');
         grid.className = 'dsp-subslot-grid';
         group.subSlots.forEach(function(sub, i) {
-            const isBooked = sub.isBooked;
-            const card = document.createElement('div');
-            card.className = 'dsp-subslot-card ' + (isBooked ? 'booked' : 'available');
-            card.innerHTML =
-                '<div class="dsp-subslot-header">' +
-                    '<span class="dsp-subslot-num">' + (i + 1) + '</span>' +
-                    '<span class="dsp-subslot-time">' + esc(sub.timeStart) + ' &ndash; ' + esc(sub.timeEnd) + '</span>' +
-                '</div>' +
-                (isBooked ?
-                    '<div class="dsp-subslot-student">' +
-                        '<span class="dsp-subslot-student-name">Booked</span>' +
-                        '<button class="dsp-subslot-search-btn" onclick="goToAppointments()">View</button>' +
-                    '</div>'
-                : '');
-            grid.appendChild(card);
+          const isBooked = sub.isBooked;
+          const isClosed = sub.status === 'closed';
+          const card = document.createElement('div');
+          card.className = 'dsp-subslot-card ' + (isClosed ? 'closed' : (isBooked ? 'booked' : 'available'));
+          card.innerHTML =
+              '<div class="dsp-subslot-header">' +
+                  '<span class="dsp-subslot-num">' + (i + 1) + '</span>' +
+                  '<span class="dsp-subslot-time">' + esc(sub.timeStart) + ' &ndash; ' + esc(sub.timeEnd) + '</span>' +
+              '</div>' +
+              (isClosed ?
+                  '<div class="dsp-subslot-student"><span class="dsp-subslot-student-name" style="color:#9ca3af;">Closed</span></div>'
+              : isBooked ?
+                  '<div class="dsp-subslot-student">' +
+                      '<span class="dsp-subslot-student-name">Booked</span>' +
+                      '<button class="dsp-subslot-search-btn" onclick="goToAppointments()">View</button>' +
+                  '</div>'
+              : '');
+          grid.appendChild(card);
         });
         groupEl.appendChild(grid);
         body.appendChild(groupEl);
@@ -823,7 +823,7 @@ function hideDayPanel(){
 }
 
 function goToAppointments(){
-  window.location.href = '/instructor/consultations';
+  window.location.href = '/instructor/appointments';
 }
 
 document.getElementById('dspClose').addEventListener('click', hideDayPanel);
@@ -897,15 +897,44 @@ async function deleteSlotGroupByIds(ids) {
         return;
     }
 
+    let deletedCount = 0;
+    let closedCount = 0;
+    let failedCount = 0;
+
     for (const slotId of deletable) {
-        await fetch('/instructor/schedule/' + slotId, { method: 'DELETE' });
-        const idx = slots.findIndex(s => s.id === slotId);
-        if (idx > -1) slots.splice(idx, 1);
+        try {
+            const res = await fetch('/instructor/schedule/' + slotId, { method: 'DELETE' });
+            const data = await res.json();
+
+            if (!data.success) {
+                failedCount++;
+                continue;
+            }
+
+            if (data.softClosed) {
+                closedCount++;
+                const s = slots.find(x => x.id === slotId);
+                if (s) s.status = 'closed';
+            } else {
+                deletedCount++;
+                const idx = slots.findIndex(s => s.id === slotId);
+                if (idx > -1) slots.splice(idx, 1);
+            }
+        } catch (err) {
+            failedCount++;
+        }
     }
 
     renderWeekStrip();
     refreshDayPanel();
-    showToast('success', 'Deleted', 'Slot block removed.');
+
+    if (failedCount > 0) {
+        showToast('error', 'Partial Failure', failedCount + ' slot(s) could not be removed.');
+    } else if (closedCount > 0) {
+        showToast('success', 'Updated', deletedCount + ' deleted, ' + closedCount + ' closed (had appointment history).');
+    } else {
+        showToast('success', 'Deleted', deletedCount + ' slot(s) removed.');
+    }
 }
 
 /* -- Slot view modal -- */
