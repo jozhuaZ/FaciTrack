@@ -184,6 +184,54 @@
     background: #0369a1;
 }
 
+.resched-check {
+    display: flex; align-items: center; gap: .4rem;
+    font-size: .78rem; color: var(--gray-600, #4b5563);
+    margin: .5rem 0; cursor: pointer;
+}
+.resched-picker { width: 100%; margin-top: .25rem; }
+.resched-cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: .5rem;
+}
+.resched-cal-nav {
+    background: none; border: 1px solid #e2e8f0; border-radius: 6px;
+    width: 22px; height: 22px; cursor: pointer; font-size: .75rem;
+    flex-shrink: 0;
+}
+.resched-cal-title { font-size: .78rem; font-weight: 600; }
+.resched-cal-grid {
+    display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 2px; width: 100%;
+}
+.resched-dow {
+    font-size: .6rem; text-align: center; color: #94a3b8; font-weight: 600;
+}
+.resched-day {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    font-size: .68rem; border-radius: 4px; color: #cbd5e1; min-width: 0;
+}
+.resched-day.has-slots {
+    background: #eff6ff; color: #1d4ed8; cursor: pointer; font-weight: 600;
+}
+.resched-day.has-slots:hover { background: #dbeafe; }
+.resched-slot-date { font-size: .72rem; font-weight: 600; margin: .5rem 0 .3rem; }
+.resched-slot-row {
+    display: flex; flex-wrap: wrap; gap: .35rem;
+}
+.resched-slot-btn {
+    font-size: .7rem; padding: .3rem .55rem; border: 1px solid #cbd5e1;
+    border-radius: 6px; background: #fff; cursor: pointer; white-space: nowrap;
+}
+.resched-slot-btn:hover { border-color: #1d4ed8; color: #1d4ed8; }
+.resched-slot-btn.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.resched-selected {
+    margin-top: .5rem; font-size: .75rem; padding: .5rem .6rem;
+    background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px;
+    color: #0c4a6e;
+}
+.resched-error { font-size: .75rem; color: #dc2626; }
+
 
 /* ── Calendar Legend ── */
 .apt-cal-legend {
