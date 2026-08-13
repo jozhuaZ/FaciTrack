@@ -139,7 +139,7 @@
 
         </div><!-- /.main-container -->
     </main>
-</div><!-- /.instructor-layout -->
+</div>
 
 <!--  POPOVER (anchored near badge) -->
 <div id="aptBackdrop"></div>
@@ -178,8 +178,12 @@
     <!-- Inline decline reason panel -->
     <div class="pop-decline-panel" id="popDeclinePanel">
         <span class="pop-decline-lbl">Reason for declining</span>
-        <textarea class="pop-decline-ta" id="popDeclineReason"
-            placeholder="e.g. Schedule conflict, fully booked…" rows="3"></textarea>
+        <textarea class="pop-decline-ta" id="popDeclineReason" placeholder="e.g. Schedule conflict, fully booked…" rows="3"></textarea>
+        <label class="resched-check">
+            <input type="checkbox" id="popReschedCheck">
+            Reschedule instead of declining
+        </label>
+        <div id="popReschedContainer" style="display:none;"></div>
         <div class="pop-decline-footer">
             <button class="pop-decline-cancel" id="popDeclineCancel">Back</button>
             <button class="pop-decline-confirm" id="popDeclineConfirm">Decline &amp; Notify</button>
