@@ -22,7 +22,6 @@ function findNextAvailable(consultationSlots) {
     const todayKey = now.toISOString().split('T')[0];
     const nowMins = now.getHours() * 60 + now.getMinutes();
 
-    // Flatten to individual open sub-slots, sorted by date then time
     const openSlots = [];
     consultationSlots.forEach(group => {
         group.subSlots.forEach(sub => {
@@ -73,9 +72,7 @@ const StudentController = {
         try {
             const [departments, faculties, appointmentCount] = await Promise.all([
                 DepartmentModel.getDepartments(),
-                UserModel.getFacultiesConsultation({
-                    limit: 10
-                }),
+                UserModel.getFacultiesConsultation(),
                 AppointmentModel.getCount(),
             ]);
 
@@ -130,7 +127,7 @@ const StudentController = {
             if (!faculty) return res.redirect('/student/dashboard');
 
             const { windowStart, windowEnd } = getTwoWeekWindow();
-            const grouped = await ConsultationModel.getSlotsByInstructorGrouped(facultyPublicId);
+            const grouped = await ConsultationModel.getBookableSlotsByInstructor(facultyPublicId);
             const activeReservations = await SlotReservation.getActiveReservationsForInstructor(facultyPublicId);
             const unavailability = await ConsultationModel.getUnavailability(facultyPublicId);
 
