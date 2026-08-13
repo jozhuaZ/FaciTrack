@@ -178,7 +178,7 @@
                                 </div>
                                 <div>
                                     <p class="apt-list-label">Rescheduled From</p>
-                                    <p class="apt-list-value" style="font-weight:400;">Originally <%= apt.rescheduledFromInfo.date %> · <%= apt.rescheduledFromInfo.slot %></p>
+                                    <p class="apt-list-value" style="font-weight:400;">Originally <%= new Date(apt.rescheduledFromInfo.date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %> · <%= apt.rescheduledFromInfo.slot %></p>
                                 </div>
                             </div>
                             <% } %>
@@ -197,7 +197,7 @@
                                 </div>
                                 <div>
                                     <p class="apt-list-label">Schedule</p>
-                                    <p class="apt-list-value"><%= apt.date %> · <%= apt.slot %></p>
+                                    <p class="apt-list-value"><%= new Date(apt.date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %> · <%= apt.slot %></p>
                                 </div>
                             </div>
                             <% if (apt.status !== 'declined') { %>
