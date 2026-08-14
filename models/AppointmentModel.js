@@ -163,6 +163,35 @@ const AppointmentModel = {
         return row || null;
     },
 
+    async getAppointmentsByInstructor(instructorPublicId) {
+        const [[instructor]] = await pool.execute(
+            'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
+        );
+        if (!instructor) return [];
+
+        const query = `SELECT
+                ap.id, ap.status, ap.mode, ap.topic, ap.section_group_name, ap.course_subject,
+                ap.email, ap.notes, ap.created_at, ap.decline_reason,
+                ch.consultation_date, ch.day_of_the_week, ch.start_time, ch.end_time,
+                s.first_name AS student_first_name, s.last_name AS student_last_name,
+                ap.student_number,
+                r.room_number,
+                d.building AS building_name
+            FROM appointments ap
+            JOIN consultation_hours ch ON ap.consultation_hour_id = ch.id
+            JOIN users s ON ap.student_id = s.id
+            LEFT JOIN rooms r ON ap.room_id = r.id
+            LEFT JOIN departments d ON r.department_id = d.id
+            WHERE ap.instructor_id = ?
+            ORDER BY
+                FIELD(ap.status, 'pending', 'confirmed', 'rescheduled', 'declined', 'completed', 'cancelled'),
+                ch.consultation_date ASC,
+                ch.start_time ASC`;
+
+        const [rows] = await pool.execute(query, [instructor.id]);
+        return rows;
+    },
+
     async cancelAppointment(appointmentId, studentPublicId) {
         const conn = await pool.getConnection();
         try {
@@ -197,36 +226,6 @@ const AppointmentModel = {
         } finally {
             conn.release();
         }
-    },
-
-    // AppointmentModel.js
-    async getAppointmentsByInstructor(instructorPublicId) {
-        const [[instructor]] = await pool.execute(
-            'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
-        );
-        if (!instructor) return [];
-
-        const query = `SELECT
-                ap.id, ap.status, ap.mode, ap.topic, ap.section_group_name, ap.course_subject,
-                ap.email, ap.notes, ap.created_at, ap.decline_reason,
-                ch.consultation_date, ch.day_of_the_week, ch.start_time, ch.end_time,
-                s.first_name AS student_first_name, s.last_name AS student_last_name,
-                ap.student_number,
-                r.room_number,
-                d.building AS building_name
-            FROM appointments ap
-            JOIN consultation_hours ch ON ap.consultation_hour_id = ch.id
-            JOIN users s ON ap.student_id = s.id
-            LEFT JOIN rooms r ON ap.room_id = r.id
-            LEFT JOIN departments d ON r.department_id = d.id
-            WHERE ap.instructor_id = ?
-            ORDER BY
-                FIELD(ap.status, 'pending', 'confirmed', 'rescheduled', 'declined', 'completed', 'cancelled'),
-                ch.consultation_date ASC,
-                ch.start_time ASC`;
-
-        const [rows] = await pool.execute(query, [instructor.id]);
-        return rows;
     },
 
     async approveAppointment(appointmentId, instructorPublicId) {
@@ -273,6 +272,84 @@ const AppointmentModel = {
 
             await conn.commit();
             return { success: true };
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    },
+
+    async rescheduleAppointment(appointmentId, newSlotId, instructorPublicId, reason) {
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [[instructor]] = await conn.execute(
+                'SELECT id, department_id FROM users WHERE public_id = ?', [instructorPublicId]
+            );
+            if (!instructor) { await conn.rollback(); return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' }; }
+
+            const [[oldApt]] = await conn.execute(
+                `SELECT * FROM appointments
+             WHERE id = ? AND instructor_id = ? AND status IN ('pending','confirmed')
+             FOR UPDATE`,
+                [appointmentId, instructor.id]
+            );
+            if (!oldApt) { await conn.rollback(); return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' }; }
+
+            const [[newSlot]] = await conn.execute(
+                `SELECT ch.*,
+                (SELECT id FROM appointments a
+                 WHERE a.consultation_hour_id = ch.id AND a.status IN ('pending','confirmed')) AS active_appointment_id
+             FROM consultation_hours ch
+             WHERE ch.id = ? AND ch.instructor_id = ? FOR UPDATE`,
+                [newSlotId, instructor.id]
+            );
+            if (!newSlot || newSlot.status === 'closed' || newSlot.active_appointment_id) {
+                await conn.rollback();
+                return { success: false, reason: 'SLOT_UNAVAILABLE' };
+            }
+
+            let roomId = oldApt.room_id;
+            if (oldApt.mode === 'Face-to-Face') {
+                roomId = await assignConsultationRoom(
+                    conn, oldApt.department_id_snapshot ?? instructor.department_id,
+                    newSlot.consultation_date, newSlot.start_time, newSlot.end_time
+                );
+                if (roomId === null) {
+                    await conn.rollback();
+                    return { success: false, reason: 'NO_ROOM_AVAILABLE' };
+                }
+            }
+
+            const [insertResult] = await conn.execute(
+                `INSERT INTO appointments
+                (consultation_hour_id, student_id, instructor_id, section_group_name,
+                 course_subject, email, topic, mode, notes, status, room_id, rescheduled_from_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    newSlotId, oldApt.student_id, instructor.id, oldApt.section_group_name,
+                    oldApt.course_subject, oldApt.email, oldApt.topic, oldApt.mode, oldApt.notes,
+                    'confirmed', roomId, appointmentId,
+                ]
+            );
+            const newAppointmentId = insertResult.insertId;
+
+            await conn.execute(
+                `UPDATE appointments SET status = 'rescheduled', rescheduled_to_id = ?, decline_reason = ?
+             WHERE id = ?`,
+                [newAppointmentId, reason || null, appointmentId]
+            );
+
+            await conn.execute(
+                `UPDATE consultation_hours SET status = 'Available'
+             WHERE id = ? AND status != 'closed'`,
+                [oldApt.consultation_hour_id]
+            );
+
+            await conn.commit();
+            return { success: true, newAppointmentId };
         } catch (err) {
             await conn.rollback();
             throw err;
