@@ -57,7 +57,7 @@ const InstructorController = {
                 consultationSlots: consultationSlots,
             });
         } catch (err) {
-            console.error('[InstructorController.renderSchedulePage]', err);
+            console.error('[InstructorController.renderConsultationPage]', err);
             res.status(500).send('Failed to load schedule page.');
         }
     },
@@ -207,6 +207,52 @@ const InstructorController = {
         } catch (err) {
             console.error('[InstructorController.renderAppointmentsPage]', err);
             res.status(500).send('Failed to load appointments.');
+        }
+    },
+
+    async getRescheduleOptions(req, res) {
+        try {
+            const instructorPublicId = req.session.userId;
+            const grouped = await ConsultationModel.getBookableSlotsByInstructor(instructorPublicId);
+            const slots = grouped.map(g => ({
+                day: g.day,
+                date: g.date,
+                subSlots: g.subSlots.map(s => ({ id: s.id, timeStart: s.timeStart, timeEnd: s.timeEnd })),
+            }));
+            res.json({ success: true, slots });
+        } catch (err) {
+            console.error('[InstructorController.getRescheduleOptions]', err);
+            res.status(500).json({ success: false, error: 'Failed to load available slots.' });
+        }
+    },
+
+    async rescheduleAppointment(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.id, 10);
+            const { newSlotId, reason } = req.body;
+            const instructorPublicId = req.session.userId;
+
+            if (!newSlotId) {
+                return res.status(400).json({ success: false, error: 'Please select a new slot.' });
+            }
+
+            const result = await AppointmentModel.rescheduleAppointment(
+                appointmentId, parseInt(newSlotId, 10), instructorPublicId, reason
+            );
+
+            if (!result.success) {
+                const messages = {
+                    SLOT_UNAVAILABLE: 'That slot is no longer available.',
+                    NO_ROOM_AVAILABLE: 'All consultation rooms are full for that time.',
+                    NOT_FOUND_OR_RESOLVED: 'Appointment not found or already resolved.',
+                };
+                return res.status(409).json({ success: false, error: messages[result.reason] || 'Failed to reschedule.' });
+            }
+
+            res.json({ success: true, newAppointmentId: result.newAppointmentId });
+        } catch (err) {
+            console.error('[InstructorController.rescheduleAppointment]', err);
+            res.status(500).json({ success: false, error: 'Failed to reschedule appointment.' });
         }
     },
 
