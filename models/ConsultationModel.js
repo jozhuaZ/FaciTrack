@@ -36,6 +36,29 @@ function addDays(dateStr, days) {
     return `${y}-${m}-${day}`;
 }
 
+function groupConsultationRows(rows) {
+    const grouped = {};
+    rows.forEach(row => {
+        const dateStr = row.consultation_date;
+        const key = `${dateStr}_${row.day_of_the_week}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                date: dateStr,
+                day: row.day_of_the_week,
+                subSlots: [],
+            };
+        }
+        grouped[key].subSlots.push({
+            id: row.id,
+            timeStart: to12Hour(row.start_time),
+            timeEnd: to12Hour(row.end_time),
+            status: row.status,
+            isBooked: !!row.appointment_id,
+        });
+    });
+    return Object.values(grouped);
+}
+
 const ConsultationModel = {
 
     async getSlotWithFaculty(slotId) {
@@ -47,7 +70,7 @@ const ConsultationModel = {
             u.id AS instructor_id, u.public_id AS faculty_id,
             u.first_name, u.last_name, u.middle_name,
             u.position, u.email, u.department_id,
-            d.name AS department_name,
+            d.full_name AS department_name,
             iu.id AS unavail_id
          FROM consultation_hours ch
          JOIN users u ON ch.instructor_id = u.id
@@ -126,27 +149,30 @@ const ConsultationModel = {
             [publicId]
         );
 
-        const grouped = {};
-        rows.forEach(row => {
-            const dateStr = toDateKey(row.consultation_date);
-            const key = `${dateStr}_${row.day_of_the_week}`;
-            if (!grouped[key]) {
-                grouped[key] = {
-                    date: dateStr,
-                    day: row.day_of_the_week,
-                    subSlots: [],
-                };
-            }
-            grouped[key].subSlots.push({
-                id: row.id,
-                timeStart: to12Hour(row.start_time),
-                timeEnd: to12Hour(row.end_time),
-                status: row.status,
-                isBooked: !!row.appointment_id,
-            });
-        });
+        return groupConsultationRows(rows);
+    },
 
-        return Object.values(grouped);
+    async getBookableSlotsByInstructor(publicId) {
+        const [rows] = await pool.execute(
+            `SELECT
+            cs.id, cs.day_of_the_week, cs.consultation_date,
+            cs.start_time, cs.end_time, cs.status,
+            a.id AS appointment_id
+         FROM consultation_hours cs
+         LEFT JOIN appointments a ON cs.id = a.consultation_hour_id AND a.status IN ('pending','confirmed')
+         JOIN users u ON cs.instructor_id = u.id
+         WHERE u.public_id = ?
+           AND cs.status != 'closed'
+           AND cs.consultation_date >= CURDATE()
+           AND a.id IS NULL
+           AND NOT EXISTS (
+               SELECT 1 FROM instructor_unavailability iu
+               WHERE iu.instructor_id = u.id AND iu.unavail_date = cs.consultation_date
+           )
+         ORDER BY cs.consultation_date, cs.start_time`,
+            [publicId]
+        );
+        return groupConsultationRows(rows);
     },
 
     async saveSlotBlock(publicId, { date, day, timeStart, timeEnd, maxCapacity, repeatWeeks = 1 }) {
