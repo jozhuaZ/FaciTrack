@@ -524,6 +524,10 @@ router.get('/appointments', InstructorController.renderAppointmentsPage);
 router.post('/appointments/:id/approve', InstructorController.approveAppointment);
 router.post('/appointments/:id/decline', InstructorController.declineAppointment);
 
+// reschedule appointment routes
+router.get('/appointments/reschedule-options', InstructorController.getRescheduleOptions);
+router.post('/appointments/:id/reschedule', InstructorController.rescheduleAppointment);
+
 // API endpoint for calendar data - schedules
 router.get('/schedule/data', (req, res) => {
     const slots = getSchedule(1);
