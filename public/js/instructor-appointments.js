@@ -19,6 +19,7 @@ let activePopAptId = null;
 let popoverOpen = false;
 let singleClickTimer = null;
 let dayPanelEl = null;
+let popReschedPicker = null;
 
 const $ = id => document.getElementById(id);
 const MONTHS = ['January','February','March','April','May','June',
@@ -195,6 +196,12 @@ function openPopover(aptId, anchor) {
     $('popDeclineReason').value = '';
     $('popResolved').classList.remove('open','approved','declined');
 
+    $('popReschedCheck').checked = false;
+    $('popReschedContainer').style.display = 'none';
+    $('popReschedContainer').innerHTML = '';
+    $('popDeclineConfirm').textContent = 'Decline & Notify';
+    popReschedPicker = null;
+
     const pop = $('aptPopover');
     pop.classList.add('open');
     $('aptBackdrop').classList.add('open');
@@ -278,6 +285,25 @@ function initPopover() {
         $('popDeclineReason').value = '';
     });
 
+    $('popReschedCheck').addEventListener('change', function() {
+        const container = $('popReschedContainer');
+        const confirmBtn = $('popDeclineConfirm');
+        if (this.checked) {
+            popReschedPicker = buildReschedulePicker(() => { confirmBtn.disabled = false; });
+            container.innerHTML = '';
+            container.appendChild(popReschedPicker.el);
+            container.style.display = 'block';
+            confirmBtn.textContent = 'Reschedule & Notify';
+            confirmBtn.disabled = true;
+        } else {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            popReschedPicker = null;
+            confirmBtn.textContent = 'Decline & Notify';
+            confirmBtn.disabled = false;
+        }
+    });
+
     $('popDeclineConfirm').addEventListener('click', () => {
         const reason = $('popDeclineReason').value.trim();
         if (!reason) {
@@ -287,14 +313,17 @@ function initPopover() {
             return;
         }
         if (!activePopAptId) return;
+
         const btn = $('popDeclineConfirm');
         btn.disabled = true;
-        doDecline(
-            activePopAptId,
-            reason,
-            () => showPopResolved('declined', '✗ Student notified'),
-            () => { btn.disabled = false; }
-        );
+
+        if ($('popReschedCheck').checked) {
+            const sel = popReschedPicker && popReschedPicker.getSelected();
+            if (!sel) { showToast('error', 'Select a Slot', 'Please choose a new date and time.'); btn.disabled = false; return; }
+            doReschedule(activePopAptId, sel.id, reason, () => showPopResolved('rescheduled', 'Student notified'), () => { btn.disabled = false; });
+        } else {
+            doDecline(activePopAptId, reason, () => showPopResolved('declined', 'Student notified'), () => { btn.disabled = false; });
+        }
     });
 
     document.addEventListener('keydown', e => { if (e.key==='Escape') { closePopover(); closeDayPanel(); } });
@@ -397,25 +426,39 @@ function openDayPanel(dateStr, apts, anchor) {
             decPanel.className = 'day-panel-decline-form';
             decPanel.innerHTML =
                 `<textarea class="day-panel-decline-ta" placeholder="Reason for declining…" rows="2"></textarea>
-                 <div class="day-panel-decline-btns">
-                   <button class="day-panel-df-cancel">Cancel</button>
-                   <button class="day-panel-df-confirm">Decline &amp; Notify</button>
-                 </div>`;
+                <label class="resched-check">
+                <input type="checkbox" class="day-panel-resched-checkbox">
+                Reschedule instead of declining
+                </label>
+                <div class="day-panel-resched-container" style="display:none;"></div>
+                <div class="day-panel-decline-btns">
+                <button class="day-panel-df-cancel">Cancel</button>
+                <button class="day-panel-df-confirm">Decline &amp; Notify</button>
+                </div>`;
 
-            decBtn.addEventListener('click', e => {
-                e.stopPropagation();
-                const open = decPanel.classList.contains('open');
-                decPanel.classList.toggle('open', !open);
-                if (!open) decPanel.querySelector('.day-panel-decline-ta').focus();
+            let dpReschedPicker = null;
+            const dpReschedCheck = decPanel.querySelector('.day-panel-resched-checkbox');
+            const dpReschedContainer = decPanel.querySelector('.day-panel-resched-container');
+            const dfConfirmBtn = decPanel.querySelector('.day-panel-df-confirm');
+
+            dpReschedCheck.addEventListener('change', function() {
+                if (this.checked) {
+                    dpReschedPicker = buildReschedulePicker(() => { dfConfirmBtn.disabled = false; });
+                    dpReschedContainer.innerHTML = '';
+                    dpReschedContainer.appendChild(dpReschedPicker.el);
+                    dpReschedContainer.style.display = 'block';
+                    dfConfirmBtn.textContent = 'Reschedule & Notify';
+                    dfConfirmBtn.disabled = true;
+                } else {
+                    dpReschedContainer.style.display = 'none';
+                    dpReschedContainer.innerHTML = '';
+                    dpReschedPicker = null;
+                    dfConfirmBtn.textContent = 'Decline & Notify';
+                    dfConfirmBtn.disabled = false;
+                }
             });
 
-            decPanel.querySelector('.day-panel-df-cancel').addEventListener('click', e => {
-                e.stopPropagation();
-                decPanel.classList.remove('open');
-                decPanel.querySelector('.day-panel-decline-ta').value = '';
-            });
-
-            decPanel.querySelector('.day-panel-df-confirm').addEventListener('click', e => {
+            dfConfirmBtn.addEventListener('click', e => {
                 e.stopPropagation();
                 const reason = decPanel.querySelector('.day-panel-decline-ta').value.trim();
                 if (!reason) {
@@ -424,14 +467,21 @@ function openDayPanel(dateStr, apts, anchor) {
                     setTimeout(() => { ta.style.borderColor = ''; }, 1400);
                     return;
                 }
-                const confirmBtn = decPanel.querySelector('.day-panel-df-confirm');
-                confirmBtn.disabled = true;
-                doDecline(
-                    apt.id,
-                    reason,
-                    () => { markRowDone(wrap, 'declined', '✗ Notified'); },
-                    () => { confirmBtn.disabled = false; }
-                );
+                dfConfirmBtn.disabled = true;
+                if (dpReschedCheck.checked) {
+                    const sel = dpReschedPicker && dpReschedPicker.getSelected();
+                    if (!sel) { showToast('error', 'Select a Slot', 'Please choose a new date and time.'); dfConfirmBtn.disabled = false; return; }
+                    doReschedule(apt.id, sel.id, reason, () => markRowDone(wrap, 'rescheduled', '↻ Notified'), () => { dfConfirmBtn.disabled = false; });
+                } else {
+                    doDecline(apt.id, reason, () => markRowDone(wrap, 'declined', '✗ Notified'), () => { dfConfirmBtn.disabled = false; });
+                }
+            });
+
+            decBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                const open = decPanel.classList.contains('open');
+                decPanel.classList.toggle('open', !open);
+                if (!open) decPanel.querySelector('.day-panel-decline-ta').focus();
             });
 
             actions.appendChild(decBtn);
@@ -598,10 +648,37 @@ function buildCard(apt) {
         declineForm.innerHTML = `
             <span class="apt-lv-decline-lbl">Reason for declining</span>
             <textarea class="apt-lv-decline-ta" placeholder="e.g. Schedule conflict, fully booked…" rows="2"></textarea>
+            <label class="resched-check">
+                <input type="checkbox" class="apt-lv-resched-checkbox">
+                Reschedule instead of declining
+            </label>
+            <div class="apt-lv-resched-container" style="display:none;"></div>
             <div class="apt-lv-decline-row">
                 <button class="apt-lv-df-cancel">Cancel</button>
                 <button class="apt-lv-df-confirm">Decline &amp; Notify</button>
             </div>`;
+
+        let lvReschedPicker = null;
+        const lvReschedCheck = declineForm.querySelector('.apt-lv-resched-checkbox');
+        const lvReschedContainer = declineForm.querySelector('.apt-lv-resched-container');
+        const lvConfirmBtn = declineForm.querySelector('.apt-lv-df-confirm');
+
+        lvReschedCheck.addEventListener('change', function() {
+            if (this.checked) {
+                lvReschedPicker = buildReschedulePicker(() => { lvConfirmBtn.disabled = false; });
+                lvReschedContainer.innerHTML = '';
+                lvReschedContainer.appendChild(lvReschedPicker.el);
+                lvReschedContainer.style.display = 'block';
+                lvConfirmBtn.textContent = 'Reschedule & Notify';
+                lvConfirmBtn.disabled = true;
+            } else {
+                lvReschedContainer.style.display = 'none';
+                lvReschedContainer.innerHTML = '';
+                lvReschedPicker = null;
+                lvConfirmBtn.textContent = 'Decline & Notify';
+                lvConfirmBtn.disabled = false;
+            }
+        });
 
         declineBtn.addEventListener('click', () => {
             const isOpen = declineForm.classList.contains('open');
@@ -612,9 +689,14 @@ function buildCard(apt) {
         declineForm.querySelector('.apt-lv-df-cancel').addEventListener('click', () => {
             declineForm.classList.remove('open');
             declineForm.querySelector('.apt-lv-decline-ta').value = '';
+            lvReschedCheck.checked = false;
+            lvReschedContainer.style.display = 'none';
+            lvReschedContainer.innerHTML = '';
+            lvReschedPicker = null;
+            lvConfirmBtn.textContent = 'Decline & Notify';
         });
 
-        declineForm.querySelector('.apt-lv-df-confirm').addEventListener('click', () => {
+        lvConfirmBtn.addEventListener('click', () => {
             const reason = declineForm.querySelector('.apt-lv-decline-ta').value.trim();
             if (!reason) {
                 const ta = declineForm.querySelector('.apt-lv-decline-ta');
@@ -622,14 +704,14 @@ function buildCard(apt) {
                 setTimeout(() => { ta.style.borderColor = ''; }, 1400);
                 return;
             }
-            const confirmBtn = declineForm.querySelector('.apt-lv-df-confirm');
-            confirmBtn.disabled = true;
-            doDecline(
-                apt.id,
-                reason,
-                () => { showToast('success', 'Declined', `${apt.studentName} has been notified.`); },
-                () => { confirmBtn.disabled = false; }
-            );
+            lvConfirmBtn.disabled = true;
+            if (lvReschedCheck.checked) {
+                const sel = lvReschedPicker && lvReschedPicker.getSelected();
+                if (!sel) { showToast('error', 'Select a Slot', 'Please choose a new date and time.'); lvConfirmBtn.disabled = false; return; }
+                doReschedule(apt.id, sel.id, reason, () => showToast('success', 'Rescheduled', `${apt.studentName} has been notified.`), () => { lvConfirmBtn.disabled = false; });
+            } else {
+                doDecline(apt.id, reason, () => showToast('success', 'Declined', `${apt.studentName} has been notified.`), () => { lvConfirmBtn.disabled = false; });
+            }
         });
 
         actions.appendChild(approveBtn);
@@ -651,6 +733,115 @@ function buildCard(apt) {
     if (declinedReason) card.appendChild(declinedReason);
 
     return card;
+}
+
+function buildReschedulePicker(onSelect) {
+    const wrap = document.createElement('div');
+    wrap.className = 'resched-picker';
+    wrap.innerHTML = `
+        <div class="resched-cal-header">
+            <button type="button" class="resched-cal-nav" data-dir="-1">&larr;</button>
+            <span class="resched-cal-title"></span>
+            <button type="button" class="resched-cal-nav" data-dir="1">&rarr;</button>
+        </div>
+        <div class="resched-cal-grid"></div>
+        <div class="resched-slot-list"></div>
+        <div class="resched-selected" style="display:none;"></div>
+    `;
+
+    let year, month, slotsData = [], selected = null;
+    const titleEl = wrap.querySelector('.resched-cal-title');
+    const gridEl  = wrap.querySelector('.resched-cal-grid');
+    const listEl  = wrap.querySelector('.resched-slot-list');
+    const selEl   = wrap.querySelector('.resched-selected');
+
+    function renderCal() {
+        titleEl.textContent = MONTHS[month] + ' ' + year;
+        gridEl.innerHTML = '';
+        const byDate = {};
+        slotsData.forEach(g => { if (g.subSlots.length) byDate[g.date] = g; });
+
+        ['S','M','T','W','T','F','S'].forEach(d => {
+            const h = document.createElement('div');
+            h.className = 'resched-dow'; h.textContent = d;
+            gridEl.appendChild(h);
+        });
+
+        const first = new Date(year, month, 1).getDay();
+        const daysIn = new Date(year, month + 1, 0).getDate();
+        for (let i = 0; i < first; i++) gridEl.appendChild(document.createElement('div'));
+        for (let d = 1; d <= daysIn; d++) {
+            const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const cell = document.createElement('div');
+            cell.className = 'resched-day' + (byDate[key] ? ' has-slots' : '');
+            cell.textContent = d;
+            if (byDate[key]) cell.addEventListener('click', () => renderSlots(byDate[key]));
+            gridEl.appendChild(cell);
+        }
+    }
+
+    function renderSlots(group) {
+        listEl.innerHTML = `<p class="resched-slot-date">${group.day}, ${group.date}</p>`;
+        const row = document.createElement('div');
+        row.className = 'resched-slot-row';
+        group.subSlots.forEach(sub => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'resched-slot-btn';
+            b.textContent = `${sub.timeStart}–${sub.timeEnd}`;
+            b.addEventListener('click', () => {
+                row.querySelectorAll('.resched-slot-btn').forEach(x => x.classList.remove('active'));
+                b.classList.add('active');
+                selected = { id: sub.id, label: `${group.day}, ${group.date} · ${sub.timeStart}–${sub.timeEnd}` };
+                selEl.innerHTML = `<strong>New time:</strong> ${selected.label}`;
+                selEl.style.display = 'block';
+                if (onSelect) onSelect(selected);
+            });
+            row.appendChild(b);
+        });
+        listEl.appendChild(row);
+    }
+
+    wrap.querySelectorAll('.resched-cal-nav').forEach(btn => {
+        btn.addEventListener('click', () => {
+            month += parseInt(btn.dataset.dir, 10);
+            if (month < 0) { month = 11; year--; }
+            if (month > 11) { month = 0; year++; }
+            renderCal();
+        });
+    });
+
+    fetch('/instructor/appointments/reschedule-options')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { listEl.innerHTML = '<p class="resched-error">Failed to load slots.</p>'; return; }
+            slotsData = d.slots;
+            const now = new Date();
+            year = now.getFullYear(); month = now.getMonth();
+            renderCal();
+        })
+        .catch(() => { listEl.innerHTML = '<p class="resched-error">Failed to load slots.</p>'; });
+
+    return { el: wrap, getSelected: () => selected };
+}
+
+function doReschedule(aptId, newSlotId, reason, onSuccess, onError) {
+    fetch(`/instructor/appointments/${encodeURIComponent(aptId)}/reschedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newSlotId, reason })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (!d.success) { showToast('error', 'Error', d.error || 'Failed to reschedule.'); if (onError) onError(); return; }
+        const apt = appointments.find(a => a.id === aptId);
+        if (apt) apt.status = 'rescheduled';
+        refreshStats(); renderCalendar();
+        if (currentView === 'list') renderListView();
+        if (onSuccess) onSuccess();
+        setTimeout(() => { window.location.reload(); }, 1500);
+    })
+    .catch(() => { showToast('error', 'Error', 'Network error. Please try again.'); if (onError) onError(); });
 }
 
 /* ── API calls ── */
