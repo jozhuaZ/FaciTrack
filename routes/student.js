@@ -4,6 +4,7 @@ const { requireRole, setSessionCookie } = require('../middleware/auth');
 const { createSession, getRoleRedirect, authenticateUser } = require('../services/auth');
 const instructorRouter = require('./instructor');
 const emailService = require('../services/email');
+const StudentController = require('../controllers/StudentController');
 
 router.use((req, res, next) => {
     console.log(`[Student Router] ${req.method} ${req.originalUrl}`);
@@ -203,67 +204,6 @@ function confirmSlot(facultyId, day, slotTime) {
     if (entry) entry.status = 'confirmed';
 }
 
-// Get all taken/reserved slots for a faculty (for the profile page)
-function getTakenSlots(facultyId) {
-    const taken = {};
-    const now = Date.now();
-    const prefix = `${facultyId}_`;
-
-    // Permanent bookings
-    Object.entries(slotBookings).forEach(([key, val]) => {
-        if (!key.startsWith(prefix)) return;
-        if (val.status !== 'pending' && val.status !== 'confirmed') return;
-        const rest = key.slice(prefix.length);
-        const underscoreIdx = rest.indexOf('_');
-        if (underscoreIdx === -1) return;
-        const day = rest.slice(0, underscoreIdx);
-        const slotTime = rest.slice(underscoreIdx + 1);
-        if (!taken[day]) taken[day] = [];
-        if (!taken[day].includes(slotTime)) taken[day].push(slotTime);
-    });
-
-    // Active reservations (5-min holds)
-    Object.values(slotReservations).forEach(r => {
-        if (r.facultyId !== facultyId) return;
-        if (r.expiresAt < now) return;
-        if (!taken[r.day]) taken[r.day] = [];
-        if (!taken[r.day].includes(r.slotTime)) taken[r.day].push(r.slotTime);
-    });
-
-    return taken;
-}
-
-function generateRefNumber() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    return 'FT-' + code;
-}
-
-// ── 2-week calendar window helpers ──
-// Returns { windowStart: Date, windowEnd: Date }
-// windowStart = Sunday of current week
-// windowEnd   = Saturday of next week
-function getTwoWeekWindow() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dayOfWeek = today.getDay(); // 0=Sun
-    const windowStart = new Date(today);
-    windowStart.setDate(today.getDate() - dayOfWeek); // back to Sunday
-    const windowEnd = new Date(windowStart);
-    windowEnd.setDate(windowStart.getDate() + 13); // +13 = next Saturday
-    return { windowStart, windowEnd };
-}
-
-// Check if a given Date falls within the 2-week window and is not in the past
-function isDateInWindow(date) {
-    const { windowStart, windowEnd } = getTwoWeekWindow();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d >= today && d >= windowStart && d <= windowEnd;
-}
 
 // ── Auto-reschedule logic ──
 // Finds the next available slot for a faculty after a given date
@@ -417,92 +357,15 @@ function getDisplayStatus(faculty) {
 }
 
 // ── Routes ──
-router.get('/dashboard', (req, res) => {
-    const { search, dept } = req.query;
-    let filtered = facultyList.map(f => getFaculty(f.id));
-    if (dept) filtered = filtered.filter(f => f.department === dept);
-    if (search) {
-        const kw = search.toLowerCase();
-        filtered = filtered.filter(f =>
-            f.name.toLowerCase().includes(kw) || f.specialization.toLowerCase().includes(kw)
-        );
-    }
+router.get('/dashboard', StudentController.renderDashboardPage);
+router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
 
-    const student = {
-        id: req.session?.userId,
-        name: req.session?.name,
-        firstName: req.session.firstName,
-        lastName: req.session.lastName,
-        status: req.session.status,
-        email: req.session?.email,
-        role: req.session.role,
-        profilePhoto: req.session?.profilePhoto || 'N/A',
-    }
+router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
+router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);
+router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservation);
 
-    res.render('pages/student/dashboard', {
-        title: 'FaciTrack - Faculty Directory',
-        student: student,
-        facultyList: filtered,
-        searchQuery: search || '', activeDept: dept || '', departments
-    });
-});
-
-router.get('/faculty/:id', (req, res) => {
-    const faculty = getFaculty(parseInt(req.params.id));
-    if (!faculty) return res.redirect('/student/dashboard');
-    const takenSlots = getTakenSlots(faculty.id);
-    const { windowStart, windowEnd } = getTwoWeekWindow();
-    res.render('pages/student/profile', {
-        title: `FaciTrack - ${faculty.name}`,
-        faculty,
-        takenSlots,
-        windowStart: windowStart.toISOString(),
-        windowEnd: windowEnd.toISOString()
-    });
-});
-
-// ── Slot reservation endpoint (called when student clicks a slot) ──
-router.post('/slot/reserve', (req, res) => {
-    const { facultyId, day, slotTime } = req.body;
-    const fid = parseInt(facultyId);
-    if (!fid || !day || !slotTime) return res.status(400).json({ error: 'Missing parameters.' });
-
-    if (isSlotTaken(fid, day, slotTime)) {
-        return res.json({ available: false, reason: 'taken' });
-    }
-    if (isSlotReserved(fid, day, slotTime)) {
-        return res.json({ available: false, reason: 'reserved' });
-    }
-
-    const token = reserveSlot(fid, day, slotTime);
-    res.json({ available: true, token, expiresIn: RESERVATION_MS });
-});
-
-// ── Release reservation (called on back/cancel) ──
-router.post('/slot/release', (req, res) => {
-    const { token } = req.body;
-    if (token) releaseReservation(token);
-    res.json({ success: true });
-});
-
-router.get('/faculty/:id/book', (req, res) => {
-    const faculty = getFaculty(parseInt(req.params.id));
-    if (!faculty) return res.redirect('/student/dashboard');
-    const hasOpen = faculty.consultationSlots.some(s => s.status === 'open');
-    if (!hasOpen) return res.redirect(`/student/faculty/${faculty.id}`);
-
-    // Get logged-in student info
-    const student = req.currentUser;
-
-    res.render('pages/student/book', {
-        title: `FaciTrack - Book Appointment with ${faculty.name}`,
-        faculty,
-        student,
-        selectedSlot: req.query.slot || null,
-        selectedDate: req.query.date || null,
-        reservationToken: req.query.token || null
-    });
-});
+router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);
+router.post('/faculty/schedule/:slotId/book', StudentController.submitBooking);
 
 router.post('/faculty/:id/book', (req, res) => {
     const faculty = getFaculty(parseInt(req.params.id));
@@ -604,52 +467,12 @@ router.post('/faculty/:id/book', (req, res) => {
     });
 });
 
-router.get('/appointments', (req, res) => {
-    // Get logged-in student's appointments
-    const student = req.currentUser;
-    const studentEmail = student.email.toLowerCase();
-
-    // Filter appointments for this student
-    const myAppointments = Object.values(refStore).filter(apt =>
-        apt.studentEmail === studentEmail
-    );
-
-    res.render('pages/student/appointments', {
-        title: 'FaciTrack - My Appointments',
-        appointments: myAppointments,
-        student
-    });
-});
+router.get('/appointments', StudentController.renderAppointmentsPage);
+router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
 
 router.get('/availability', (req, res) => {
     res.render('pages/student/availability', {
         title: 'FaciTrack - Faculty Availability', facultyList
-    });
-});
-
-// Validate reference number
-router.get('/ref/validate', (req, res) => {
-    const ref = (req.query.ref || '').toUpperCase().trim();
-    const email = (req.query.email || '').toLowerCase().trim();
-
-    if (!refStore[ref]) {
-        return res.json({ valid: false });
-    }
-
-    const apt = refStore[ref];
-
-    // Validate email matches the booking
-    if (email && apt.studentEmail && apt.studentEmail.toLowerCase() !== email) {
-        return res.json({ valid: false, reason: 'email_mismatch' });
-    }
-
-    const faculty = getFaculty(apt.facultyId);
-    return res.json({
-        valid: true,
-        appointment: {
-            ...apt,
-            facultyDept: faculty ? faculty.department : ''
-        }
     });
 });
 

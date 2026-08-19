@@ -199,12 +199,17 @@ const AdminController = {
             if (!roomNumber) errors.roomNumber = 'Room Number is required.';
             if (!department) errors.department = 'Department is required.';
             if (!roomType) errors.roomType = 'Room Type is required.';
-            if (!bleStatus) errors.bleStatus = 'BLE Scanner status is required.';
+            if (bleStatus == null || bleStatus === '') errors.bleStatus = 'BLE Scanner status is required.';   
             if (!status) errors.status = 'Status is required.';
 
             // return early if at least one error is present
             if (Object.keys(errors).length > 0) {
                 return res.status(422).json({ success: false, errors })
+            }
+
+            let capacity = null;
+            if (roomType === 'Consultation Room') {
+                capacity = 5;
             }
 
             // await for the room model to finish inserting new room
@@ -214,7 +219,8 @@ const AdminController = {
                 roomType,
                 bleStatus,
                 assignedFaculty,
-                status
+                status,
+                capacity
             });
 
             return res.status(200).json({
