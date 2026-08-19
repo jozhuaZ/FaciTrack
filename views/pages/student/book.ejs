@@ -408,6 +408,7 @@
                         </div>
                     </div>
 
+                    <% const savedForm = typeof formData !== 'undefined' && formData ? formData : {}; %>
                     <form id="bookingForm" action="/student/faculty/<%= faculty.id %>/book" method="POST">
 
                         <!-- Step 1: Consultation Slot (read-only — selected from profile page) -->
@@ -431,8 +432,9 @@
                                 </a>
                             </div>
                             <!-- Hidden input carries the selected slot to the server -->
-                            <input type="hidden" name="selectedSlot" id="selectedSlotInput">
-                            <input type="hidden" name="reservationToken" id="reservationTokenInput">
+                            <input type="hidden" name="selectedSlot" id="selectedSlotInput" value="<%= selectedSlot || '' %>">
+                            <input type="hidden" name="selectedDate" id="selectedDateInput" value="<%= selectedDate || '' %>">
+                            <input type="hidden" name="reservationToken" id="reservationTokenInput" value="<%= reservationToken || '' %>">
                             <span class="form-hint" id="slotHint" style="color:#e53e3e;display:none;">Please go back and select a time slot first.</span>
                         </div>
 
@@ -445,28 +447,28 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Full Name <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="studentName" name="studentName" placeholder="e.g. Juan Dela Cruz" required>
+                                <input type="text" class="form-input" id="studentName" name="studentName" value="<%= savedForm.studentName || '' %>" placeholder="e.g. Juan Dela Cruz" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Student ID <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="studentId" name="studentId" placeholder="e.g. 2021-00123" required>
+                                <input type="text" class="form-input" id="studentId" name="studentId" value="<%= savedForm.studentId || '' %>" placeholder="e.g. 2021-00123" required>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Section/Group Name <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="studentSection" name="studentSection" placeholder="e.g. BSIT-3E" required>
+                                <input type="text" class="form-input" id="studentSection" name="studentSection" value="<%= savedForm.studentSection || '' %>" placeholder="e.g. BSIT-3E" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Course/Subject <span style="color:#e53e3e;">*</span></label>
-                                <input type="text" class="form-input" id="courseSubject" name="courseSubject" placeholder="e.g. Capstone Project 1" required>
+                                <input type="text" class="form-input" id="courseSubject" name="courseSubject" value="<%= savedForm.courseSubject || '' %>" placeholder="e.g. Capstone Project 1" required>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">CSPC Email Address <span style="color:#e53e3e;">*</span></label>
-                            <input type="email" class="form-input" id="studentEmail" name="studentEmail" placeholder="student@my.cspc.edu.ph" required>
+                            <input type="email" class="form-input" id="studentEmail" name="studentEmail" value="<%= savedForm.studentEmail || '' %>" placeholder="student@my.cspc.edu.ph" required>
                             <span class="form-hint">Use your official CSPC student email</span>
                         </div>
                             <!-- Step 3: Consultation Details -->
@@ -477,28 +479,28 @@
 
                                 <div class="form-group">
                                     <label class="form-label">Consultation Topic <span style="color:#e53e3e;">*</span></label>
-                                    <input type="text" class="form-input" id="consultTopic" name="consultTopic" placeholder="e.g. Thesis consultation regarding system architecture" required>
+                                    <input type="text" class="form-input" id="consultTopic" name="consultTopic" value="<%= savedForm.consultTopic || '' %>" placeholder="e.g. Thesis consultation regarding system architecture" required>
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label">Consultation Mode <span style="color:#e53e3e;">*</span></label>
                                     <div class="consult-type-toggle" id="consultTypeToggle">
-                                        <button type="button" class="consult-type-btn active" data-type="Face-to-Face" id="btnFaceToFace">
+                                        <button type="button" class="consult-type-btn<%= savedForm.consultType !== 'Online' ? ' active' : '' %>" data-type="Face-to-Face" id="btnFaceToFace">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                             Face-to-Face
                                         </button>
-                                        <button type="button" class="consult-type-btn" data-type="Online" id="btnOnline">
+                                        <button type="button" class="consult-type-btn<%= savedForm.consultType === 'Online' ? ' active' : '' %>" data-type="Online" id="btnOnline">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
                                             Online
                                         </button>
                                     </div>
-                                    <input type="hidden" name="consultType" id="consultTypeInput" value="Face-to-Face">
+                                    <input type="hidden" name="consultType" id="consultTypeInput" value="<%= savedForm.consultType || 'Face-to-Face' %>">
                                 </div>
 
                                 <div class="form-group">
                                     <label class="form-label">Additional Notes <span
                                             style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
-                                    <textarea class="form-textarea" id="consultNotes" name="consultNotes" placeholder="Provide any additional context or specific questions you would like to discuss..."></textarea>
+                                    <textarea class="form-textarea" id="consultNotes" name="consultNotes" placeholder="Provide any additional context or specific questions you would like to discuss..."><%= savedForm.consultNotes || '' %></textarea>
                                 </div>
 
                                 <!-- Actions -->
@@ -514,7 +516,7 @@
                                         </svg>
                                         Submit Appointment Request
                                     </button>
-                                    <a href="/student/faculty/<%= faculty.id %>" class="btn-cancel-book">Cancel</a>
+                                    <a href="/student/faculty/<%= faculty.id %>" class="btn-cancel-book" id="cancelBookingLink">Cancel</a>
                                 </div>
 
                                 <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.75rem;">
@@ -541,12 +543,29 @@
     <%- include('../../partials/footer') %>
                                         <%- include('../../partials/script') %>
                                             <script>
+                                                function releaseReservationToken() {
+                                                    const tokenEl = document.getElementById('reservationTokenInput');
+                                                    const token = tokenEl ? tokenEl.value : '';
+                                                    if (!token) return Promise.resolve();
+
+                                                    return fetch('/student/slot/release', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ token })
+                                                    }).then(() => {
+                                                        tokenEl.value = '';
+                                                    }).catch(() => {
+                                                        tokenEl.value = '';
+                                                    });
+                                                }
+
                                                 // Read slot, date, token and prefill values from URL query params
                                                 (function () {
                                                     const params = new URLSearchParams(window.location.search);
-                                                    const slot = params.get('slot');
-                                                    const date = params.get('date');
-                                                    const token = params.get('token');
+                                                    const slot = params.get('slot') || <%- JSON.stringify(selectedSlot || '') %>;
+                                                    const date = params.get('date') || <%- JSON.stringify(selectedDate || '') %>;
+                                                    const token = params.get('token') || <%- JSON.stringify(reservationToken || '') %>;
+                                                    const expiresAt = Number(params.get('expiresAt') || '<%= typeof reservationExpiresAt !== "undefined" ? reservationExpiresAt : "" %>');
 
                                                     const timeEl = document.getElementById('slotReadonlyTime');
                                                     const dateEl = document.getElementById('slotReadonlyDate');
@@ -580,8 +599,7 @@
 
                                                         const countdownEl = document.getElementById('holdCountdown');
                                                         const interval = setInterval(() => {
-                                                            const elapsed = Date.now() - startedAt;
-                                                            const remaining = Math.max(0, HOLD_MS - elapsed);
+                                                            const remaining = Math.max(0, (expiresAt || (startedAt + HOLD_MS)) - Date.now());
                                                             const mins = Math.floor(remaining / 60000);
                                                             const secs = Math.floor((remaining % 60000) / 1000);
                                                             countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
@@ -624,6 +642,13 @@
                                                     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
                                                 }
 
+                                                document.getElementById('cancelBookingLink').addEventListener('click', function (event) {
+                                                    event.preventDefault();
+                                                    releaseReservationToken().finally(() => {
+                                                        window.location.href = '/student/faculty/<%= faculty.id %>';
+                                                    });
+                                                });
+
                                                 // ── Consultation mode toggle ──
                                                 const typeButtons = document.querySelectorAll('.consult-type-btn');
                                                 const typeInput = document.getElementById('consultTypeInput');
@@ -639,6 +664,8 @@
                                                     e.preventDefault();
 
                                                     const slot = document.getElementById('selectedSlotInput').value;
+                                                    const selectedDate = document.getElementById('selectedDateInput').value;
+                                                    const reservationToken = document.getElementById('reservationTokenInput').value;
                                                     const name = document.getElementById('studentName').value.trim();
                                                     const id = document.getElementById('studentId').value.trim();
                                                     const section = document.getElementById('studentSection').value.trim();
@@ -646,7 +673,10 @@
                                                     const email = document.getElementById('studentEmail').value.trim();
                                                     const topic = document.getElementById('consultTopic').value.trim();
 
-                                                    if (!slot) { showToast('error', 'No Slot Selected', 'Please go back and select a consultation time slot.'); return; }
+                                                    if (!slot || !selectedDate || !reservationToken) {
+                                                        showToast('error', 'Reservation Missing', 'Please return to the faculty schedule and select a time slot again.');
+                                                        return;
+                                                    }
                                                     if (!name) { showToast('error', 'Required', 'Please enter your full name.'); return; }
                                                     if (!id) { showToast('error', 'Required', 'Please enter your student ID.'); return; }
                                                     if (!section) { showToast('error', 'Required', 'Please enter your section/group name.'); return; }
@@ -655,17 +685,10 @@
                                                     if (!topic) { showToast('error', 'Required', 'Please enter a consultation topic.'); return; }
                                                     // Also carry the selected date so the back-URL can restore it
                                                     const params = new URLSearchParams(window.location.search);
-                                                    const dateVal = params.get('date') || '';
-                                                    let dateInput = document.getElementById('selectedDateInput');
-                                                    if (!dateInput) {
-                                                        dateInput = document.createElement('input');
-                                                        dateInput.type = 'hidden';
-                                                        dateInput.name = 'selectedDate';
-                                                        dateInput.id = 'selectedDateInput';
-                                                        this.appendChild(dateInput);
-                                                    }
+                                                    const dateVal = params.get('date') || selectedDate || <%- JSON.stringify(selectedDate || '') %>;
+                                                    const dateInput = document.getElementById('selectedDateInput');
                                                     dateInput.value = dateVal;
 
-                                                    this.submit();
+                                                    HTMLFormElement.prototype.submit.call(this);
                                                 });
                                             </script>

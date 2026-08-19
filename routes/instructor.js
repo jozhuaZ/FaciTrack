@@ -758,7 +758,7 @@ router.post('/consultations/:id/approve', (req, res) => {
     const booking = sr.refStore && sr.refStore[refNumber];
     if (booking) {
         booking.status = 'confirmed';
-        sr.confirmSlot(booking.facultyId, booking.day, booking.slot);
+        sr.confirmSlot(booking.facultyId, booking.date, booking.slot);
         console.log(`[Instructor] Approved booking ${refNumber}`);
         // Send approval email
         if (sr.sendApprovalEmail) {
@@ -786,7 +786,7 @@ router.post('/consultations/:id/decline', (req, res) => {
     if (booking) {
         booking.status = 'declined';
         booking.declineReason = reason || '';
-        sr.releaseSlot(booking.facultyId, booking.day, booking.slot);
+        sr.releaseSlot(booking.facultyId, booking.date, booking.slot);
         console.log(`[Instructor] Declined booking ${refNumber}, reason: ${reason}`);
         // Send decline email
         if (sr.sendDeclineEmail) {
@@ -802,6 +802,66 @@ router.post('/consultations/:id/decline', (req, res) => {
         console.log(`[Instructor] Declined appointment ID: ${refNumber}, reason: ${reason}`);
     }
     res.json({ success: true, message: 'Appointment declined.' });
+});
+
+// Confirm all pending appointments for the current instructor
+router.post('/appointments/confirm-all', (req, res) => {
+    const sr = getStudentRouter();
+    if (!sr || !sr.refStore) {
+        return res.status(500).json({ success: false, error: 'Student booking store is unavailable.' });
+    }
+
+    const confirmed = [];
+    Object.entries(sr.refStore).forEach(([refNumber, booking]) => {
+        if (booking.facultyId !== 1) return;
+        if (booking.status !== 'pending') return;
+
+        booking.status = 'confirmed';
+        if (typeof sr.confirmSlot === 'function') {
+            sr.confirmSlot(booking.facultyId, booking.date, booking.slot);
+        }
+        confirmed.push(refNumber);
+    });
+
+    res.json({
+        success: true,
+        confirmedCount: confirmed.length,
+        message: confirmed.length ? `Confirmed ${confirmed.length} pending appointment(s).` : 'No pending appointments to confirm.'
+    });
+});
+
+// Confirm all pending appointments on a specific date for the current instructor
+router.post('/appointments/confirm-by-date', (req, res) => {
+    const { date } = req.body || {};
+    const dateKey = normalizeDateKey(date);
+    if (!dateKey) {
+        return res.status(400).json({ success: false, error: 'Please provide a valid date in YYYY-MM-DD format.' });
+    }
+
+    const sr = getStudentRouter();
+    if (!sr || !sr.refStore) {
+        return res.status(500).json({ success: false, error: 'Student booking store is unavailable.' });
+    }
+
+    const confirmed = [];
+    Object.entries(sr.refStore).forEach(([refNumber, booking]) => {
+        if (booking.facultyId !== 1) return;
+        if (booking.status !== 'pending') return;
+        if (normalizeDateKey(booking.date) !== dateKey) return;
+
+        booking.status = 'confirmed';
+        if (typeof sr.confirmSlot === 'function') {
+            sr.confirmSlot(booking.facultyId, booking.date, booking.slot);
+        }
+        confirmed.push(refNumber);
+    });
+
+    res.json({
+        success: true,
+        date,
+        confirmedCount: confirmed.length,
+        message: confirmed.length ? `Confirmed ${confirmed.length} pending appointment(s) on ${dateKey}.` : `No pending appointments found on ${dateKey}.`
+    });
 });
 
 // ── Make-Up Class Request routes ──
@@ -1206,7 +1266,7 @@ async function cancelBookingsForBlock(instructorId, block, dateKeys, reason) {
         };
 
         if (booking.day && booking.slot) {
-            sr.releaseSlot(booking.facultyId, booking.day, booking.slot);
+            sr.releaseSlot(booking.facultyId, booking.date, booking.slot);
         }
 
         cancelled.push({
@@ -1313,8 +1373,11 @@ router.post('/unavailability/set', async (req, res) => {
 
     console.log(`[Unavailability] Set ${startKey}${startKey !== endKey ? ` to ${endKey}` : ''} – reason: "${sanitisedReason}" – cancelled: ${cancelled.length} booking(s)`);
 
+    const dateKey = affectedDates.length === 1 ? affectedDates[0] : startKey;
     res.json({
         success: true,
+        dateKey,
+        date: dateKey,
         startDate: startKey,
         endDate: endKey,
         type,

@@ -3,6 +3,17 @@ const UserModel = require('../models/UserModel');
 
 const AuthController = {
 
+    renderLandingPage(req, res) {
+        if (req.session.userId) {
+            return AuthController.redirectByRole(res, req.session.role);
+        }
+
+        res.render('pages/index', {
+            title: 'FaciTrack - Faculty Appointment & Monitoring System',
+            error: null,
+        });
+    },
+
     renderLogin(req, res) {
         const errorMessages = {
             'oauth_not_configured': 'Google Sign-In is not configured. Please use email/password login.',
@@ -18,7 +29,7 @@ const AuthController = {
         if (req.session.userId) {
             return AuthController.redirectByRole(res, req.session.role);
         }
-        res.render('pages/index', {
+        res.render('pages/login', {
             title: 'FaciTrack - Faculty Appointment & Monitoring System',
             error: errorMessage,
         });
@@ -30,7 +41,7 @@ const AuthController = {
 
             // Basic validation
             if (!email || !password) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Email and password are required.',
                 });
@@ -39,7 +50,7 @@ const AuthController = {
             // Find user
             const user = await UserModel.getUserByEmail(email);
             if (!user) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Invalid email or password.',
                 });
@@ -47,7 +58,7 @@ const AuthController = {
 
             // Check if account is active
             if (user.status !== 'Active') {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Your account is inactive. Please contact the administrator.',
                 });
@@ -56,7 +67,7 @@ const AuthController = {
             // Verify password
             const match = await bcrypt.compare(password, user.hashed_password);
             if (!match) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Invalid email or password.',
                 });

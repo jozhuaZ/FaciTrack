@@ -112,6 +112,21 @@
     opacity: 1;
 }
 
+/* Keep the CSPC logo readable on every student route. */
+.cspc-logo-avatar {
+    background: #ffffff !important;
+    border: 2px solid var(--gray-200);
+    overflow: hidden;
+    padding: 2px;
+}
+
+.cspc-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
 .avatar-img {
     width: 100%;
     height: 100%;

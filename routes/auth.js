@@ -3,7 +3,7 @@ const router = express.Router();
 const AuthController = require('../controllers/AuthController');
 const passport = require('passport');
 
-router.get('/', AuthController.renderLogin);
+router.get('/', AuthController.renderLandingPage);
 router.get('/login', AuthController.renderLogin);
 router.post('/login', AuthController.login);
 router.get('/logout', AuthController.logout);

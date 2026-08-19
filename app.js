@@ -10,6 +10,7 @@ const passport = require('./configs/passport');
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+const sessionSecret = process.env.SESSION_SECRET || 'facitrack_session_secret_key_2026';
 ensureSeedUsers(); // remove soon
 
 // Set EJS as templating engine
@@ -24,6 +25,16 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Middleware: Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
+
+app.use(session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 8
+    },
+}));
 app.use(authContext);
 
 // Security: Basic headers
@@ -40,23 +51,14 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: false,
-        maxAge: 1000 * 60 * 60 * 8
-    },
-}));
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes 
 // app.use('/', require('./routes/index'));
 app.use('/', require('./routes/auth'));
-app.use('/student', requireRole('Student'), require('./routes/student'));
-app.use('/instructor', requireRole('Instructor'), require('./routes/instructor'));
+app.use('/student', requireRole('student'), require('./routes/student'));
+app.use('/instructor', requireRole('instructor'), require('./routes/instructor'));
 app.use('/export', require('./routes/export'));
 app.use('/dean', require('./routes/dean'));
 app.use('/admin', require('./routes/admin'));

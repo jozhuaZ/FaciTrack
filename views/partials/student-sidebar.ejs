@@ -1,3 +1,4 @@
+<% const sideStudent = typeof student !== 'undefined' && student ? student : { firstName: 'Student', email: '' }; %>
 <aside class="student-sidebar">
     <div class="sidebar-header">
         <div class="student-profile-mini">
@@ -5,8 +6,8 @@
                 <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Camarines_Sur_Polytechnic_Colleges_Logo.png" alt="CSPC Logo" class="cspc-logo-img">
             </div>
             <div class="profile-info-mini">
-                <h3 class="profile-name-mini">Welcome <%= student.firstName %>!</h3>
-                <p class="profile-role-mini"><%= student.email %></p>
+                <h3 class="profile-name-mini">Welcome <%= sideStudent.firstName || 'Student' %>!</h3>
+                <p class="profile-role-mini"><%= sideStudent.email || '' %></p>
             </div>
         </div>
         <!-- Mobile hamburger toggle -->
@@ -31,9 +32,6 @@
                 <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
             <span>My Appointments</span>
-            <% if (typeof appointmentCount !== 'undefined' && appointmentCount > 0) { %>
-            <span class="nav-badge"><%= appointmentCount %></span>
-            <% } %>
         </a>
         <a href="/student/availability" class="nav-item <%= activePage === 'availability' ? 'active' : '' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

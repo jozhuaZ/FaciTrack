@@ -15,6 +15,14 @@
                     <p class="page-subtitle">Review and respond to student appointment requests</p>
                 </div>
                 <div class="header-actions">
+                    <button class="btn-header-action" id="setUnavailableBtn" type="button" style="color:#b91c1c;border-color:#fecaca;background:#fff7f7;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+                        Set Unavailable Date
+                    </button>
+                    <button class="btn-header-action" id="confirmAllBtn" type="button" style="background:#0a3d62;color:#fff;border-color:#0a3d62;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Confirm All
+                    </button>
                     <button class="btn-header-action" id="genLogsBtn">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                         Generate Logs
@@ -192,6 +200,20 @@
 <!-- Toast container -->
 <div class="toast-container" id="aptToastContainer"></div>
 
+<div class="modal-overlay" id="instructorActionsModal">
+    <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+            <h3 class="modal-title" id="instructorActionsTitle">Instructor Action</h3>
+            <button class="modal-close" type="button" id="instructorActionsClose">&times;</button>
+        </div>
+        <div class="modal-body" id="instructorActionsBody"></div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" type="button" id="instructorActionsCancel">Cancel</button>
+            <button class="btn-modal btn-confirm" type="button" id="instructorActionsSubmit">Continue</button>
+        </div>
+    </div>
+</div>
+
 <!-- Generate Logs Modal -->
 <div class="modal-overlay" id="genLogsModal">
     <div class="modal-content" style="max-width:600px;">
@@ -318,6 +340,82 @@ window.APT_DATA = <%- JSON.stringify(appointments) %>;
         document.body.appendChild(a); a.click();
         document.body.removeChild(a); URL.revokeObjectURL(url);
         closeModal();
+    });
+}());
+</script>
+
+<script>
+(function () {
+    var modal = document.getElementById('instructorActionsModal');
+    var title = document.getElementById('instructorActionsTitle');
+    var body = document.getElementById('instructorActionsBody');
+    var submit = document.getElementById('instructorActionsSubmit');
+    var close = function () { modal.classList.remove('show'); };
+    var showError = function (message) {
+        var existing = document.getElementById('instructorActionError');
+        if (!existing) {
+            existing = document.createElement('p');
+            existing.id = 'instructorActionError';
+            existing.style.cssText = 'margin:.75rem 0 0;color:#b91c1c;font-size:.8rem;';
+            body.appendChild(existing);
+        }
+        existing.textContent = message;
+    };
+    var open = function (heading, content, action, label) {
+        title.textContent = heading;
+        body.innerHTML = content;
+        submit.textContent = label;
+        submit.onclick = action;
+        modal.classList.add('show');
+    };
+    document.getElementById('instructorActionsClose').addEventListener('click', close);
+    document.getElementById('instructorActionsCancel').addEventListener('click', close);
+    modal.addEventListener('click', function (event) { if (event.target === modal) close(); });
+
+    document.getElementById('setUnavailableBtn').addEventListener('click', function () {
+        open('Set Unavailable Date',
+            '<label class="modal-label" for="actionDate">Date</label><input class="modal-textarea" type="date" id="actionDate" required>' +
+            '<label class="modal-label" for="actionReason" style="display:block;margin-top:.75rem;">Reason (optional)</label><textarea class="modal-textarea" id="actionReason" rows="3" maxlength="300" placeholder="e.g. Leave, meeting"></textarea>',
+            function () {
+                var date = document.getElementById('actionDate').value;
+                var reason = document.getElementById('actionReason').value.trim();
+                if (!date) return;
+                submit.disabled = true;
+                fetch('/instructor/unavailability/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: date, reason: reason }) })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (!data.success) throw new Error(data.error || 'Unable to set unavailable date.');
+                        close();
+                        window.location.reload();
+                    })
+                    .catch(function (error) { showError(error.message); })
+                    .finally(function () { submit.disabled = false; });
+            }, 'Set Unavailable');
+    });
+
+    document.getElementById('confirmAllBtn').addEventListener('click', function () {
+        open('Confirm Appointments',
+            '<button type="button" class="btn-header-action" id="confirmEveryPending" style="width:100%;justify-content:flex-start;margin-bottom:.65rem;">Confirm all pending appointments</button>' +
+            '<label class="modal-label" for="confirmDate">Confirm pending appointments by date</label><input class="modal-textarea" type="date" id="confirmDate">',
+            function () {
+                var date = document.getElementById('confirmDate').value;
+                var endpoint = date ? '/instructor/appointments/confirm-by-date' : '/instructor/appointments/confirm-all';
+                var payload = date ? { date: date } : {};
+                submit.disabled = true;
+                fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (!data.success) throw new Error(data.error || 'Unable to confirm appointments.');
+                        close();
+                        window.location.reload();
+                    })
+                    .catch(function (error) { showError(error.message); })
+                    .finally(function () { submit.disabled = false; });
+            }, 'Confirm');
+        setTimeout(function () {
+            var allButton = document.getElementById('confirmEveryPending');
+            if (allButton) allButton.addEventListener('click', function () { document.getElementById('confirmDate').value = ''; submit.click(); });
+        }, 0);
     });
 }());
 </script>

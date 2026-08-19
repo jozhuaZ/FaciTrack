@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js",
+    "dev": "nodemon --watch app.js --watch routes --watch services --watch middleware --watch models --watch configs --watch views --watch public --ignore data --ext js,ejs,json app.js"
   },
   "keywords": [],
   "author": "",

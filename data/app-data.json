@@ -6,8 +6,8 @@
       "email": "admin@cspc.edu.ph",
       "role": "admin",
       "status": "active",
-      "passwordHash": "03320bffd5423421954edbfd567e2bac:8fb9fe91415bb76d9a923cf7b9592e895f0e2e71d72d174cfe12d89343b190e702e9533d3c7876c9450e59cd044cfffe45bfd0eee44768f906d8d8f5ae764e6e",
-      "createdAt": "2026-05-08T08:39:21.043Z"
+      "passwordHash": "f990ffc2ec967cd0f407aebda329057d:afebfbb45c765615d4feb23702dceb1d23abb5643ebfae7565cccce59ef4b798968ecd3d1b7f7c5a50e3ad5f1cb85148d82defd3447f8b0d5011f93b8cd50c97",
+      "createdAt": "2026-08-17T21:28:53.202Z"
     },
     {
       "id": 2,
@@ -15,8 +15,8 @@
       "email": "dean@cspc.edu.ph",
       "role": "dean",
       "status": "active",
-      "passwordHash": "0f2e82bc1aa32fc07ccc24e10f7c71a2:c77faf9e62416ba4cabb76cbc6bcec68a8e2b938b3c34ad9a709c5070d7a65d6855d3344a1179ad11a47a87fc01658d3ae9cb377211e28c215e64da51e35f571",
-      "createdAt": "2026-05-08T08:39:21.114Z"
+      "passwordHash": "9257f80156fb5d51c2de224c91acdc0a:7237cc86597a9c72a431e460df18f4ffd96628b9fcf6ee7c4bd961a3e5205898d6e91599c0dbaad55e331f0c60de1916700b12172440a6623d473ada5220f3c4",
+      "createdAt": "2026-08-17T21:28:53.771Z"
     },
     {
       "id": 3,
@@ -24,8 +24,8 @@
       "email": "maria.santos@cspc.edu.ph",
       "role": "instructor",
       "status": "active",
-      "passwordHash": "feae79eaffd64b699778d724f66b82fe:1a5ba6b0aabbd74a5eb9af40d159f5e81d0726a1ff0736d3ccb2036f8545431d9822e3d06b69db3096217c185653beb60ec0a765b7f2360c730dc0dce02aa652",
-      "createdAt": "2026-05-08T08:39:21.180Z"
+      "passwordHash": "cf045d72eb7879032d1c7b365dc441e6:decc0e0db524877d2239b0e99a2e709c628f85ad3336acc298030694396a4242c9afefc262dd0dab67d19fa2999d3af36732571d94723d81a20a3a8eab29fea7",
+      "createdAt": "2026-08-17T21:28:53.817Z"
     },
     {
       "id": 4,
@@ -33,8 +33,8 @@
       "email": "instructor@cspc.edu.ph",
       "role": "instructor",
       "status": "active",
-      "passwordHash": "520e81e6249c42719d9559451e3644c4:bff24310153845186f8bbc043df3a096a5933c0caf7b67dffcd38fbe1b6bdce0c26dbd19974843915d7262bab850eda2b60bcd03081cc3e44df67536093baf31",
-      "createdAt": "2026-05-08T08:39:21.246Z"
+      "passwordHash": "aa4cd66bf4a052b0560fe9c188f6d699:6f46e62720b27d3312a21660bf56c9daab6d507460b9bd8d9bb0261b690fff6896c2da8f18c82a548200f0b85624ad988df7df8f9e2689a22506842997e3639a",
+      "createdAt": "2026-08-17T21:28:53.860Z"
     },
     {
       "id": 5,
@@ -42,8 +42,8 @@
       "email": "superadmin@cspc.edu.ph",
       "role": "superadmin",
       "status": "active",
-      "passwordHash": "1d076298bb1d75aa44eb85dcbc42e1dd:c3c80f44c9567de995480adfde30d8c4ea93175eb6d2f96f764b11629c2feadb485c51b85c0270a72cd8d0e20803152a4c221af0a4e46a088afead3f8816a520",
-      "createdAt": "2026-05-08T08:39:21.311Z"
+      "passwordHash": "fae49420ed86fbb94b011c62540dd1bd:895e9be6a6e374455ec54ced2daf6c19f1ea0eabe0f766be0c5ae9048ed0e62c8f780d9123db405caf3fc59d715561523383e939e9e7305ba560e2a68def8ad7",
+      "createdAt": "2026-08-17T21:28:53.911Z"
     },
     {
       "id": 6,
@@ -51,20 +51,10 @@
       "email": "student@my.cspc.edu.ph",
       "role": "student",
       "status": "active",
-      "studentNo": "2021-00001",
-      "passwordHash": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-      "createdAt": "2026-06-17T08:00:00.000Z"
+      "passwordHash": "d8e720a7f6b18fe7c2156aa7e937d01a:4103cac7d3aa0dbd10829d5d63ba5382d7fa8ff80bf69571d4753b22f2b08fe2b9e3f886f7a93488c2c61a1b4a67fab20430674d9130b99a2874c6f4d55592bf",
+      "createdAt": "2026-08-17T21:28:53.956Z",
+      "studentNo": "2021-00001"
     }
   ],
-  "sessions": [
-    {
-      "token": "e2dbcf395132e6ecb3d91e16f572b4e25f03b7366f9dbd72795193638872dac3",
-      "userId": 4,
-      "role": "instructor",
-      "createdAt": 1782306368754,
-      "expiresAt": 1782349568754,
-      "ip": "::1",
-      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-    }
-  ]
+  "sessions": []
 }
