@@ -514,7 +514,7 @@
                                         </svg>
                                         Submit Appointment Request
                                     </button>
-                                    <a href="/student/faculty/<%= faculty.id %>" class="btn-cancel-book">Cancel</a>
+                                    <a href="#" class="btn-cancel-book" id="btnCancel">Cancel</a>
                                 </div>
 
                                 <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.75rem;">
@@ -571,7 +571,7 @@
 
                                                     // 5-minute countdown timer display
                                                     if (token && slot) {
-                                                        const HOLD_MS = 5 * 60 * 1000;
+                                                        const HOLD_MS = <%- typeof reservationExpiresIn !== 'undefined' ? reservationExpiresIn : (5 * 60 * 1000) %>;
                                                         const startedAt = Date.now();
                                                         const timerEl = document.createElement('p');
                                                         timerEl.style.cssText = 'font-size:.75rem;color:#b45309;margin-top:.375rem;display:flex;align-items:center;gap:.25rem;';
@@ -646,7 +646,7 @@
                                                     const email = document.getElementById('studentEmail').value.trim();
                                                     const topic = document.getElementById('consultTopic').value.trim();
 
-                                                    if (!slot) { showToast('error', 'No Slot Selected', 'Please go back and select a consultation time slot.'); return; }
+                                                    if (!slot) { window.location.href = '/student/faculty/<%= faculty.id %>?needslot=1'; return; }
                                                     if (!name) { showToast('error', 'Required', 'Please enter your full name.'); return; }
                                                     if (!id) { showToast('error', 'Required', 'Please enter your student ID.'); return; }
                                                     if (!section) { showToast('error', 'Required', 'Please enter your section/group name.'); return; }
@@ -667,5 +667,21 @@
                                                     dateInput.value = dateVal;
 
                                                     this.submit();
+                                                });
+
+                                                // ── Cancel button: release reservation then navigate back ──
+                                                document.getElementById('btnCancel').addEventListener('click', async function(e) {
+                                                    e.preventDefault();
+                                                    const token = document.getElementById('reservationTokenInput').value;
+                                                    if (token) {
+                                                        try {
+                                                            await fetch('/student/slot/release', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ token })
+                                                            });
+                                                        } catch (err) { /* ignore — slot will expire on its own */ }
+                                                    }
+                                                    window.location.href = '/student/faculty/<%= faculty.id %>';
                                                 });
                                             </script>
