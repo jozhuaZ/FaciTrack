@@ -534,6 +534,16 @@ router.get('/faculty/:id/book', (req, res) => {
     
     // Get logged-in student info
     const student = req.currentUser;
+
+    // Compute how many milliseconds remain on the reservation so the
+    // countdown timer in book.ejs continues from where it left off on the
+    // profile page, rather than restarting at 5:00.
+    const token = req.query.token || null;
+    let reservationExpiresIn = 5 * 60 * 1000; // default (full 5 min)
+    if (token && slotReservations[token]) {
+        const remaining = slotReservations[token].expiresAt - Date.now();
+        reservationExpiresIn = Math.max(0, remaining);
+    }
     
     res.render('pages/student/book', {
         title: `FaciTrack - Book Appointment with ${faculty.name}`,
@@ -541,7 +551,8 @@ router.get('/faculty/:id/book', (req, res) => {
         student,
         selectedSlot: req.query.slot || null,
         selectedDate: req.query.date || null,
-        reservationToken: req.query.token || null
+        reservationToken: token,
+        reservationExpiresIn
     });
 });
 

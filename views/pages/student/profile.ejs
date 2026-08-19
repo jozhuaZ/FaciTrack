@@ -75,6 +75,26 @@
 .btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
 .btn-book-slot:hover { background:var(--primary-dark); }
 .btn-book-slot.disabled { background:var(--gray-300); cursor:not-allowed; pointer-events:none; }
+/* Reserved slot — visually locked for the 5-minute hold */
+.slot-select-btn.reserved {
+    border: 2.5px solid #16a34a !important;
+    background: linear-gradient(135deg, rgba(22,163,74,.18) 0%, rgba(34,197,94,.10) 100%) !important;
+    box-shadow: inset 0 1px 4px rgba(22,163,74,.15), 0 2px 8px rgba(22,163,74,.20);
+    font-weight: 700;
+    color: #14532d !important;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+.slot-select-btn.reserved .slot-avail-tag {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #86efac;
+    font-weight: 700;
+}
+.slot-select-btn.reserved .slot-num-badge {
+    background: #16a34a;
+    color: #fff;
+}
 </style>
 
 <div class="instructor-layout">
@@ -278,6 +298,25 @@ viewMonth = today.getMonth();
 let selectedSlotText = null;
 let selectedDate = null;
 
+// Returns true if every sub-slot for the given day name has already ended
+// based on the current time. Used to gray out today when all its slots are past.
+function areAllSlotsPassed(dayName) {
+    const daySlotObjs = availableByDay[dayName];
+    if (!daySlotObjs || !daySlotObjs.length) return true;
+    const nowMins = today.getHours() * 60 + today.getMinutes();
+    for (const s of daySlotObjs) {
+        const subSlots = chopSlot(s);
+        for (const timeStr of subSlots) {
+            // Parse end time of this sub-slot (the part after " – ")
+            const parts = timeStr.split('–').map(p => p.trim());
+            const endStr = parts[1] || parts[0];
+            const endMins = parseTime(endStr);
+            if (endMins > nowMins) return false; // at least one sub-slot is still upcoming
+        }
+    }
+    return true; // every sub-slot has ended
+}
+
 function renderCalendar() {
     document.getElementById('calMonthLabel').textContent = monthNames[viewMonth] + ' ' + viewYear;
     const grid = document.getElementById('calGrid');
@@ -331,6 +370,15 @@ function renderCalendar() {
         }
 
         if (availableByDay[dayName]) {
+            // If this is today and all its sub-slots have already passed,
+            // treat it as a past/unavailable day — gray it out.
+            const isThisDayToday = (d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear());
+            if (isThisDayToday && areAllSlotsPassed(dayName)) {
+                cell.classList.add('past');
+                grid.appendChild(cell);
+                continue;
+            }
+
             cell.classList.add('available');
             // Tooltip: show generic availability message (schedule times are private)
             const daySlots = availableByDay[dayName];
@@ -391,7 +439,16 @@ let reservationToken = null;
 let reservationTimer = null;
 const RESERVATION_MS = 5 * 60 * 1000;
 
+// Guard: prevents double-click / rapid-click from firing two reserve requests simultaneously
+let isReservingSlot = false;
+
 function clearReservation() {
+    // If we are intentionally navigating to the booking form, do NOT release the token.
+    // The sessionStorage flag is set by the "Book Appointment" click handler.
+    if (sessionStorage.getItem('navigatingToBook') === '1') {
+        sessionStorage.removeItem('navigatingToBook');
+        return;
+    }
     if (reservationToken) {
         navigator.sendBeacon('/student/slot/release', JSON.stringify({ token: reservationToken }));
         reservationToken = null;
@@ -399,7 +456,7 @@ function clearReservation() {
     if (reservationTimer) { clearTimeout(reservationTimer); reservationTimer = null; }
 }
 
-// Release reservation when leaving the page
+// Release reservation when leaving the page (e.g. close tab, navigate away)
 window.addEventListener('beforeunload', clearReservation);
 window.addEventListener('pagehide',     clearReservation);
 
@@ -417,7 +474,7 @@ function showSlotDetail(dayName, dayNum, daySlots) {
     let slotIndex = 0;
     daySlots.forEach(s => {
         const subSlots = chopSlot(s);
-        subSlots.forEach((timeStr, subIdx) => {
+        subSlots.forEach((timeStr) => {
             slotIndex++;
             const isTaken = takenForDay.includes(timeStr.trim());
             const btn = document.createElement('button');
@@ -428,11 +485,25 @@ function showSlotDetail(dayName, dayNum, daySlots) {
                 <span style="flex:1;">${timeStr}</span>
                 <span class="slot-avail-tag${isTaken ? ' full' : ''}">${isTaken ? 'Not Available' : 'Available'}</span>`;
             if (!isTaken) {
-                btn.addEventListener('click', async function() {
-                    // Clear any previous reservation
-                    clearReservation();
+                btn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                    // Mark button as loading
+                    // ── Double-click / rapid-click protection ──
+                    // If a reservation request is already in flight, ignore this click.
+                    if (isReservingSlot) return;
+
+                    // If this slot is already the one reserved (locked), ignore the click.
+                    if (btn.classList.contains('reserved')) return;
+
+                    isReservingSlot = true;
+
+                    // Release any previously held reservation before reserving a new slot
+                    if (reservationToken) {
+                        clearReservation();
+                    }
+
+                    // Mark button as loading while we wait for the server
                     btn.disabled = true;
                     const tag = btn.querySelector('.slot-avail-tag');
                     if (tag) tag.textContent = 'Checking...';
@@ -446,46 +517,95 @@ function showSlotDetail(dayName, dayNum, daySlots) {
                         const data = await resp.json();
 
                         if (!data.available) {
-                            // Slot taken or reserved by someone else
+                            // Slot taken or reserved by someone else — mark it unavailable
                             btn.classList.add('full');
-                            if (tag) tag.textContent = 'Not Available';
+                            btn.disabled = true;
+                            if (tag) { tag.textContent = 'Not Available'; tag.classList.add('full'); }
                             if (!takenForDay.includes(timeStr.trim())) takenForDay.push(timeStr.trim());
                             selectedSlotText = null;
                             updateBookButton();
+                            isReservingSlot = false;
                             return;
                         }
 
-                        // Reserved successfully
+                        // ── Reserved successfully ──
                         reservationToken = data.token;
-                        btn.disabled = false;
-                        if (tag) tag.textContent = 'Reserved (5 min)';
 
-                        container.querySelectorAll('.slot-select-btn').forEach(b => b.classList.remove('selected'));
-                        btn.classList.add('selected');
+                        // Remove reserved state from any previously reserved button
+                        container.querySelectorAll('.slot-select-btn').forEach(b => {
+                            b.classList.remove('selected', 'reserved');
+                            // Re-enable other available (non-full) buttons
+                            if (!b.classList.contains('full')) b.disabled = false;
+                        });
+
+                        // Lock this button visually as reserved
+                        btn.classList.add('selected', 'reserved');
+                        btn.disabled = true; // pointer-events:none via CSS, disabled as extra guard
+                        if (tag) { tag.textContent = 'Reserved (5 min)'; tag.classList.remove('full'); }
+
                         selectedSlotText = timeStr;
                         updateBookButton();
 
-                        // Auto-release after 5 minutes → redirect back to profile
+                        // Show / reset the countdown display
+                        showSlotCountdown(RESERVATION_MS);
+
+                        // Auto-release after 5 minutes → redirect back to profile with expired flag
+                        if (reservationTimer) clearTimeout(reservationTimer);
                         reservationTimer = setTimeout(() => {
-                            clearReservation();
+                            reservationToken = null;
                             selectedSlotText = null;
                             updateBookButton();
-                            // Redirect back to profile with expired flag
                             window.location.href = `/student/faculty/${facultyId}?expired=1`;
                         }, RESERVATION_MS);
 
                     } catch (err) {
-                            btn.disabled = false;
-                            if (tag) tag.textContent = 'Available';
-                            console.error('Reservation error:', err);
-                        }
-                    });
-                }
-                container.appendChild(btn);
-            });
+                        // Network error — restore the button so the student can retry
+                        btn.disabled = false;
+                        if (tag) tag.textContent = 'Available';
+                        console.error('Reservation error:', err);
+                    } finally {
+                        isReservingSlot = false;
+                    }
+                });
+            }
+            container.appendChild(btn);
         });
+    });
 
     panel.classList.add('show');
+}
+
+// ── Slot countdown display (below the slot panel) ──
+let _countdownInterval = null;
+function showSlotCountdown(durationMs) {
+    let display = document.getElementById('slotCountdownDisplay');
+    if (!display) {
+        display = document.createElement('div');
+        display.id = 'slotCountdownDisplay';
+        display.style.cssText = [
+            'margin-top:.5rem', 'padding:.5rem .875rem',
+            'background:#fffbeb', 'border:1px solid #fcd34d',
+            'border-radius:6px', 'font-size:.8125rem',
+            'color:#92400e', 'font-weight:600', 'text-align:center'
+        ].join(';');
+        const panel = document.getElementById('slotDetailPanel');
+        if (panel && panel.parentNode) panel.parentNode.insertBefore(display, panel.nextSibling);
+    }
+    display.style.display = 'block';
+    if (_countdownInterval) clearInterval(_countdownInterval);
+    const startedAt = Date.now();
+    function tick() {
+        const remaining = Math.max(0, durationMs - (Date.now() - startedAt));
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        display.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
+        if (remaining <= 0) {
+            clearInterval(_countdownInterval);
+            display.style.display = 'none';
+        }
+    }
+    tick();
+    _countdownInterval = setInterval(tick, 1000);
 }
 
 function updateBookButton() {
@@ -494,11 +614,19 @@ function updateBookButton() {
     if (!btn) return;
     if (selectedSlotText && selectedDate && reservationToken) {
         btn.classList.remove('disabled');
-        btn.href = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}`;
+        const bookUrl = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}`;
+        btn.href = bookUrl;
+        btn.onclick = function(e) {
+            if (btn.classList.contains('disabled')) { e.preventDefault(); return; }
+            // Set flag so clearReservation() in beforeunload does NOT release the token
+            sessionStorage.setItem('navigatingToBook', '1');
+            // Navigation proceeds naturally via href
+        };
         if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Slot selected: <strong>${selectedSlotText}</strong> — <span style="color:#b45309;">5 min hold</span>`;
     } else {
         btn.classList.add('disabled');
         btn.href = '#';
+        btn.onclick = null;
         if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Click a highlighted date, then select a time slot to continue`;
     }
 }
@@ -580,6 +708,28 @@ function hideTooltip() {
             const okBtn = document.getElementById('expiredOkBtn');
             if (okBtn) okBtn.addEventListener('click', resetAndClose);
         }
+    }
+
+    // Show gentle notice when redirected back because no slot was selected
+    if (params.get('needslot') === '1') {
+        window.history.replaceState({}, '', window.location.pathname);
+        const notice = document.createElement('div');
+        notice.id = 'needSlotNotice';
+        notice.style.cssText = [
+            'position:fixed', 'top:1rem', 'left:50%', 'transform:translateX(-50%)',
+            'z-index:1100', 'background:#fff', 'border:1.5px solid #fcd34d',
+            'border-radius:8px', 'padding:.625rem 1.25rem', 'box-shadow:0 4px 16px rgba(0,0,0,.12)',
+            'display:flex', 'align-items:center', 'gap:.5rem',
+            'font-size:.8125rem', 'font-weight:600', 'color:#92400e',
+            'max-width:calc(100% - 2rem)', 'white-space:nowrap'
+        ].join(';');
+        notice.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Please select a time slot to continue booking.';
+        document.body.appendChild(notice);
+        setTimeout(() => {
+            notice.style.transition = 'opacity .4s';
+            notice.style.opacity = '0';
+            setTimeout(() => notice.remove(), 400);
+        }, 4000);
     }
 })();
 

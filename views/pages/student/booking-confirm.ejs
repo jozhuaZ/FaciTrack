@@ -1,6 +1,26 @@
-<%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaciTrack - Booking Confirmed</title>
+  <link rel="icon" href="/images/FaciTrack-logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
+  <link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
+<style>/* ── Scoped overrides: lock to viewport, no scroll ── */
+html:has(.login-main.confirm-page),
+body:has(.login-main.confirm-page) {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+body:has(.login-main.confirm-page) {
+    margin: 0;
+    padding: 0;
+}
+
 .email-highlight { font-weight:700; color:var(--primary-blue); word-break:break-all; }
 .ref-input-wrap { position:relative; }
 .ref-input {
@@ -28,9 +48,27 @@
     font-family:var(--font-body); text-decoration:none; text-align:center; box-sizing:border-box;
 }
 .back-outline:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
-</style>
 
-<main class="login-main">
+@media (max-width: 480px) {
+    .login-main.confirm-page .login-container {
+        padding: 1rem 0.75rem 1.5rem;
+    }
+    .login-main.confirm-page .login-card {
+        padding: 1.25rem 1rem;
+        max-width: 100%;
+    }
+    .ref-input {
+        font-size: 1rem;
+    }
+    .email-highlight {
+        word-break: break-all;
+    }
+}
+</style>
+</head>
+<body>
+
+<main class="login-main confirm-page">
     <div class="login-container">
         <div class="login-card">
 
@@ -43,11 +81,6 @@
 
             <div class="login-header">
                 <h1 class="login-title">Check Your Email</h1>
-                <p class="login-description">
-                    Your booking was received. A reference number has been sent to
-                    <span class="email-highlight"><%= email %></span>.
-                    Enter it below to confirm your appointment.
-                </p>
             </div>
 
             <% if (typeof error !== 'undefined' && error) { %>
@@ -63,7 +96,7 @@
                     <div class="ref-input-wrap">
                         <input type="text" class="ref-input" id="refInput" placeholder="e.g. FT-AB3K9Z" maxlength="9" autocomplete="off" spellcheck="false">
                     </div>
-                    <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your inbox and spam folder</small>
+                    <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your CSPC mail account</small>
                 </div>
 
                 <button class="btn-verify" id="verifyBtn" disabled>
@@ -77,10 +110,10 @@
                 Go back to booking form
             </a>
 
-            <div class="login-footer">
-                <div class="info-box">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    <p>For testing, your reference number is: <strong><%= refNumber %></strong></p>
+            <div class="login-footer" style="margin-top:.75rem;width:100%;">
+                <div class="info-box" style="padding:.5rem .75rem;font-size:.72rem;opacity:.8;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <p style="font-size:.72rem;margin:0;">For testing: <strong style="font-family:monospace;letter-spacing:.05em;"><%= refNumber %></strong></p>
                 </div>
             </div>
 
@@ -88,7 +121,6 @@
     </div>
 </main>
 
-<%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 <script>
 var CORRECT_REF = <%- JSON.stringify(refNumber) %>;
@@ -149,3 +181,5 @@ verifyBtn.addEventListener('click', function() {
     window.location.href = '/student/appointments';
 });
 </script>
+</body>
+</html>
