@@ -1,7 +1,6 @@
 <%- include('../../partials/header') %>
 <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
 <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
-<<<<<<< HEAD
 <style>
 /* ── Consultation Calendar ── */
 .consult-calendar-wrap { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); overflow:hidden; }
@@ -80,8 +79,6 @@
 .btn-book-slot:hover { background:var(--primary-dark); }
 .btn-book-slot.disabled { background:var(--gray-300); cursor:not-allowed; pointer-events:none; }
 </style>
-=======
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 
 <div class="instructor-layout">
     <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
@@ -100,8 +97,8 @@
                         <span style="color:var(--gray-300);font-size:0.8125rem;">/</span>
                         <span style="font-size:0.8125rem;color:var(--gray-700);font-weight:600;">Faculty Profile</span>
                     </div>
-                    <h1 class="page-title"><%= faculty.last_name %>, <%= faculty.first_name %><%= faculty.middle_name ? ' ' + faculty.middle_name : '' %></h1>
-                    <p class="page-subtitle"><%= faculty.position %> — <%= faculty.department_name %></p>
+                    <h1 class="page-title"><%= faculty.name %></h1>
+                    <p class="page-subtitle"><%= faculty.position %> — <%= faculty.department %></p>
                 </div>
                 <div class="header-actions">
                 </div>
@@ -124,14 +121,14 @@
 
                     <!-- Faculty Info Sidebar -->
                     <aside class="prof-sidebar">
-                        <div class="sidebar-avatar"><%= (faculty.first_name?.[0] || '') + (faculty.last_name?.[0] || '') %></div>
-                        <h2 class="sidebar-name"><%= faculty.last_name %>, <%= faculty.first_name %><%= faculty.middle_name ? ' ' + faculty.middle_name : '' %></h2>
+                        <div class="sidebar-avatar"><%= faculty.name.split(' ').map(n => n[0]).join('') %></div>
+                        <h2 class="sidebar-name"><%= faculty.name %></h2>
                         <p class="sidebar-position"><%= faculty.position %></p>
                         <div class="sidebar-divider"></div>
                         <ul class="sidebar-meta">
                             <li>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                <span><%= faculty.department_name %></span>
+                                <span><%= faculty.department %></span>
                             </li>
                             <li>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M16 9v6"/><path d="M8 9v6"/><path d="M12 9v6"/></svg>
@@ -139,7 +136,7 @@
                             </li>
                             <li>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                <span><%= faculty.position %></span>
+                                <span><%= faculty.specialization %></span>
                             </li>
                             <li>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
@@ -149,7 +146,7 @@
                         <div class="sidebar-divider"></div>
                         <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);border:1px solid var(--gray-200);width:100%;">
                             <p style="font-size:0.75rem;color:var(--gray-500);margin-bottom:0.25rem;">Next Available</p>
-                            <p style="font-size:0.875rem;font-weight:600;color:var(--primary-blue);"><%= faculty.nextAvailable ?? 'No upcoming available slot' %></p>
+                            <p style="font-size:0.875rem;font-weight:600;color:var(--primary-blue);"><%= faculty.nextAvailable %></p>
                         </div>
                     </aside>
 
@@ -176,8 +173,8 @@
                         <!-- Floating tooltip rendered by JS -->
                         <div id="calTooltip"></div>
 
-                        <% const hasAnySlots = consultationSlots.some(g => g.subSlots.length > 0); %>
-                        <% const hasOpen = consultationSlots.some(g => g.subSlots.some(s => !s.isBooked && !s.isReservedByOther)); %>
+                        <% const hasAnySlots = faculty.consultationSlots.length > 0; %>
+                        <% const hasOpen = faculty.consultationSlots.some(s => s.status === 'open'); %>
 
                         <% if (!hasAnySlots) { %>
                         <div class="no-schedule-panel">
@@ -197,7 +194,7 @@
                         <div class="slots-card" style="margin-top:.75rem;">
                             <div class="book-action">
                                 <% if (faculty.manualStatus !== 'in-leave' && hasOpen) { %>
-                                <a href="#" id="btnBookAppointment" class="btn-book-slot disabled" style="display:none;">
+                                <a href="#" id="btnBookAppointment" class="btn-book-slot disabled">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                     Book Appointment
                                 </a>
@@ -210,6 +207,7 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                     <%= hasAnySlots ? 'No Available Slots' : 'No Consultation Schedule Yet' %>
                                 </span>
+                                <p class="book-note"><%= hasAnySlots ? `Next available: ${faculty.nextAvailable}` : 'Please check again once instructor posts schedule.' %></p>
                                 <% } %>
                             </div>
                         </div>
@@ -222,30 +220,17 @@
     </main>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
-
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 <script>
-const slots = <%- JSON.stringify(consultationSlots) %>; 
-const unavailableDates = new Set(<%- JSON.stringify(unavailableDates || []) %>);
-const facultyId = '<%= faculty.id %>';
+const slots = <%- JSON.stringify(faculty.consultationSlots) %>;
+const facultyId = <%= faculty.id %>;
+const takenSlots = <%- JSON.stringify(typeof takenSlots !== 'undefined' ? takenSlots : {}) %>;
 const WINDOW_START = new Date('<%- windowStart %>');
 const WINDOW_END   = new Date('<%- windowEnd %>');
 const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-<<<<<<< HEAD
-=======
-const availableByDate = {};
-slots.forEach(group => {
-    if (unavailableDates.has(group.date)) return;
-    const hasOpenSub = group.subSlots.some(s => !s.isBooked && !s.isReservedByOther);
-    if (!hasOpenSub) return;
-    availableByDate[group.date] = group;
-});
-
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 // Parse "2:00 PM" → minutes
 function parseTime(str) {
     const [time, period] = str.trim().split(' ');
@@ -262,7 +247,6 @@ function formatTime(mins) {
     return `${h}:${m.toString().padStart(2,'0')} ${p}`;
 }
 
-<<<<<<< HEAD
 function toDateKey(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -295,17 +279,6 @@ slots.forEach(s => {
     availableByDay[s.day].push(s);
 });
 
-=======
-function showToast(type, title, message) {
-    const c = document.getElementById('toastContainer');
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    t.innerHTML = `<div class="toast-content"><p class="toast-title">${title}</p><p class="toast-message">${message}</p></div>`;
-    c.appendChild(t);
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
-}
-
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 function chopSlot(slotObj) {
     const parts = (slotObj.time || '').split('–').map(s => s.trim());
     if (parts.length < 2) return [slotObj.time];
@@ -327,7 +300,6 @@ const today = new Date();
 viewYear = today.getFullYear();
 viewMonth = today.getMonth();
 
-let selectedSlotId = null;
 let selectedSlotText = null;
 let selectedDate = null;
 
@@ -361,13 +333,13 @@ function renderCalendar() {
         cell.textContent = d;
         cell.className = 'cal-cell';
 
-        const cellDateOnly = new Date(viewYear, viewMonth, d);
-        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const isPastOrToday = cellDateOnly <= todayOnly;
+        const isToday = (d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear());
+        if (isToday) cell.classList.add('today');
 
-        if (isPastOrToday) {
+        // Past days — dim and disable
+        const isPast = new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        if (isPast) {
             cell.classList.add('past');
-            if (cellDateOnly.getTime() === todayOnly.getTime()) cell.classList.add('today'); // keep the "today" ring styling
             grid.appendChild(cell);
             continue;
         }
@@ -383,7 +355,6 @@ function renderCalendar() {
             continue;
         }
 
-<<<<<<< HEAD
         const daySlots = availableByDay[dayName] || [];
         const dateTaken = takenSlots[toDateKey(cellDate)] || [];
         const hasAvailableSlot = daySlots.some(slot =>
@@ -395,31 +366,18 @@ function renderCalendar() {
         if (hasAvailableSlot) {
             cell.classList.add('available');
             // Tooltip: show generic availability message (schedule times are private)
-=======
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        const dateKey = `${y}-${m}-${dd}`;
-
-        if (unavailableDates.has(dateKey)) {
-            cell.classList.add('blocked');
-            cell.addEventListener('mouseenter', function() { showTooltip(this, 'Instructor unavailable this day'); });
-            cell.addEventListener('mouseleave', hideTooltip);
-            cell.addEventListener('mousemove', function(e) { positionTooltip(e.clientX, e.clientY); });
-            grid.appendChild(cell);
-            continue;
-        }
-
-        const dayGroup = availableByDate[dateKey]; 
-        if (dayGroup) {
-            cell.classList.add('available');
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
             const tooltipText = 'Available for consultation';
 
-            cell.addEventListener('mouseenter', function() { showTooltip(this, tooltipText); });
+            // Mouse hover (web)
+            cell.addEventListener('mouseenter', function(e) {
+                showTooltip(this, tooltipText);
+            });
             cell.addEventListener('mouseleave', hideTooltip);
-            cell.addEventListener('mousemove', function(e) { positionTooltip(e.clientX, e.clientY); });
+            cell.addEventListener('mousemove', function(e) {
+                positionTooltip(e.clientX, e.clientY);
+            });
 
+            // Touch hold (mobile) — show on touchstart, hide on touchend/move
             let touchTimer = null;
             cell.addEventListener('touchstart', function(e) {
                 touchTimer = setTimeout(() => {
@@ -436,29 +394,38 @@ function renderCalendar() {
                 document.querySelectorAll('.cal-cell.available').forEach(c => c.classList.remove('selected'));
                 this.classList.add('selected');
                 selectedDate = `${dayName}, ${monthNames[viewMonth]} ${d}, ${viewYear}`;
-                selectedSlotId = null;
                 selectedSlotText = null;
                 updateBookButton();
-                showSlotDetail(dayName, d, [dayGroup]);
+                showSlotDetail(dayName, d, daySlots);
+                // Auto-scroll to the slot panel
                 setTimeout(() => {
                     const panel = document.getElementById('slotDetailPanel');
                     if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 80);
             });
         }
+
+        grid.appendChild(cell);
+    }
+
+    const totalCells = firstDay + daysInMonth;
+    const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let i = 1; i <= remaining; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell other-month';
+        cell.textContent = i;
         grid.appendChild(cell);
     }
 }
 
 // ── Slot reservation state ──
-let reservedSlotId = null;
+let reservationToken = null;
 let reservationTimer = null;
 let reservationCountdown = null;
 let reservationExpiresAt = null;
 const RESERVATION_MS = 5 * 60 * 1000;
 
 function clearReservation() {
-<<<<<<< HEAD
     const isLeavingForBooking = sessionStorage.getItem('skipReservationRelease') === '1';
     if (isLeavingForBooking) {
         sessionStorage.removeItem('skipReservationRelease');
@@ -469,11 +436,6 @@ function clearReservation() {
         const payload = new Blob([JSON.stringify({ token: reservationToken })], { type: 'application/json' });
         navigator.sendBeacon('/student/slot/release', payload);
         reservationToken = null;
-=======
-    if (reservedSlotId) {
-        navigator.sendBeacon(`/student/schedule/reserve/${reservedSlotId}`, new Blob([], { type: 'application/json' }));
-        reservedSlotId = null;
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
     }
     if (reservationTimer) { clearTimeout(reservationTimer); reservationTimer = null; }
     if (reservationCountdown) { clearInterval(reservationCountdown); reservationCountdown = null; }
@@ -510,7 +472,7 @@ window.addEventListener('pagehide', function () {
     clearReservation();
 });
 
-function showSlotDetail(dayName, dayNum, dayGroups) {
+function showSlotDetail(dayName, dayNum, daySlots) {
     const panel = document.getElementById('slotDetailPanel');
     document.getElementById('slotDetailTitle').textContent =
         `${dayName}, ${monthNames[viewMonth]} ${dayNum}, ${viewYear} — Select a Slot`;
@@ -518,26 +480,18 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
     const container = document.getElementById('slotDetailList');
     container.innerHTML = '';
 
-<<<<<<< HEAD
     // Fully booked slots for this day (from server)
     const selectedDateKey = toDateKey(new Date(viewYear, viewMonth, dayNum));
     const takenForDay = (takenSlots[selectedDateKey] || []).map(t => t.trim());
 
-=======
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
     let slotIndex = 0;
-    dayGroups.forEach(group => {
-        group.subSlots.forEach(sub => {
+    daySlots.forEach(s => {
+        const subSlots = chopSlot(s);
+        subSlots.forEach((timeStr, subIdx) => {
             slotIndex++;
-<<<<<<< HEAD
             const selectedCalendarDate = new Date(viewYear, viewMonth, dayNum);
             const isPast = hasSlotPassed(dayName, timeStr, selectedCalendarDate);
             const isTaken = takenForDay.includes(timeStr.trim()) || isPast;
-=======
-            const timeStr = `${sub.timeStart} – ${sub.timeEnd}`;
-            const isTaken = sub.isBooked || sub.isReservedByOther;
-
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
             const btn = document.createElement('button');
             btn.className = 'slot-select-btn' + (isTaken ? ' full' : '');
             btn.disabled = isTaken;
@@ -545,9 +499,7 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
                 <span class="slot-num-badge">${slotIndex}</span>
                 <span style="flex:1;">${timeStr}</span>
                 <span class="slot-avail-tag${isTaken ? ' full' : ''}">${isTaken ? 'Not Available' : 'Available'}</span>`;
-
             if (!isTaken) {
-<<<<<<< HEAD
                 btn.addEventListener('pointerdown', function (e) {
                     if (btn.dataset.pending === '1') {
                         e.preventDefault();
@@ -666,20 +618,7 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
                 }
                 container.appendChild(btn);
             });
-=======
-                btn.addEventListener('click', function() {
-                    container.querySelectorAll('.slot-select-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-
-                    selectedSlotId = sub.id;
-                    selectedSlotText = timeStr;
-                    updateBookButton();
-                });
-            }
-            container.appendChild(btn);
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
         });
-    });
 
     panel.classList.add('show');
 }
@@ -688,10 +627,8 @@ function updateBookButton() {
     const btn = document.getElementById('btnBookAppointment');
     const helper = document.getElementById('bookHelperText');
     if (!btn) return;
-
-    if (selectedSlotId && selectedSlotText && selectedDate) {
+    if (selectedSlotText && selectedDate && reservationToken) {
         btn.classList.remove('disabled');
-<<<<<<< HEAD
         btn.href = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}&expiresAt=${encodeURIComponent(reservationExpiresAt || '')}`;
         if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Slot selected: <strong>${selectedSlotText}</strong> — <span style="color:#b45309;">5 min hold</span>`;
 
@@ -702,20 +639,10 @@ function updateBookButton() {
             }
             sessionStorage.setItem('skipReservationRelease', '1');
         }, { once: true });
-=======
-        btn.style.display = 'inline-flex';
-        btn.href = `/student/faculty/schedule/${selectedSlotId}/book`;
-        if (helper) {
-            helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Slot selected: <strong>${selectedSlotText}</strong>`;
-        }
->>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
     } else {
         btn.classList.add('disabled');
-        btn.style.display = 'none';
         btn.href = '#';
-        if (helper) {
-            helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Click a highlighted date, then select a time slot to continue`;
-        }
+        if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Click a highlighted date, then select a time slot to continue`;
     }
 }
 
@@ -724,14 +651,14 @@ document.getElementById('calPrev').addEventListener('click', () => {
     if (viewMonth < 0) { viewMonth = 11; viewYear--; }
     renderCalendar();
     document.getElementById('slotDetailPanel').classList.remove('show');
-    selectedSlotId = null; selectedSlotText = null; selectedDate = null; updateBookButton();
+    selectedSlotText = null; selectedDate = null; updateBookButton();
 });
 document.getElementById('calNext').addEventListener('click', () => {
     viewMonth++;
     if (viewMonth > 11) { viewMonth = 0; viewYear++; }
     renderCalendar();
     document.getElementById('slotDetailPanel').classList.remove('show');
-    selectedSlotId = null; selectedSlotText = null; selectedDate = null; updateBookButton();
+    selectedSlotText = null; selectedDate = null; updateBookButton();
 });
 
 // ── Floating tooltip helpers ──
@@ -796,22 +723,6 @@ function hideTooltip() {
             const okBtn = document.getElementById('expiredOkBtn');
             if (okBtn) okBtn.addEventListener('click', resetAndClose);
         }
-    }
-})();
-
-(function() {
-    const params = new URLSearchParams(window.location.search);
-    const bookingError = params.get('bookingError');
-    if (bookingError) {
-        const messages = {
-            slotTaken: 'That time slot has already been booked. Please choose another.',
-            reserveFailed: 'That slot is currently being reserved by another student. Please pick a different time.',
-            slotNotFound: 'That consultation slot no longer exists.',
-            noRoomAvailable: 'There is no room available for your consultation',
-            dateUnavailable: 'The instructor has marked this date as unavailable. Please choose another slot.',
-        };
-        showToast('error', 'Unable to Book', messages[bookingError] || 'Something went wrong. Please try again.');
-        window.history.replaceState({}, '', window.location.pathname);
     }
 })();
 
