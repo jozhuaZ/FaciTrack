@@ -78,9 +78,10 @@ const AuthController = {
             req.session.role = user.role;
             req.session.name = `${user.first_name} ${user.last_name}`;
             req.session.firstName = user.first_name;
-            req.session.middleName = user?.middleName || '';
+            req.session.middleName = user?.middle_name || '';
             req.session.lastName = user.last_name;
             req.session.email = user.email;
+            req.session.position = user.position;
             req.session.department = user.department_name;
             req.session.profilePhoto = user.profile_picture || null;
 
@@ -92,7 +93,7 @@ const AuthController = {
 
         } catch (err) {
             console.error('[AuthController.login]', err);
-            res.render('pages/login', {
+            res.render('pages/index', {
                 title: 'FaciTrack - Faculty Appointment & Monitoring System',
                 error: 'Something went wrong. Please try again.',
             });
@@ -127,6 +128,7 @@ const AuthController = {
         req.session.middleName = user?.middleName || '';
         req.session.lastName = user.last_name;
         req.session.email = user.email;
+        req.session.position = user.position;
         req.session.department = user.department_name;
         req.session.profilePhoto = user.profile_picture || null;
 

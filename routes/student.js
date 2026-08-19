@@ -4,6 +4,7 @@ const { requireRole, setSessionCookie } = require('../middleware/auth');
 const { createSession, getRoleRedirect, authenticateUser } = require('../services/auth');
 const instructorRouter = require('./instructor');
 const emailService = require('../services/email');
+const StudentController = require('../controllers/StudentController');
 
 router.use((req, res, next) => {
     console.log(`[Student Router] ${req.method} ${req.originalUrl}`);
@@ -217,6 +218,7 @@ function confirmSlot(facultyId, date, slotTime) {
     if (entry) entry.status = 'confirmed';
 }
 
+<<<<<<< HEAD
 // Get all taken/reserved slots for a faculty (for the profile page)
 function getTakenSlots(facultyId) {
     const taken = {};
@@ -304,6 +306,8 @@ function isDateInWindow(date) {
     d.setHours(0, 0, 0, 0);
     return d >= today && d >= windowStart && d <= windowEnd;
 }
+=======
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 
 // ── Auto-reschedule logic ──
 // Finds the next available slot for a faculty after a given date
@@ -459,17 +463,10 @@ function getDisplayStatus(faculty) {
 }
 
 // ── Routes ──
-router.get('/dashboard', (req, res) => {
-    const { search, dept } = req.query;
-    let filtered = facultyList.map(f => getFaculty(f.id));
-    if (dept) filtered = filtered.filter(f => f.department === dept);
-    if (search) {
-        const kw = search.toLowerCase();
-        filtered = filtered.filter(f =>
-            f.name.toLowerCase().includes(kw) || f.specialization.toLowerCase().includes(kw)
-        );
-    }
+router.get('/dashboard', StudentController.renderDashboardPage);
+router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
 
+<<<<<<< HEAD
     const student = getStudentContext(req);
 
     res.render('pages/student/dashboard', {
@@ -558,6 +555,14 @@ router.get('/faculty/:id/book', (req, res) => {
             : null
     });
 });
+=======
+router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
+router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);
+router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservation);
+
+router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);
+router.post('/faculty/schedule/:slotId/book', StudentController.submitBooking);
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 
 router.post('/faculty/:id/book', (req, res) => {
     const faculty = getFaculty(parseInt(req.params.id));
@@ -678,6 +683,7 @@ router.post('/faculty/:id/book', (req, res) => {
     });
 });
 
+<<<<<<< HEAD
 router.get('/appointments', (req, res) => {
     const student = getStudentContext(req);
     if (!student.email) return res.redirect('/login');
@@ -694,6 +700,10 @@ router.get('/appointments', (req, res) => {
         student
     });
 });
+=======
+router.get('/appointments', StudentController.renderAppointmentsPage);
+router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 
 router.get('/availability', (req, res) => {
     const student = getStudentContext(req);
@@ -701,32 +711,6 @@ router.get('/availability', (req, res) => {
         title: 'FaciTrack - Faculty Availability',
         facultyList,
         student
-    });
-});
-
-// Validate reference number
-router.get('/ref/validate', (req, res) => {
-    const ref = (req.query.ref || '').toUpperCase().trim();
-    const email = (req.query.email || '').toLowerCase().trim();
-
-    if (!refStore[ref]) {
-        return res.json({ valid: false });
-    }
-
-    const apt = refStore[ref];
-
-    // Validate email matches the booking
-    if (email && apt.studentEmail && apt.studentEmail.toLowerCase() !== email) {
-        return res.json({ valid: false, reason: 'email_mismatch' });
-    }
-
-    const faculty = getFaculty(apt.facultyId);
-    return res.json({
-        valid: true,
-        appointment: {
-            ...apt,
-            facultyDept: faculty ? faculty.department : ''
-        }
     });
 });
 

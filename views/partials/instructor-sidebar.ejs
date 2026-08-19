@@ -39,7 +39,7 @@
             </svg>
             <span>Dashboard</span>
         </a>
-        <a href="/instructor/consultations" class="nav-item <%= activePage === 'consultations' ? 'active' : '' %>">
+        <a href="/instructor/appointments" class="nav-item <%= activePage === 'appointments' ? 'active' : '' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                 <circle cx="9" cy="7" r="4"></circle>
@@ -48,7 +48,7 @@
             </svg>
             <span>Appointments</span>
         </a>
-        <a href="/instructor/schedule" class="nav-item <%= activePage === 'schedule' ? 'active' : '' %>">
+        <a href="/instructor/consultation-schedule" class="nav-item <%= activePage === 'schedule' ? 'active' : '' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
@@ -92,22 +92,6 @@
     </nav>
 
     <div class="sidebar-footer">
-        <!-- Notification Bell -->
-        <button class="btn-notif-bell" id="btnNotifBell" aria-label="Open notifications" type="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <span>Notifications</span>
-            <%
-              const _bellUnread = (typeof notifications !== 'undefined') ? notifications.filter(n=>!n.read).length : 0;
-            %>
-            <% if (_bellUnread > 0) { %>
-            <span class="notif-bell-badge" id="notifBellBadge"><%= _bellUnread > 9 ? '9+' : _bellUnread %></span>
-            <% } else { %>
-            <span class="notif-bell-badge" id="notifBellBadge" style="display:none;">0</span>
-            <% } %>
-        </button>
         <a href="/logout" class="btn-logout-sidebar">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

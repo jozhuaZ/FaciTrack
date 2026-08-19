@@ -8,6 +8,10 @@
     .view-toggle-btn.active { background:#fff; color:var(--primary-blue); box-shadow:0 1px 3px rgba(0,0,0,.1); }
     
     /* List View Styles */
+    .calendar-day.has-appointments {
+        border-color: var(--primary-blue);
+        border-width: 1.5px;
+    }
     .apt-list-card { background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:1rem;overflow:hidden; }
     .apt-list-header { padding:1rem 1.25rem;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;background:rgba(10,61,98,.02); }
     .apt-list-faculty { font-weight:700;font-size:.9375rem;color:var(--gray-900);margin:0 0 .125rem; }
@@ -15,14 +19,18 @@
     .apt-status-pill { padding:5px 14px;border-radius:var(--radius-full);font-size:.75rem;font-weight:700;letter-spacing:.3px; }
     .apt-status-pending   { background:#fffbeb;color:#b45309;border:1px solid #fde68a; }
     .apt-status-confirmed { background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0; }
-    .apt-status-declined  { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
+    .apt-status-completed { background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe; }
+    .apt-status-cancelled { background:#fef2f2;color:#dc2626;border:1px solid #fecaca; }
+    .apt-status-declined  { background:#fdf4ff;color:#a21caf;border:1px solid #f5d0fe; }
+    .apt-status-rescheduled { background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd; }
+
     .apt-list-body { padding:1rem 1.25rem; }
     .apt-list-row { display:flex;gap:.75rem;margin-bottom:.75rem; }
     .apt-list-row:last-child { margin-bottom:0; }
     .apt-list-icon { width:32px;height:32px;border-radius:var(--radius-md);background:rgba(10,61,98,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary-blue); }
     .apt-list-label { font-size:.75rem;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin:0 0 .2rem; }
     .apt-list-value { font-size:.875rem;font-weight:600;color:var(--gray-900);margin:0; }
-    .apt-list-actions { padding:0 1.25rem 1rem;border-top:1px solid var(--gray-100);padding-top:1rem;margin-top:.5rem; }
+    .apt-list-actions { padding:0 1.25rem 1rem;border-top:1px solid var(--gray-100);padding-top:1rem; }
     .btn-decline-apt { display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;background:#fff;color:#dc2626;border:1.5px solid #fecaca;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body); }
     .btn-decline-apt:hover { border-color:#dc2626;background:#fef2f2; }
     .btn-decline-apt:disabled { opacity:.5;cursor:not-allowed; }
@@ -45,12 +53,24 @@
     .calendar-day-number { font-size:.875rem; font-weight:600; color:var(--gray-900); margin-bottom:.25rem; }
     .calendar-day-dots { display:flex; gap:2px; flex-wrap:wrap; justify-content:center; }
     .calendar-day-dot { width:6px; height:6px; border-radius:50%; }
-    .calendar-day-dot.pending { background:#f59e0b; }
-    .calendar-day-dot.confirmed { background:#16a34a; }
-    .calendar-day-dot.declined { background:#dc2626; }
+    .calendar-day-dot.pending     { background:#f59e0b; }
+    .calendar-day-dot.confirmed   { background:#16a34a; }
+    .calendar-day-dot.completed   { background:#1d4ed8; }
+    .calendar-day-dot.cancelled   { background:#dc2626; }
+    .calendar-day-dot.declined    { background:#a21caf; }
+    .calendar-day-dot.rescheduled { background:#0369a1; }
+
     .calendar-legend { display:flex; gap:1.5rem; padding:1rem 1.5rem; border-top:1px solid var(--gray-100); flex-wrap:wrap; }
     .calendar-legend-item { display:flex; align-items:center; gap:.5rem; font-size:.8125rem; color:var(--gray-600); }
     .calendar-legend-dot { width:10px; height:10px; border-radius:50%; }
+    .calendar-legend-dot.pending     { background:#f59e0b; }
+    .calendar-legend-dot.confirmed   { background:#16a34a; }
+    .calendar-legend-dot.completed   { background:#1d4ed8; }
+    .calendar-legend-dot.cancelled   { background:#dc2626; }
+    .calendar-legend-dot.declined    { background:#a21caf; }
+    .calendar-legend-dot.rescheduled { background:#0369a1; }
+    .list-container { display:none; }
+    .list-container.active { display:block; }
     
     .empty-state { text-align:center;padding:3rem 2rem; }
     .empty-icon { width:64px;height:64px;background:rgba(10,61,98,.06);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;color:var(--primary-blue); }
@@ -133,13 +153,35 @@
                         <div class="apt-list-header">
                             <div>
                                 <p class="apt-list-faculty"><%= apt.facultyName %></p>
-                                <p class="apt-list-position">Faculty Member</p>
+                                <p class="apt-list-position"><%= apt.departmentName %></p>
                             </div>
                             <span class="apt-status-pill apt-status-<%= apt.status %>">
                                 <%= apt.status.charAt(0).toUpperCase() + apt.status.slice(1) %>
                             </span>
                         </div>
+                        <% if (apt.status === 'rescheduled' && apt.rescheduledInfo) { %>
+                        <div class="apt-list-row">
+                            <div class="apt-list-icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                            </div>
+                            <div>
+                                <p class="apt-list-label">Rescheduled To</p>
+                                <p class="apt-list-value"><%= apt.rescheduledInfo.date %> · <%= apt.rescheduledInfo.slot %></p>
+                            </div>
+                        </div>
+                        <% } %>
                         <div class="apt-list-body">
+                            <% if (apt.rescheduledFromId && apt.rescheduledFromInfo) { %>
+                            <div class="apt-list-row">
+                                <div class="apt-list-icon" style="background:rgba(3,105,161,.08);color:#0369a1;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                                </div>
+                                <div>
+                                    <p class="apt-list-label">Rescheduled From</p>
+                                    <p class="apt-list-value" style="font-weight:400;">Originally <%= new Date(apt.rescheduledFromInfo.date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %> · <%= apt.rescheduledFromInfo.slot %></p>
+                                </div>
+                            </div>
+                            <% } %>
                             <div class="apt-list-row">
                                 <div class="apt-list-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -155,10 +197,26 @@
                                 </div>
                                 <div>
                                     <p class="apt-list-label">Schedule</p>
-                                    <p class="apt-list-value"><%= apt.date %> · <%= apt.slot %></p>
+                                    <p class="apt-list-value"><%= new Date(apt.date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' }) %> · <%= apt.slot %></p>
                                 </div>
                             </div>
-                            <% if (apt.notes && apt.notes.trim()) { %>
+                            <% if (apt.status !== 'declined') { %>
+                            <div class="apt-list-row">
+                                <div class="apt-list-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                </div>
+                                <div>
+                                    <p class="apt-list-label">Mode</p>
+                                    <p class="apt-list-value">
+                                        <%= apt.mode %>
+                                        <% if (apt.mode === 'Face-to-Face' && apt.roomNumber) { %>
+                                            — <%= apt.roomNumber %><% if (apt.buildingName) { %>, <%= apt.buildingName %><% } %>
+                                        <% } %>
+                                    </p>
+                                </div>
+                            </div>
+                            <% } %>
+                            <% if (apt.notes && apt.notes.trim() && apt.status !== 'declined') { %>
                             <div class="apt-list-row">
                                 <div class="apt-list-icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -168,11 +226,21 @@
                                     <p class="apt-list-value" style="font-weight:400;"><%= apt.notes %></p>
                                 </div>
                             </div>
+                            <% } else if (apt.status === 'declined') { %>
+                                <div class="apt-list-row">
+                                <div class="apt-list-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                </div>
+                                <div>
+                                    <p class="apt-list-label">Reason for declining</p>
+                                    <p class="apt-list-value" style="font-weight:400;"><%= apt.declineReason %></p>
+                                </div>
+                            </div>
                             <% } %>
                         </div>
                         <% if (apt.status === 'pending' || apt.status === 'confirmed') { %>
                         <div class="apt-list-actions">
-                            <button type="button" class="btn-decline-apt" onclick="showDeclineModal('<%= apt.id || apt.refNumber %>', '<%= apt.facultyName %>', '<%= apt.date %>', '<%= apt.slot %>')">
+                            <button type="button" class="btn-decline-apt" onclick="showDeclineModal(<%= apt.id %>, '<%= apt.facultyName %>', '<%= apt.date %>', '<%= apt.slot %>')">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                 Cancel Appointment
                             </button>
@@ -219,8 +287,20 @@
                             <span>Confirmed</span>
                         </div>
                         <div class="calendar-legend-item">
+                            <div class="calendar-legend-dot completed"></div>
+                            <span>Completed</span>
+                        </div>
+                        <div class="calendar-legend-item">
+                            <div class="calendar-legend-dot cancelled"></div>
+                            <span>Cancelled</span>
+                        </div>
+                        <div class="calendar-legend-item">
                             <div class="calendar-legend-dot declined"></div>
                             <span>Declined</span>
+                        </div>
+                        <div class="calendar-legend-item">
+                            <div class="calendar-legend-dot rescheduled"></div>
+                            <span>Rescheduled</span>
                         </div>
                     </div>
                 </div>
@@ -253,8 +333,8 @@
 <script>
 let currentDeclineRef = null;
 
-function showDeclineModal(refNumber, facultyName, date, slot) {
-    currentDeclineRef = refNumber;
+function showDeclineModal(appointmentId, facultyName, date, slot) {
+    currentDeclineRef = appointmentId;
     const text = `You are about to cancel your appointment with ${facultyName} scheduled for ${date} at ${slot}. This action cannot be undone.`;
     document.getElementById('declineModalText').textContent = text;
     document.getElementById('declineModal').classList.add('show');
@@ -267,25 +347,24 @@ function hideDeclineModal() {
 
 async function confirmDecline() {
     if (!currentDeclineRef) return;
-    
+
     const btn = document.querySelector('.decline-modal-confirm');
     btn.disabled = true;
     btn.textContent = 'Canceling...';
-    
+
     try {
-        // TODO: Backend endpoint - For now, just show success message
-        // const response = await fetch(`/student/appointments/${currentDeclineRef}/cancel`, { method: 'POST' });
-        
-        // Simulate success
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
+        const response = await fetch(`/student/appointments/${currentDeclineRef}/cancel`, { method: 'POST' });
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to cancel appointment.');
+        }
+
         hideDeclineModal();
         showToast('success', 'Appointment Canceled', 'Your appointment has been canceled successfully. The instructor will be notified.');
-        
-        // Refresh page after short delay
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.location.reload(), 2000);
     } catch (error) {
-        showToast('error', 'Error', 'Failed to cancel appointment. Please try again.');
+        showToast('error', 'Error', error.message || 'Failed to cancel appointment. Please try again.');
         btn.disabled = false;
         btn.textContent = 'Yes, Cancel';
     }
@@ -403,6 +482,7 @@ function renderCalendar() {
         dayEl.appendChild(dayNumber);
         
         if (dayApts.length > 0) {
+            dayEl.classList.add('has-appointments');
             const dotsContainer = document.createElement('div');
             dotsContainer.className = 'calendar-day-dots';
             dayApts.forEach(apt => {

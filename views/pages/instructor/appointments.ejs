@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/css/instructor/appointments.css?v=<%= Date.now() %>">
 
 <div class="instructor-layout">
-    <%- include('../../partials/instructor-sidebar', { activePage: 'consultations', pendingCount: appointments.filter(a => a.status === 'pending').length }) %>
+    <%- include('../../partials/instructor-sidebar', { activePage: 'appointments', pendingCount: appointments.filter(a => a.status === 'pending').length }) %>
 
     <main class="instructor-main">
         <div class="main-container">
@@ -80,7 +80,9 @@
                     <option value="all">All Statuses</option>
                     <option value="pending">Pending</option>
                     <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
                     <option value="declined">Declined</option>
+                    <option value="rescheduled">Rescheduled</option>
                 </select>
                 <div class="apt-view-toggle">
                     <button class="apt-view-btn" data-view="list" title="List view">
@@ -92,7 +94,7 @@
                 </div>
             </div>
 
-            <!-- ═══════════ CALENDAR VIEW (default) ═══════════ -->
+            <!--  CALENDAR VIEW (default)  -->
             <div id="aptCalView">
                 <div class="apt-cal-wrap">
                     <div class="apt-cal-header">
@@ -120,12 +122,15 @@
                     <div class="apt-cal-legend">
                         <div class="apt-legend-item"><span class="apt-legend-dot pending"></span>Pending</div>
                         <div class="apt-legend-item"><span class="apt-legend-dot confirmed"></span>Confirmed</div>
+                        <div class="apt-legend-item"><span class="apt-legend-dot completed"></span>Completed</div>
                         <div class="apt-legend-item"><span class="apt-legend-dot declined"></span>Declined</div>
+                        <div class="apt-legend-item"><span class="apt-legend-dot cancelled"></span>Cancelled</div>
+                        <div class="apt-legend-item"><span class="apt-legend-dot rescheduled"></span>Rescheduled</div>
                     </div>
                 </div>
             </div>
 
-            <!-- ═══════════ LIST VIEW ═══════════ -->
+            <!--  LIST VIEW  -->
             <div id="aptListView" style="display:none;">
                 <div class="apt-list-wrap">
                     <div class="apt-list-header">
@@ -142,11 +147,9 @@
 
         </div><!-- /.main-container -->
     </main>
-</div><!-- /.instructor-layout -->
+</div>
 
-<!-- ════════════════════════════════════════
-     POPOVER (anchored near badge)
-════════════════════════════════════════ -->
+<!--  POPOVER (anchored near badge) -->
 <div id="aptBackdrop"></div>
 <div id="aptPopover" role="dialog" aria-label="Appointment details">
     <div class="pop-stripe" id="popStripe"></div>
@@ -167,7 +170,7 @@
         <div class="pop-row"><span class="pop-lbl">Duration</span><span class="pop-val" id="popDuration">—</span></div>
         <div class="pop-divider"></div>
         <div class="pop-row"><span class="pop-lbl">Topic</span><span class="pop-val" id="popTopic">—</span></div>
-        <div class="pop-row"><span class="pop-lbl">Requested</span><span class="pop-val" id="popRequested">—</span></div>
+        <div class="pop-row"><span class="pop-lbl">Notes</span><span class="pop-val" id="popNotes">—</span></div>
     </div>
     <!-- Action buttons (pending only) -->
     <div class="pop-actions" id="popActions">
@@ -183,8 +186,12 @@
     <!-- Inline decline reason panel -->
     <div class="pop-decline-panel" id="popDeclinePanel">
         <span class="pop-decline-lbl">Reason for declining</span>
-        <textarea class="pop-decline-ta" id="popDeclineReason"
-            placeholder="e.g. Schedule conflict, fully booked…" rows="3"></textarea>
+        <textarea class="pop-decline-ta" id="popDeclineReason" placeholder="e.g. Schedule conflict, fully booked…" rows="3"></textarea>
+        <label class="resched-check">
+            <input type="checkbox" id="popReschedCheck">
+            Reschedule instead of declining
+        </label>
+        <div id="popReschedContainer" style="display:none;"></div>
         <div class="pop-decline-footer">
             <button class="pop-decline-cancel" id="popDeclineCancel">Back</button>
             <button class="pop-decline-confirm" id="popDeclineConfirm">Decline &amp; Notify</button>

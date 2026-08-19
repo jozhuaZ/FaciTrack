@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { createWorker } = require('tesseract.js');
 const WorkloadController = require('../controllers/WorkloadController');
+const InstructorController = require('../controllers/InstructorController');
 const { authenticateUser, createSession, getRoleRedirect, revokeSession } = require('../services/auth');
 const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
 const { bookingConflictsWithBlock, getBlockDateKeys, normalizeDateKey } = require('../services/scheduling');
@@ -381,72 +382,6 @@ function getSchedule(instructorId) {
     return scheduleStore[instructorId] || [];
 }
 
-// Save schedule POST — called from the schedule page via fetch
-router.post('/schedule/save', (req, res) => {
-    const { slots } = req.body;
-    if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data' });
-    // Validate: each must have day/timeStart/timeEnd/maxCapacity
-    const cleaned = slots.map(s => ({
-        day:         String(s.day || '').trim(),
-        timeStart:   String(s.timeStart || '').trim(),
-        timeEnd:     String(s.timeEnd || '').trim(),
-        maxCapacity: Math.max(1, parseInt(s.maxCapacity) || 3),
-        bookedCount: parseInt(s.bookedCount) || 0,
-        status:      ['open','full','closed'].includes(s.status) ? s.status : 'open'
-    })).filter(s => s.day && s.timeStart && s.timeEnd);
-    scheduleStore[1] = cleaned;
-    console.log('[Schedule] Saved:', JSON.stringify(cleaned));
-    res.json({ success: true, slots: cleaned });
-});
-
-// Instructor Login page
-router.get('/login', (req, res) => {
-    res.render('pages/instructor/login', { 
-        title: 'FaciTrack - Instructor Login',
-        error: null 
-    });
-});
-
-// Instructor Login POST handler
-router.post('/login', (req, res) => {
-    const { email } = req.body;
-    
-    // Input validation
-    if (!email || typeof email !== 'string' || email.trim().length === 0) {
-        return res.render('pages/instructor/login', { 
-            title: 'FaciTrack - Instructor Login',
-            error: 'Please enter your email address.' 
-        });
-    }
-    
-    // PROTOTYPE MODE: Accept any email without password verification
-    const { readData } = require('../services/data-store');
-    const db = readData();
-    const user = (db.users || []).find((u) => String(u.email || '').toLowerCase() === email.trim().toLowerCase());
-    
-    if (user && user.role === 'instructor') {
-        const session = createSession(user, { ip: req.ip, userAgent: req.headers['user-agent'] || '' });
-        setSessionCookie(res, session.token);
-        res.redirect(getRoleRedirect(user.role));
-    } else {
-        res.render('pages/instructor/login', { 
-            title: 'FaciTrack - Instructor Login',
-            error: 'Instructor user not found.'
-        });
-    }
-});
-
-router.post('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-router.get('/logout', (req, res) => {
-    if (req.authToken) revokeSession(req.authToken);
-    clearSessionCookie(res);
-    return res.redirect('/');
-});
-
 // PROTOTYPE MODE: Disabled role check to allow free navigation
 // router.use(requireRole('instructor'));
 
@@ -584,31 +519,14 @@ function getSharedData() {
     return { instructor, appointments, consultationSlots, presenceLogs, workloadStats, notifications, workloadLogs };
 }
 
-// Consultations
-// Supports query parameters: ?status=pending|confirmed|declined&page=N
-router.get('/consultations', (req, res) => {
-    const data = getSharedData();
-    const { status } = req.query;
+// Appointments
+router.get('/appointments', InstructorController.renderAppointmentsPage);
+router.post('/appointments/:id/approve', InstructorController.approveAppointment);
+router.post('/appointments/:id/decline', InstructorController.declineAppointment);
 
-    let filteredAppointments = data.appointments;
-    if (status) {
-        filteredAppointments = filteredAppointments.filter(a => a.status === status);
-    }
-
-    res.render('pages/instructor/consultations', {
-        title: 'FaciTrack - Consultations',
-        ...data,
-        appointments: filteredAppointments,
-        filterStatus: status || '',
-        pendingCount: data.appointments.filter(a => a.status === 'pending').length
-    });
-});
-
-// API endpoint for calendar data - consultations
-router.get('/consultations/data', (req, res) => {
-    const data = getSharedData();
-    res.json({ appointments: data.appointments });
-});
+// reschedule appointment routes
+router.get('/appointments/reschedule-options', InstructorController.getRescheduleOptions);
+router.post('/appointments/:id/reschedule', InstructorController.rescheduleAppointment);
 
 // API endpoint for calendar data - schedules
 router.get('/schedule/data', (req, res) => {
@@ -616,16 +534,20 @@ router.get('/schedule/data', (req, res) => {
     res.json({ slots: slots });
 });
 
-// Schedule
-router.get('/schedule', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/instructor/schedule', {
-        title: 'FaciTrack - Schedule',
-        ...data,
-        pendingCount: data.appointments.filter(a => a.status === 'pending').length
-    });
-});
+// Schedule page
+router.get('/consultation-schedule', InstructorController.renderConsultationPage);
 
+// Slot management
+router.post('/schedule/save',       InstructorController.saveSlotBlock);
+router.delete('/schedule/:slotId',  InstructorController.deleteSlot);
+
+// Unavailability for consultation slots
+router.get('/unavailability/list',         InstructorController.getUnavailability);
+router.get('/unavailability/check/:date',  InstructorController.checkUnavailability);
+router.post('/unavailability/set',         InstructorController.setUnavailability);
+router.delete('/unavailability/:date',     InstructorController.removeUnavailability);
+
+// workload
 router.get('/workload', WorkloadController.renderPage);
 router.post('/workload/save', WorkloadController.save);
 // Workload — Load timetable
@@ -1293,6 +1215,7 @@ async function cancelBookingsForBlock(instructorId, block, dateKeys, reason) {
     return cancelled;
 }
 
+<<<<<<< HEAD
 // GET /instructor/unavailability/list — returns all unavailable dates for this instructor
 router.get('/unavailability/list', (req, res) => {
     const list = Object.values(unavailabilityStore)
@@ -1408,6 +1331,8 @@ router.get('/unavailability/check/:date', (req, res) => {
     res.json({ unavailable: !!record, reason: record ? record.reason : null });
 });
 
+=======
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
 router.requestStore         = requestStore;
 router.timetableStore       = timetableStore;
 router.notificationsList    = notificationsList;

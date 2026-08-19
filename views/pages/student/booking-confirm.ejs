@@ -1,4 +1,5 @@
 <%- include('../../partials/header') %>
+<<<<<<< HEAD
 <link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
 <link rel="stylesheet" href="/css/student/booking-confirm.css?v=<%= Date.now() %>">
 <style>
@@ -175,12 +176,52 @@
                     </div>
                     <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your reference in your CSPC mail account</small>
                 </div>
+=======
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
-                <button class="btn-verify" id="verifyBtn" disabled>
-                    <span>Verify &amp; Continue</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                </button>
+<div class="instructor-layout">
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+    <main class="instructor-main">
+        <div class="main-container" style="display:flex;justify-content:center;padding:2rem 1rem;">
+            <div style="background:#fff;border-radius:var(--radius-xl);padding:2.5rem 2rem;max-width:480px;width:100%;box-shadow:var(--shadow-md);text-align:center;">
+
+                <% if (status === 'success') { %>
+                    <div style="width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:var(--primary-blue);margin:0 0 .5rem;">Appointment Requested</h3>
+                    <p style="font-size:.9rem;color:var(--gray-600);margin:0 0 1.5rem;line-height:1.6;">
+                        Your consultation request has been sent to
+                        <strong><%= appointment.first_name %> <%= appointment.last_name %></strong>.
+                        You'll be notified once it's confirmed.
+                    </p>
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
+
+                    <div style="text-align:left;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-md);padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:.85rem;color:var(--gray-700);line-height:1.8;">
+                        <div><strong>When:</strong> <%= appointment.day_of_the_week %>, <%= new Date(appointment.consultation_date).toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' }) %></div>
+                        <div><strong>Topic:</strong> <%= appointment.topic %></div>
+                        <div><strong>Mode:</strong> <%= appointment.mode %></div>
+                        <% if (appointment.mode === 'Face-to-Face' && appointment.room_number) { %>
+                            <div><strong>Room:</strong> <%= appointment.room_number %><% if (appointment.building_name) { %> — <%= appointment.building_name %><% } %></div>
+                        <% } %>
+                        <div><strong>Notes:</strong> <%= appointment.notes %></div>
+                        <div><strong>Status:</strong> <span style="text-transform:capitalize;"><%= appointment.status %></span></div>
+                    </div>
+
+                <% } else { %>
+                    <div style="width:72px;height:72px;background:#fef2f2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h3 style="font-size:1.25rem;font-weight:700;color:#dc2626;margin:0 0 .5rem;">Booking Failed</h3>
+                    <p style="font-size:.9rem;color:var(--gray-600);margin:0 0 1.5rem;line-height:1.6;"><%= message %></p>
+                <% } %>
+
+                <a href="/student/dashboard" style="display:inline-flex;align-items:center;justify-content:center;padding:.75rem 1.75rem;background:var(--primary-blue);color:#fff;border-radius:var(--radius-md);font-size:.9375rem;font-weight:600;text-decoration:none;">
+                    Back to Dashboard
+                </a>
             </div>
+<<<<<<< HEAD
 
             <div class="login-footer">
                 <div class="info-box">
@@ -189,68 +230,11 @@
                 </div>
             </div>
 
+=======
+>>>>>>> c71d16bf038fca6624a58a1e67b1141cc736296c
         </div>
-    </div>
-</main>
+    </main>
+</div>
 
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script>
-var CORRECT_REF = <%- JSON.stringify(refNumber) %>;
-var BOOKING     = <%- JSON.stringify(bookingData) %>;
-
-var refInput  = document.getElementById('refInput');
-var verifyBtn = document.getElementById('verifyBtn');
-
-// Format input as FT-XXXXXX
-refInput.addEventListener('input', function() {
-    var raw = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (raw.startsWith('FT')) raw = raw.slice(2);
-    raw = raw.slice(0, 6);
-    this.value = raw.length > 0 ? 'FT-' + raw : '';
-    verifyBtn.disabled = this.value.length < 9;
-});
-
-refInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !verifyBtn.disabled) verifyBtn.click();
-});
-
-verifyBtn.addEventListener('click', function() {
-    var entered = refInput.value.trim().toUpperCase();
-    if (entered !== CORRECT_REF) {
-        refInput.style.borderColor = '#dc2626';
-        refInput.style.boxShadow   = '0 0 0 3px rgba(220,38,38,.1)';
-        // Show error
-        var existing = document.querySelector('.alert-error');
-        if (!existing) {
-            var err = document.createElement('div');
-            err.className = 'alert alert-error';
-            err.style.width = '100%';
-            err.style.marginBottom = '.5rem';
-            err.innerHTML = '<span>Incorrect reference number. Please check your email and try again.</span>';
-            refInput.closest('.login-form').before(err);
-        }
-        return;
-    }
-
-    // Correct — save appointment and go to My Appointments
-    var existing = JSON.parse(localStorage.getItem('studentAppointments') || '[]');
-    existing.push({
-        refNumber:   CORRECT_REF,
-        facultyName: BOOKING.facultyName || '',
-        topic:       BOOKING.topic       || '',
-        day:         BOOKING.date        || 'TBD',
-        time:        BOOKING.slot        || '',
-        duration:    '—',
-        status:      'pending',
-        requestedAt: new Date().toLocaleString()
-    });
-    localStorage.setItem('studentAppointments', JSON.stringify(existing));
-
-    var refs = JSON.parse(localStorage.getItem('studentRefs') || '[]');
-    if (refs.indexOf(CORRECT_REF) === -1) refs.push(CORRECT_REF);
-    localStorage.setItem('studentRefs', JSON.stringify(refs));
-
-    window.location.href = '/student/appointments';
-});
-</script>

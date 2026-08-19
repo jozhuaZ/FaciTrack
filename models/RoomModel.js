@@ -53,8 +53,8 @@ const RoomModel = {
     },
 
     async insertRoomByAdmin(newRoom) {
-        let query = `INSERT INTO rooms (room_number, department_id, room_type, assigned_faculty, is_ble_scanner_installed, status) 
-                    VALUES (?, ?, ?, ?, ?, ?)`;
+        let query = `INSERT INTO rooms (room_number, department_id, room_type, assigned_faculty, is_ble_scanner_installed, status, capacity) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
         const [result] = await pool.execute(query, [
             newRoom.roomNumber,
@@ -62,7 +62,8 @@ const RoomModel = {
             newRoom.roomType,
             newRoom.assignedFaculty || null,
             newRoom.bleStatus,
-            newRoom.status
+            newRoom.status,
+            newRoom.capacity
         ]);
 
         return result.insertId;
