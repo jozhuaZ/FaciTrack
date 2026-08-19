@@ -1,9 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
 const router = express.Router();
 const AdminController = require('../controllers/AdminController');
-const UserModel = require('../models/UserModel');
-const { createSession, getRoleRedirect, revokeSession, createOTP, verifyOTP } = require('../services/auth');
+const { authenticateUser, createSession, getRoleRedirect, revokeSession, createOTP, verifyOTP } = require('../services/auth');
 const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
 
 // Router-level middleware: log all admin route requests
@@ -24,12 +22,13 @@ router.get('/login', (req, res) => {
     });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', (req, res) => {
     const { email, password } = req.body;
-
+    
+    // Input validation
     if (!email || typeof email !== 'string' || email.trim().length === 0) {
-        return res.render('pages/admin/login', {
-            title: 'FaciTrack - Administrator Login',
+        return res.render('pages/admin/login', { 
+            title: 'FaciTrack - Administrator Login', 
             error: 'Please enter your email address.',
             step: 'login',
             email: '',
@@ -39,8 +38,8 @@ router.post('/login', async (req, res) => {
     }
 
     if (!password || typeof password !== 'string' || password.trim().length === 0) {
-        return res.render('pages/admin/login', {
-            title: 'FaciTrack - Administrator Login',
+        return res.render('pages/admin/login', { 
+            title: 'FaciTrack - Administrator Login', 
             error: 'Please enter your password.',
             step: 'login',
             email: email,
@@ -48,77 +47,33 @@ router.post('/login', async (req, res) => {
             otpError: null
         });
     }
-
-    try {
-        const user = await UserModel.getUserByEmail(email.trim());
-
-        if (!user) {
-            return res.render('pages/admin/login', {
-                title: 'FaciTrack - Administrator Login',
-                error: 'Invalid email or password.',
-                step: 'login',
-                email: email,
-                otpToken: '',
-                otpError: null
-            });
-        }
-
-        if ((user.role || '').toLowerCase() !== 'admin') {
-            return res.render('pages/admin/login', {
-                title: 'FaciTrack - Administrator Login',
-                error: 'Invalid email or password.',
-                step: 'login',
-                email: email,
-                otpToken: '',
-                otpError: null
-            });
-        }
-
-        if (user.status !== 'Active') {
-            return res.render('pages/admin/login', {
-                title: 'FaciTrack - Administrator Login',
-                error: 'Your account is inactive.',
-                step: 'login',
-                email: email,
-                otpToken: '',
-                otpError: null
-            });
-        }
-
-        const match = await bcrypt.compare(password, user.hashed_password || '');
-        if (!match) {
-            return res.render('pages/admin/login', {
-                title: 'FaciTrack - Administrator Login',
-                error: 'Invalid email or password.',
-                step: 'login',
-                email: email,
-                otpToken: '',
-                otpError: null
-            });
-        }
-
-        const { otpToken } = createOTP(email.trim());
-
-        return res.render('pages/admin/login', {
-            title: 'FaciTrack - Verify Your Identity',
-            error: null,
-            step: 'otp',
-            email: email.trim(),
-            otpToken: otpToken,
-            otpError: null
-        });
-
-    } catch (err) {
-        console.error('[Admin Login Error]', err);
-        return res.render('pages/admin/login', {
-            title: 'FaciTrack - Administrator Login',
-            error: 'Something went wrong. Please try again.',
+    
+    // Authenticate user
+    const user = authenticateUser(email, password);
+    
+    if (!user || user.role !== 'admin') {
+        return res.render('pages/admin/login', { 
+            title: 'FaciTrack - Administrator Login', 
+            error: 'Invalid email or password.',
             step: 'login',
             email: email,
             otpToken: '',
             otpError: null
         });
     }
+
+    // Generate OTP and send to email
+    const { otpToken, expiresAt } = createOTP(email);
+
+    // Show OTP verification page
+    res.render('pages/admin/login', {
+        title: 'FaciTrack - Verify Your Identity',
+        error: null,
+        step: 'otp',
+        email: email,
+        otpToken: otpToken,
+        otpError: null
+    });
 });
 
 // OTP Verification

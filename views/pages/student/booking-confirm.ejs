@@ -1,153 +1,38 @@
 <%- include('../../partials/header') %>
 <link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/student/booking-confirm.css?v=<%= Date.now() %>">
 <style>
-  .login-main {
-    background-image: linear-gradient(rgba(8, 24, 38, 0.6), rgba(8, 24, 38, 0.6)), url('/images/CSPC-background.png') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-color: #edf2f7 !important;
-  }
-  .login-back {
-    display:inline-flex;
-    align-items:center;
-    gap:.375rem;
-    font-size:.875rem;
-    font-weight:700;
-    color:#ffffff;
-    text-decoration:none;
-    margin-bottom:.75rem;
-    transition:opacity .15s;
-    background: rgba(10, 61, 98, 0.28);
-    border: 1px solid rgba(255,255,255,0.22);
-    padding: 0.5rem 0.8rem;
-    border-radius: 999px;
-    backdrop-filter: blur(2px);
-    box-shadow: 0 4px 12px rgba(7, 25, 41, 0.12);
-  }
-  .login-back:hover { opacity:.8; }
-  .login-back svg { flex-shrink:0; }
-
-  .email-highlight { font-weight:700; color:var(--primary-blue); word-break:break-all; }
-  .ref-input-wrap { position:relative; }
-  .ref-input {
-      width:100%; padding:.7rem 1rem; border:1.5px solid var(--gray-300);
-      border-radius:var(--radius-md); font-size:1.125rem; font-weight:700;
-      text-align:center; letter-spacing:.1em; text-transform:uppercase;
-      font-family:var(--font-body); color:var(--gray-900); outline:none;
-      transition:border-color .2s; box-sizing:border-box;
-  }
-  .ref-input:focus { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.08); }
-  .ref-input::placeholder { font-size:.875rem; letter-spacing:0; font-weight:400; text-transform:none; color:var(--gray-400); }
-  .btn-verify {
-      width:100%; padding:.7rem 1rem; background:var(--teal-gradient); color:white;
-      border:none; border-radius:var(--radius-md); font-size:.9rem; font-weight:600;
-      font-family:var(--font-body); cursor:pointer; transition:all .2s; box-shadow:var(--shadow-sm);
-      display:flex; align-items:center; justify-content:center; gap:.5rem;
-  }
-  .btn-verify:hover:not(:disabled) { transform:translateY(-1px); box-shadow:var(--shadow-md); }
-  .btn-verify:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-  .back-outline {
-      display:flex; align-items:center; justify-content:center; gap:.4rem;
-      width:100%; padding:.65rem 1rem; margin-top:.625rem;
-      border:1.5px solid var(--gray-300); border-radius:var(--radius-md);
-      background:#fff; color:var(--gray-700); font-size:.875rem; font-weight:600;
-      font-family:var(--font-body); text-decoration:none; text-align:center; box-sizing:border-box;
-  }
-  .back-outline:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
-
-  .confirmation-page {
-      min-height: calc(100vh - 120px);
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      justify-content: flex-start;
-      gap: 1.25rem;
-      padding: 2.25rem 1rem 3rem;
-      position: relative;
-      overflow: visible;
-  }
-
-  .confirmation-shell {
-      width: min(100%, 420px);
-      flex: 0 0 auto;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-  }
-
-  .confirmation-card {
-      width: min(100%, 420px);
-      margin: 0 auto;
-      padding: 1.6rem 1.5rem 1.2rem;
-      border-radius: 1.5rem;
-      box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1), 0 6px 18px rgba(15, 23, 42, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(255, 255, 255, 0.98);
-      max-height: none;
-      overflow: visible;
-  }
-
-  .confirmation-card .login-header { margin-bottom: 1rem; }
-  .confirmation-card .login-description {
-      max-width: 40rem;
-      margin: 0 auto;
-      color: var(--gray-700);
-      line-height: 1.5;
-      font-size: 0.95rem;
-  }
-  .confirmation-card .info-box {
-      margin-top: .75rem;
-      border-radius: 1rem;
-      padding: .8rem .9rem;
-      background: rgba(10, 61, 98, 0.04);
-      border: 1px solid rgba(10, 61, 98, 0.08);
-  }
-  .confirmation-card .login-form { gap: .7rem !important; }
-  .confirmation-card .form-group { gap: .45rem !important; }
-  .confirmation-card .login-footer { margin-top: .25rem; }
-
-  @media (max-width: 640px) {
-      .confirmation-page { gap: 1rem; padding: 1.5rem .5rem 2.5rem; }
-      .confirmation-card {
-          padding: 1.2rem .9rem 1rem;
-          max-height: none;
-          overflow: visible;
-          border-radius: 1.2rem;
-          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-      }
-      .confirmation-card .login-header { margin-bottom: .75rem; }
-      .confirmation-card .login-title { font-size: 1.7rem; }
-      .confirmation-card .login-description {
-          font-size: 0.88rem;
-          line-height: 1.45;
-      }
-      .confirmation-card .info-box {
-          padding: .7rem .75rem;
-          font-size: 0.78rem;
-      }
-      .confirmation-card .ref-input {
-          font-size: 1rem;
-          padding: .75rem .8rem;
-      }
-      .confirmation-card .btn-verify { padding: .72rem .8rem; }
-      .confirmation-card .back-outline {
-          font-size: 0.8rem;
-          padding: .7rem .8rem;
-      }
-  }
+.email-highlight { font-weight:700; color:var(--primary-blue); word-break:break-all; }
+.ref-input-wrap { position:relative; }
+.ref-input {
+    width:100%; padding:.7rem 1rem; border:1.5px solid var(--gray-300);
+    border-radius:var(--radius-md); font-size:1.125rem; font-weight:700;
+    text-align:center; letter-spacing:.1em; text-transform:uppercase;
+    font-family:var(--font-body); color:var(--gray-900); outline:none;
+    transition:border-color .2s; box-sizing:border-box;
+}
+.ref-input:focus { border-color:var(--primary-blue); box-shadow:0 0 0 3px rgba(10,61,98,.08); }
+.ref-input::placeholder { font-size:.875rem; letter-spacing:0; font-weight:400; text-transform:none; color:var(--gray-400); }
+.btn-verify {
+    width:100%; padding:.7rem 1rem; background:var(--teal-gradient); color:white;
+    border:none; border-radius:var(--radius-md); font-size:.9rem; font-weight:600;
+    font-family:var(--font-body); cursor:pointer; transition:all .2s; box-shadow:var(--shadow-sm);
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+}
+.btn-verify:hover:not(:disabled) { transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.btn-verify:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.back-outline {
+    display:flex; align-items:center; justify-content:center; gap:.4rem;
+    width:100%; padding:.65rem 1rem; margin-top:.625rem;
+    border:1.5px solid var(--gray-300); border-radius:var(--radius-md);
+    background:#fff; color:var(--gray-700); font-size:.875rem; font-weight:600;
+    font-family:var(--font-body); text-decoration:none; text-align:center; box-sizing:border-box;
+}
+.back-outline:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
 </style>
 
-<main class="login-main confirmation-page">
-    <a href="/student/dashboard" class="back-btn login-back" aria-label="Back to Faculty Directory" style="margin-left: 0; margin-bottom: 0;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-        Back to Faculty Directory
-    </a>
-
-    <div class="login-container confirmation-shell">
-        <div class="login-card confirmation-card" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+<main class="login-main">
+    <div class="login-container">
+        <div class="login-card">
 
             <div class="login-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -158,6 +43,11 @@
 
             <div class="login-header">
                 <h1 class="login-title">Check Your Email</h1>
+                <p class="login-description">
+                    Your booking was received. A reference number has been sent to
+                    <span class="email-highlight"><%= email %></span>.
+                    Enter it below to confirm your appointment.
+                </p>
             </div>
 
             <% if (typeof error !== 'undefined' && error) { %>
@@ -173,7 +63,7 @@
                     <div class="ref-input-wrap">
                         <input type="text" class="ref-input" id="refInput" placeholder="e.g. FT-AB3K9Z" maxlength="9" autocomplete="off" spellcheck="false">
                     </div>
-                    <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your reference in your CSPC mail account</small>
+                    <small style="font-size:.75rem;color:var(--gray-500);text-align:center;margin-top:.25rem;">Check your inbox and spam folder</small>
                 </div>
 
                 <button class="btn-verify" id="verifyBtn" disabled>
@@ -181,6 +71,11 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
             </div>
+
+            <a href="<%= backHref %>" class="back-outline" style="margin-top:.625rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                Go back to booking form
+            </a>
 
             <div class="login-footer">
                 <div class="info-box">

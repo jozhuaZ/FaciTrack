@@ -910,13 +910,7 @@
         <div class="gcal-top"><h3 class="gcal-title">Select an appointment time</h3><div class="gcal-tz">(GMT+08:00) Philippine Standard Time</div></div>
         <div class="gcal-body">
           <div class="mini-cal">
-            <div class="mini-head">
-              <span class="mini-month" id="miniMonthTitle"></span>
-              <div class="mini-nav">
-                <button type="button" class="mini-btn" id="miniPrev" title="Previous month" aria-label="Previous month">&lsaquo;</button>
-                <button type="button" class="mini-btn" id="miniNext" title="Next month" aria-label="Next month">&rsaquo;</button>
-              </div>
-            </div>
+            <div class="mini-head"><span class="mini-month" id="miniMonthTitle"></span></div>
             <div class="mini-grid" id="miniCalGrid"></div>
           </div>
           <div style="flex:1;min-width:auto;overflow-x:auto;overflow-y:visible;display:flex;flex-direction:column;" class="gcal-content-wrapper">
@@ -1031,22 +1025,6 @@
       <div id="timeValidationMsg" style="display:none;padding:.6rem .8rem;border-radius:8px;font-size:.78rem;margin-top:.5rem;"></div>
     </div>
     <div class="modal-footer"><button class="btn-modal btn-cancel" id="cancelSlot">Cancel</button><button class="btn-modal btn-confirm" id="confirmSlot">Save Slot</button></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="deleteConfirmModal" onclick="if(event.target===this){closeDeleteConfirm();}">
-  <div class="modal-content" style="max-width:420px;">
-    <div class="modal-header" style="background:#fff7f7;">
-      <h3 class="modal-title" style="color:#b91c1c;">Delete Consultation Slot</h3>
-      <button class="modal-close" type="button" onclick="closeDeleteConfirm();">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p style="margin:0;color:#4b5563;line-height:1.55;">Delete <strong id="deleteConfirmDetails"></strong>? Students will no longer be able to request this slot.</p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-modal btn-cancel" type="button" onclick="closeDeleteConfirm();">Cancel</button>
-      <button class="btn-modal btn-confirm" type="button" id="deleteConfirmButton" style="background:#dc2626;">Delete Slot</button>
-    </div>
   </div>
 </div>
 
@@ -1490,13 +1468,7 @@ function renderMiniCalendar(){
     const dateKey = toDateKeyJS(date);
     if (unavailDates && unavailDates[dateKey]) cell.classList.add('blocked');
     if(!isPastDate(date)){
-      cell.addEventListener('click',function(){
-        selectedDate=new Date(date);
-        viewMonthDate=new Date(date.getFullYear(), date.getMonth(), 1);
-        renderMiniCalendar();
-        renderWeekStrip();
-        showDayPanel(DAYS[date.getDay()], date);
-      });
+      cell.addEventListener('click',function(){ selectedDate=new Date(date); viewMonthDate=new Date(date.getFullYear(), date.getMonth(), 1); renderMiniCalendar(); renderWeekStrip(); });
     }
     grid.appendChild(cell);
   }
@@ -1793,50 +1765,15 @@ function toggleSlotStatus(idx){
 }
 
 /* -- Delete slot -- */
-let pendingDeleteIndex = -1;
-let pendingUnavailDate = null;
-
-function closeDeleteConfirm(){
-  document.getElementById('deleteConfirmModal').classList.remove('show');
-  pendingDeleteIndex = -1;
-  pendingUnavailDate = null;
-}
-
 function deleteSlot(idx){
   const slot=slots[idx];
   if(!slot) return;
-  pendingDeleteIndex = idx;
-  pendingUnavailDate = null;
-  document.getElementById('deleteConfirmDetails').textContent = slot.day+' ('+slot.timeStart+' \u2013 '+slot.timeEnd+')';
-  document.getElementById('deleteConfirmModal').classList.add('show');
-}
-
-document.getElementById('deleteConfirmButton').addEventListener('click', function(){
-  if (pendingUnavailDate) {
-    const dateKey = pendingUnavailDate;
-    const label = new Date(dateKey + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric' });
-    fetch('/instructor/unavailability/' + dateKey, { method: 'DELETE' })
-      .then(function(response){ return response.json(); })
-      .then(function(data){
-        if (!data.success) throw new Error('Failed to remove block.');
-        delete unavailDates[dateKey];
-        renderUnavailList();
-        renderWeekStrip();
-        checkWeekUnavailBanner();
-        closeDeleteConfirm();
-        showToast('success','Block Removed',label + ' is now available for bookings again.');
-      })
-      .catch(function(error){ closeDeleteConfirm(); showToast('error','Unable to remove block',error.message); });
-    return;
-  }
-  if (pendingDeleteIndex < 0 || !slots[pendingDeleteIndex]) return closeDeleteConfirm();
-  slots.splice(pendingDeleteIndex, 1);
+  if(!confirm('Delete slot on '+slot.day+' ('+slot.timeStart+' \u2013 '+slot.timeEnd+')?')) return;
+  slots.splice(idx,1);
   saveSlots();
   renderWeekStrip();
   refreshDayPanel();
-  closeDeleteConfirm();
-  showToast('success','Deleted','Consultation slot removed.');
-});
+}
 
 /* -- Open Add modal -- */
 function openAddModal(day, date){
@@ -1938,15 +1875,6 @@ document.getElementById('jumpBookable').addEventListener('click',function(e){
   selectedDate=new Date(today);
   viewMonthDate=new Date(today.getFullYear(),today.getMonth(),1);
   renderMiniCalendar(); renderWeekStrip();
-});
-
-document.getElementById('miniPrev').addEventListener('click', function(){
-  viewMonthDate = new Date(viewMonthDate.getFullYear(), viewMonthDate.getMonth() - 1, 1);
-  renderMiniCalendar();
-});
-document.getElementById('miniNext').addEventListener('click', function(){
-  viewMonthDate = new Date(viewMonthDate.getFullYear(), viewMonthDate.getMonth() + 1, 1);
-  renderMiniCalendar();
 });
 
 renderMiniCalendar();
@@ -2173,10 +2101,19 @@ function confirmUnavailability() {
 // ── Remove a block ──
 function removeUnavailDate(dateKey) {
   var label = new Date(dateKey + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric' });
-  pendingDeleteIndex = -1;
-  pendingUnavailDate = dateKey;
-  document.getElementById('deleteConfirmDetails').textContent = 'the unavailability block for ' + label;
-  document.getElementById('deleteConfirmModal').classList.add('show');
+  if (!confirm('Remove the unavailability block for ' + label + '?\n\nStudents will be able to book appointments on this date again.')) return;
+
+  fetch('/instructor/unavailability/' + dateKey, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(function(data) {
+      if (!data.success) { alert('Failed to remove block.'); return; }
+      delete unavailDates[dateKey];
+      renderUnavailList();
+      renderWeekStrip();
+      checkWeekUnavailBanner();
+      showToast('success', 'Block Removed', label + ' is now available for bookings again.');
+    })
+    .catch(function() { alert('Network error. Please try again.'); });
 }
 
 // Load on page start

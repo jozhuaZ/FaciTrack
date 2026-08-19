@@ -31,7 +31,11 @@
         <div class="form-group">
           <label for="email" class="form-label">Email Address <span class="required">*</span></label>
           <div class="input-wrapper">
-            <input type="text" id="email" name="email" class="form-input <%= (error && error !== 'Please enter your password.') ? 'input-error' : '' %>" placeholder="superadmin@cspc.edu.ph" required autofocus autocomplete="username">
+            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <input type="email" id="email" name="email" class="form-input <%= (error && error !== 'Please enter your password.') ? 'input-error' : '' %>" placeholder="superadmin@cspc.edu.ph" required autofocus autocomplete="username">
           </div>
           <% if (error && error !== 'Please enter your password.') { %>
             <span class="field-error">

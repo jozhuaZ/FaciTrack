@@ -56,15 +56,11 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
-const normalizeRole = (role) => String(role || '').trim().toLowerCase();
-
 const requireRole = (...roles) => (req, res, next) => {
-    if (!req.session || !req.session.userId) {
+    if (!req.session.userId) {
         return res.redirect('/login');
     }
-    const sessionRole = normalizeRole(req.session.role);
-    const allowedRoles = roles.map(normalizeRole);
-    if (!allowedRoles.includes(sessionRole)) {
+    if (!roles.includes(req.session.role)) {
         return res.status(403).render('pages/403', { title: 'Access Denied' });
     }
     next();

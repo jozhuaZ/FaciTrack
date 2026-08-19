@@ -113,31 +113,40 @@ body:has(.landing-main) .landing-main {
 /* Hero split layout */
 .hero-split {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 1fr);
-  max-width: 1400px;
-  width: 100%;
+  grid-template-columns: 1fr 48px 420px;
+  max-width: 100%;
+  /* width: 100%; */
   min-height: calc(100vh - 64px);
   align-items: center;
   margin: 0 auto;
-  gap: 2rem;
-  padding: 0 2rem;
 }
 
 .hero-left {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  text-align: left;
+  text-align: center;
   gap: 2rem;
-  padding: 3rem 0 3rem 4rem;
+  padding: 3rem;
+}
+
+.hero-wave-divider {
+  display: flex;
+  align-items: stretch;
+}
+
+.hero-wave-divider svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .hero-right {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 4rem 2rem 0;
+  padding: 2rem 0 2rem 1.5rem;
 }
 
 
@@ -174,9 +183,8 @@ body:has(.landing-main) .landing-main {
 .hero-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  max-width: 700px;
 }
 
 .hero-badge {
@@ -202,7 +210,6 @@ body:has(.landing-main) .landing-main {
     line-height: 1;
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    text-align: left;
 }
 
 .hero-subtitle {
@@ -211,7 +218,6 @@ body:has(.landing-main) .landing-main {
     font-weight: 600;
     margin: 0;
     line-height: 1.3;
-    text-align: left;
 }
 
 .hero-description {
@@ -220,13 +226,12 @@ body:has(.landing-main) .landing-main {
     line-height: 1.7;
     margin: 0;
     max-width: 540px;
-    text-align: left;
 }
 
 /* ── HERO VISUAL ── */
 .hero-visual {
   width: 100%;
-  max-width: 720px;
+  max-width: 380px;
   margin: 0 auto;
 }
 
@@ -234,8 +239,6 @@ body:has(.landing-main) .landing-main {
   width: 100%;
   height: auto;
   display: block;
-  max-height: 540px;
-  object-fit: contain;
 }
 
 /* ── SHARED SECTION LAYOUT ── */

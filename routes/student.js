@@ -144,33 +144,19 @@ const slotBookings = {};
 const slotReservations = {};
 const RESERVATION_MS = 5 * 60 * 1000; // 5 minutes
 
-function normalizeDateKey(date) {
-    if (!date) return '';
-    if (typeof date === 'string') {
-        const isoMatch = date.match(/^\d{4}-\d{2}-\d{2}/);
-        if (isoMatch) return isoMatch[0];
-    }
-    const parsed = date instanceof Date ? date : new Date(date);
-    if (Number.isNaN(parsed.getTime())) return String(date).trim();
-    const year = parsed.getFullYear();
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-function slotKey(facultyId, date, slotTime) {
-    return `${facultyId}_${normalizeDateKey(date)}_${slotTime.trim()}`;
+function slotKey(facultyId, day, slotTime) {
+    return `${facultyId}_${day}_${slotTime.trim()}`;
 }
 
 // Check if a slot is taken (pending or confirmed booking — permanent)
-function isSlotTaken(facultyId, date, slotTime) {
-    const entry = slotBookings[slotKey(facultyId, date, slotTime)];
+function isSlotTaken(facultyId, day, slotTime) {
+    const entry = slotBookings[slotKey(facultyId, day, slotTime)];
     return entry && (entry.status === 'pending' || entry.status === 'confirmed');
 }
 
 // Check if a slot is under a 5-min reservation hold
-function isSlotReserved(facultyId, date, slotTime) {
-    const key = slotKey(facultyId, date, slotTime);
+function isSlotReserved(facultyId, day, slotTime) {
+    const key = slotKey(facultyId, day, slotTime);
     const now = Date.now();
     // Clean expired reservations first
     Object.keys(slotReservations).forEach(token => {
@@ -180,17 +166,17 @@ function isSlotReserved(facultyId, date, slotTime) {
     });
     return Object.values(slotReservations).some(r =>
         r.facultyId === facultyId &&
-        normalizeDateKey(r.date) === normalizeDateKey(date) &&
+        r.day === day &&
         r.slotTime.trim() === slotTime.trim() &&
         r.expiresAt > now
     );
 }
 
 // Reserve a slot for 5 minutes (returns token)
-function reserveSlot(facultyId, date, day, slotTime) {
+function reserveSlot(facultyId, day, slotTime) {
     const token = `RSV-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     slotReservations[token] = {
-        facultyId, date: normalizeDateKey(date), day, slotTime: slotTime.trim(),
+        facultyId, day, slotTime: slotTime.trim(),
         expiresAt: Date.now() + RESERVATION_MS
     };
     return token;
@@ -202,18 +188,18 @@ function releaseReservation(token) {
 }
 
 // Lock a slot permanently (on booking submit)
-function lockSlot(facultyId, date, day, slotTime, refNumber, studentEmail) {
-    slotBookings[slotKey(facultyId, date, slotTime)] = { refNumber, studentEmail, date: normalizeDateKey(date), day, status: 'pending' };
+function lockSlot(facultyId, day, slotTime, refNumber, studentEmail) {
+    slotBookings[slotKey(facultyId, day, slotTime)] = { refNumber, studentEmail, status: 'pending' };
 }
 
 // Release a slot (on decline or cancellation)
-function releaseSlot(facultyId, date, slotTime) {
-    delete slotBookings[slotKey(facultyId, date, slotTime)];
+function releaseSlot(facultyId, day, slotTime) {
+    delete slotBookings[slotKey(facultyId, day, slotTime)];
 }
 
 // Confirm a slot
-function confirmSlot(facultyId, date, slotTime) {
-    const entry = slotBookings[slotKey(facultyId, date, slotTime)];
+function confirmSlot(facultyId, day, slotTime) {
+    const entry = slotBookings[slotKey(facultyId, day, slotTime)];
     if (entry) entry.status = 'confirmed';
 }
 
@@ -227,50 +213,24 @@ function getTakenSlots(facultyId) {
     Object.entries(slotBookings).forEach(([key, val]) => {
         if (!key.startsWith(prefix)) return;
         if (val.status !== 'pending' && val.status !== 'confirmed') return;
-        const date = normalizeDateKey(val.date);
-        const slotTime = key.slice(key.lastIndexOf('_') + 1);
-        if (!date) return;
-        if (!taken[date]) taken[date] = [];
-        if (!taken[date].includes(slotTime)) taken[date].push(slotTime);
+        const rest = key.slice(prefix.length);
+        const underscoreIdx = rest.indexOf('_');
+        if (underscoreIdx === -1) return;
+        const day = rest.slice(0, underscoreIdx);
+        const slotTime = rest.slice(underscoreIdx + 1);
+        if (!taken[day]) taken[day] = [];
+        if (!taken[day].includes(slotTime)) taken[day].push(slotTime);
     });
 
     // Active reservations (5-min holds)
     Object.values(slotReservations).forEach(r => {
         if (r.facultyId !== facultyId) return;
         if (r.expiresAt < now) return;
-        const date = normalizeDateKey(r.date);
-        if (!date) return;
-        if (!taken[date]) taken[date] = [];
-        if (!taken[date].includes(r.slotTime)) taken[date].push(r.slotTime);
+        if (!taken[r.day]) taken[r.day] = [];
+        if (!taken[r.day].includes(r.slotTime)) taken[r.day].push(r.slotTime);
     });
 
     return taken;
-}
-
-function getStudentContext(req) {
-    const user = req.currentUser || {
-        id: req.session?.userId,
-        name: req.session?.name || '',
-        firstName: req.session?.firstName || (req.session?.name || '').split(' ')[0],
-        lastName: req.session?.lastName || '',
-        status: req.session?.status || 'active',
-        email: req.session?.email || '',
-        role: req.session?.role || 'student',
-        profilePhoto: req.session?.profilePhoto || 'N/A',
-        studentNo: req.session?.studentNo || null
-    };
-
-    return {
-        id: user.id,
-        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Student',
-        firstName: user.firstName || (user.name || '').split(' ')[0] || 'Student',
-        lastName: user.lastName || '',
-        status: user.status || 'active',
-        email: user.email || '',
-        role: user.role || 'student',
-        profilePhoto: user.profilePhoto || 'N/A',
-        studentNo: user.studentNo || null,
-    };
 }
 
 function generateRefNumber() {
@@ -329,9 +289,7 @@ function findNextAvailableSlot(faculty, afterDate) {
             // Chop into sub-slots and find a free one
             const subSlots = chopSlotServer(slot);
             for (const subSlot of subSlots) {
-                const candidateDate = new Date(afterDate);
-                candidateDate.setDate(afterDate.getDate() + offset);
-                if (!isSlotTaken(faculty.id, candidateDate, subSlot) && !isSlotReserved(faculty.id, candidateDate, subSlot)) {
+                if (!isSlotTaken(faculty.id, dayName, subSlot) && !isSlotReserved(faculty.id, dayName, subSlot)) {
                     return {
                         date: candidate,
                         day: dayName,
@@ -470,11 +428,20 @@ router.get('/dashboard', (req, res) => {
         );
     }
 
-    const student = getStudentContext(req);
+    const student = {
+        id: req.session?.userId,
+        name: req.session?.name,
+        firstName: req.session.firstName,
+        lastName: req.session.lastName,
+        status: req.session.status,
+        email: req.session?.email,
+        role: req.session.role,
+        profilePhoto: req.session?.profilePhoto || 'N/A',
+    }
 
     res.render('pages/student/dashboard', {
         title: 'FaciTrack - Faculty Directory',
-        student,
+        student: student,
         facultyList: filtered,
         searchQuery: search || '', activeDept: dept || '', departments
     });
@@ -483,15 +450,11 @@ router.get('/dashboard', (req, res) => {
 router.get('/faculty/:id', (req, res) => {
     const faculty = getFaculty(parseInt(req.params.id));
     if (!faculty) return res.redirect('/student/dashboard');
-
-    const student = getStudentContext(req);
-
     const takenSlots = getTakenSlots(faculty.id);
     const { windowStart, windowEnd } = getTwoWeekWindow();
     res.render('pages/student/profile', {
         title: `FaciTrack - ${faculty.name}`,
         faculty,
-        student,
         takenSlots,
         windowStart: windowStart.toISOString(),
         windowEnd: windowEnd.toISOString()
@@ -500,34 +463,19 @@ router.get('/faculty/:id', (req, res) => {
 
 // ── Slot reservation endpoint (called when student clicks a slot) ──
 router.post('/slot/reserve', (req, res) => {
-    const { facultyId, date, day, slotTime, reservationToken } = req.body;
+    const { facultyId, day, slotTime } = req.body;
     const fid = parseInt(facultyId);
-    if (!fid || !date || !day || !slotTime) return res.status(400).json({ error: 'Missing parameters.' });
+    if (!fid || !day || !slotTime) return res.status(400).json({ error: 'Missing parameters.' });
 
-    if (isSlotTaken(fid, date, slotTime)) {
+    if (isSlotTaken(fid, day, slotTime)) {
         return res.json({ available: false, reason: 'taken' });
     }
-
-    const ownReservation = reservationToken && slotReservations[reservationToken];
-    if (ownReservation && ownReservation.expiresAt > Date.now() &&
-        ownReservation.facultyId === fid &&
-        normalizeDateKey(ownReservation.date) === normalizeDateKey(date) &&
-        ownReservation.day === day &&
-        ownReservation.slotTime.trim() === slotTime.trim()) {
-        return res.json({
-            available: true,
-            token: reservationToken,
-            expiresAt: ownReservation.expiresAt,
-            expiresIn: Math.max(0, ownReservation.expiresAt - Date.now())
-        });
-    }
-
-    if (isSlotReserved(fid, date, slotTime)) {
+    if (isSlotReserved(fid, day, slotTime)) {
         return res.json({ available: false, reason: 'reserved' });
     }
 
-    const token = reserveSlot(fid, date, day, slotTime);
-    res.json({ available: true, token, expiresAt: slotReservations[token].expiresAt, expiresIn: RESERVATION_MS });
+    const token = reserveSlot(fid, day, slotTime);
+    res.json({ available: true, token, expiresIn: RESERVATION_MS });
 });
 
 // ── Release reservation (called on back/cancel) ──
@@ -543,8 +491,8 @@ router.get('/faculty/:id/book', (req, res) => {
     const hasOpen = faculty.consultationSlots.some(s => s.status === 'open');
     if (!hasOpen) return res.redirect(`/student/faculty/${faculty.id}`);
 
-    const student = getStudentContext(req);
-    if (!student.email) return res.redirect('/login');
+    // Get logged-in student info
+    const student = req.currentUser;
 
     res.render('pages/student/book', {
         title: `FaciTrack - Book Appointment with ${faculty.name}`,
@@ -552,10 +500,7 @@ router.get('/faculty/:id/book', (req, res) => {
         student,
         selectedSlot: req.query.slot || null,
         selectedDate: req.query.date || null,
-        reservationToken: req.query.token || null,
-        reservationExpiresAt: req.query.token && slotReservations[req.query.token]
-            ? slotReservations[req.query.token].expiresAt
-            : null
+        reservationToken: req.query.token || null
     });
 });
 
@@ -565,9 +510,8 @@ router.post('/faculty/:id/book', (req, res) => {
 
     const { selectedSlot, consultTopic, consultNotes, selectedDate, reservationToken } = req.body;
 
-    const student = getStudentContext(req);
-    if (!student.email) return res.redirect('/login');
-
+    // Get logged-in student info
+    const student = req.currentUser;
     const studentName = student.name;
     const studentId = student.studentNo || student.id.toString();
     const studentEmail = student.email;
@@ -575,20 +519,7 @@ router.post('/faculty/:id/book', (req, res) => {
     const renderError = (msg) => res.render('pages/student/book', {
         title: `FaciTrack - Book Appointment with ${faculty.name}`,
         faculty, student, error: msg,
-        selectedSlot, selectedDate, reservationToken,
-        formData: {
-            studentName: req.body.studentName || '',
-            studentId: req.body.studentId || '',
-            studentSection: req.body.studentSection || '',
-            courseSubject: req.body.courseSubject || '',
-            studentEmail: req.body.studentEmail || '',
-            consultTopic: req.body.consultTopic || '',
-            consultNotes: req.body.consultNotes || '',
-            consultType: req.body.consultType || 'Face-to-Face'
-        },
-        reservationExpiresAt: reservationToken && slotReservations[reservationToken]
-            ? slotReservations[reservationToken].expiresAt
-            : null
+        selectedSlot, selectedDate, reservationToken
     });
 
     if (!selectedSlot) return renderError('Please select a consultation slot.');
@@ -601,43 +532,38 @@ router.post('/faculty/:id/book', (req, res) => {
     const dayFromSlot = selectedDate ? selectedDate.split(',')[0].trim() : '';
 
     // Check if slot is taken by a permanent booking
-    if (isSlotTaken(faculty.id, selectedDate, selectedSlot)) {
+    if (isSlotTaken(faculty.id, dayFromSlot, selectedSlot)) {
         // Release their reservation token since slot is gone
         if (reservationToken) releaseReservation(reservationToken);
         return renderError('This slot has already been booked. Please go back and select a different slot.');
     }
 
     // Validate reservation token — if expired, redirect back with session expired message
-    const reservation = reservationToken ? slotReservations[reservationToken] : null;
-    if (!reservation || reservation.expiresAt <= Date.now() ||
-        reservation.facultyId !== faculty.id ||
-        normalizeDateKey(reservation.date) !== normalizeDateKey(selectedDate) ||
-        reservation.day !== dayFromSlot ||
-        reservation.slotTime.trim() !== selectedSlot.trim()) {
-        if (reservationToken) releaseReservation(reservationToken);
-        return res.redirect(
-            `/student/faculty/${faculty.id}?expired=1&slot=${encodeURIComponent(selectedSlot)}&date=${encodeURIComponent(selectedDate || '')}`
-        );
+    if (reservationToken) {
+        const reservation = slotReservations[reservationToken];
+        if (!reservation || reservation.expiresAt < Date.now()) {
+            releaseReservation(reservationToken);
+            return res.redirect(
+                `/student/faculty/${faculty.id}?expired=1&slot=${encodeURIComponent(selectedSlot)}&date=${encodeURIComponent(selectedDate || '')}`
+            );
+        }
+        // Release the reservation — we're converting it to a permanent booking
+        releaseReservation(reservationToken);
     }
-    // Release the reservation — we're converting it to a permanent booking.
-    releaseReservation(reservationToken);
 
-    // Allow multiple bookings with the same instructor when they use different dates or slots.
-    // The slot lock above prevents duplicate bookings for the exact same appointment slot.
+    // Check duplicate booking by same student with same instructor
     const existingBooking = Object.values(refStore).find(r =>
         r.facultyId === faculty.id &&
         r.studentEmail === normalizedEmail &&
-        normalizeDateKey(r.date) === normalizeDateKey(selectedDate) &&
-        r.slot === selectedSlot &&
         (r.status === 'pending' || r.status === 'confirmed')
     );
     if (existingBooking) {
-        return renderError(`You already have an active booking for this consultation slot (Ref: ${existingBooking.refNumber}). Please select a different date or time.`);
+        return renderError(`You already have an active booking with ${faculty.name} (Ref: ${existingBooking.refNumber}). Please wait for the instructor to respond before booking again.`);
     }
 
     // Generate reference number and lock the slot permanently
     const refNumber = generateRefNumber();
-    lockSlot(faculty.id, selectedDate, dayFromSlot, selectedSlot, refNumber, normalizedEmail);
+    lockSlot(faculty.id, dayFromSlot, selectedSlot, refNumber, normalizedEmail);
 
     refStore[refNumber] = {
         refNumber, facultyId: faculty.id, facultyName: faculty.name,
@@ -679,13 +605,13 @@ router.post('/faculty/:id/book', (req, res) => {
 });
 
 router.get('/appointments', (req, res) => {
-    const student = getStudentContext(req);
-    if (!student.email) return res.redirect('/login');
+    // Get logged-in student's appointments
+    const student = req.currentUser;
+    const studentEmail = student.email.toLowerCase();
 
-    const studentEmail = String(student.email || '').toLowerCase();
-
+    // Filter appointments for this student
     const myAppointments = Object.values(refStore).filter(apt =>
-        String(apt.studentEmail || '').toLowerCase() === studentEmail
+        apt.studentEmail === studentEmail
     );
 
     res.render('pages/student/appointments', {
@@ -696,11 +622,8 @@ router.get('/appointments', (req, res) => {
 });
 
 router.get('/availability', (req, res) => {
-    const student = getStudentContext(req);
     res.render('pages/student/availability', {
-        title: 'FaciTrack - Faculty Availability',
-        facultyList,
-        student
+        title: 'FaciTrack - Faculty Availability', facultyList
     });
 });
 
@@ -747,8 +670,8 @@ router.post('/reschedule/:refNumber', (req, res) => {
     const originalDateStr = booking.date;
 
     // Release old slot, lock new one
-    releaseSlot(booking.facultyId, booking.date, booking.slot);
-    lockSlot(booking.facultyId, next.date, next.day, next.slot, ref, booking.studentEmail);
+    releaseSlot(booking.facultyId, booking.day, booking.slot);
+    lockSlot(booking.facultyId, next.day, next.slot, ref, booking.studentEmail);
 
     // Update booking
     booking.slot = next.slot;

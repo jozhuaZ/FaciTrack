@@ -56,7 +56,6 @@
 /* Slot detail panel */
 .slot-detail-panel { margin-top:.75rem; padding:1rem 1.25rem; background:rgba(34,197,94,.06); border:1.5px solid rgba(34,197,94,.25); border-radius:var(--radius-md); display:none; }
 .slot-detail-panel.show { display:block; }
-.slot-hold-countdown { display:none; margin:.65rem 0 0; color:#b45309; font-size:.75rem; font-weight:600; text-align:center; }
 .no-schedule-panel { margin-top:.75rem; padding:1rem 1.25rem; background:#f8fafc; border:1px solid var(--gray-200); border-radius:var(--radius-md); }
 .no-schedule-title { font-size:.9rem; font-weight:700; color:var(--gray-800); margin:0 0 .35rem; }
 .no-schedule-text { font-size:.82rem; color:var(--gray-600); margin:0; }
@@ -66,13 +65,11 @@
 /* Selectable slot items */
 .slot-select-btn { display:flex; align-items:center; gap:.625rem; width:100%; padding:.625rem .875rem; background:#fff; border:1.5px solid rgba(34,197,94,.3); border-radius:var(--radius-md); cursor:pointer; transition:all .18s; font-family:var(--font-body); font-size:.8125rem; color:var(--gray-800); text-align:left; }
 .slot-select-btn:hover { border-color:#16a34a; background:rgba(34,197,94,.06); }
-.slot-select-btn.selected { border-color:#16a34a; background:linear-gradient(135deg, rgba(34,197,94,.12), rgba(22,163,74,.18)); font-weight:700; color:#15803d; box-shadow:0 0 0 2px rgba(34,197,94,.12), inset 0 0 0 1px rgba(22,163,74,.15); }
-.slot-select-btn.selected:hover { background:linear-gradient(135deg, rgba(34,197,94,.16), rgba(22,163,74,.22)); }
+.slot-select-btn.selected { border-color:#16a34a; background:rgba(34,197,94,.12); font-weight:700; color:#15803d; }
 .slot-select-btn.full { opacity:.5; cursor:not-allowed; background:var(--gray-50); border-color:var(--gray-200); color:var(--gray-400); }
 .slot-num-badge { width:20px; height:20px; border-radius:50%; background:rgba(34,197,94,.2); color:#15803d; font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .slot-select-btn.selected .slot-num-badge { background:#16a34a; color:#fff; }
 .slot-avail-tag { margin-left:auto; font-size:.6875rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; flex-shrink:0; }
-.slot-select-btn.selected .slot-avail-tag { background:#dcfce7; color:#166534; border-color:#86efac; box-shadow:inset 0 0 0 1px rgba(22,163,74,.14); }
 .slot-avail-tag.full { background:var(--gray-100); color:var(--gray-400); border-color:var(--gray-200); }
 /* Book button with slot selected */
 .btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
@@ -187,7 +184,6 @@
                         <div class="slot-detail-panel" id="slotDetailPanel">
                             <p class="slot-detail-title" id="slotDetailTitle"></p>
                             <div id="slotDetailList" style="display:flex;flex-direction:column;gap:.5rem;"></div>
-                            <p id="slotHoldCountdown" class="slot-hold-countdown">Slot held for 5:00</p>
                         </div>
 
                         <!-- Book Action -->
@@ -231,6 +227,17 @@ const WINDOW_END   = new Date('<%- windowEnd %>');
 const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+// Map day name -> slot info (open only and not fully booked)
+const availableByDay = {};
+slots.forEach(s => {
+    if (s.status !== 'open') return;
+    const slotText = s.time;
+    const dayTaken = takenSlots[s.day] || [];
+    if (dayTaken.includes(slotText)) return;
+    availableByDay[s.day] = availableByDay[s.day] || [];
+    availableByDay[s.day].push(s);
+});
+
 // Parse "2:00 PM" → minutes
 function parseTime(str) {
     const [time, period] = str.trim().split(' ');
@@ -246,38 +253,6 @@ function formatTime(mins) {
     if (h === 0) h = 12;
     return `${h}:${m.toString().padStart(2,'0')} ${p}`;
 }
-
-function toDateKey(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// Check if a time slot has already passed (for today only)
-function hasSlotPassed(dayName, slotTime, date) {
-    const today = new Date();
-    const isToday = date
-        ? toDateKey(date) === toDateKey(today)
-        : dayName === dayNames[today.getDay()];
-    if (!isToday) return false; // Future dates: slot hasn't passed
-
-    // Parse slot end time and compare to current time
-    const parts = (slotTime || '').split('–').map(s => s.trim());
-    if (parts.length < 2) return false;
-    const endTimeStr = parts[1];
-    const endMins = parseTime(endTimeStr);
-    const nowMins = today.getHours() * 60 + today.getMinutes();
-    return nowMins >= endMins; // Slot has passed if now >= end time
-}
-
-// Map day name -> slot info (open only and not fully booked)
-const availableByDay = {};
-slots.forEach(s => {
-    if (s.status !== 'open') return;
-    availableByDay[s.day] = availableByDay[s.day] || [];
-    availableByDay[s.day].push(s);
-});
 
 function chopSlot(slotObj) {
     const parts = (slotObj.time || '').split('–').map(s => s.trim());
@@ -355,17 +330,10 @@ function renderCalendar() {
             continue;
         }
 
-        const daySlots = availableByDay[dayName] || [];
-        const dateTaken = takenSlots[toDateKey(cellDate)] || [];
-        const hasAvailableSlot = daySlots.some(slot =>
-            chopSlot(slot).some(timeStr =>
-                !dateTaken.includes(timeStr.trim()) && !hasSlotPassed(dayName, timeStr, cellDate)
-            )
-        );
-
-        if (hasAvailableSlot) {
+        if (availableByDay[dayName]) {
             cell.classList.add('available');
             // Tooltip: show generic availability message (schedule times are private)
+            const daySlots = availableByDay[dayName];
             const tooltipText = 'Available for consultation';
 
             // Mouse hover (web)
@@ -421,56 +389,19 @@ function renderCalendar() {
 // ── Slot reservation state ──
 let reservationToken = null;
 let reservationTimer = null;
-let reservationCountdown = null;
-let reservationExpiresAt = null;
 const RESERVATION_MS = 5 * 60 * 1000;
 
 function clearReservation() {
-    const isLeavingForBooking = sessionStorage.getItem('skipReservationRelease') === '1';
-    if (isLeavingForBooking) {
-        sessionStorage.removeItem('skipReservationRelease');
-        return;
-    }
-
     if (reservationToken) {
-        const payload = new Blob([JSON.stringify({ token: reservationToken })], { type: 'application/json' });
-        navigator.sendBeacon('/student/slot/release', payload);
+        navigator.sendBeacon('/student/slot/release', JSON.stringify({ token: reservationToken }));
         reservationToken = null;
     }
     if (reservationTimer) { clearTimeout(reservationTimer); reservationTimer = null; }
-    if (reservationCountdown) { clearInterval(reservationCountdown); reservationCountdown = null; }
-    reservationExpiresAt = null;
-    const countdown = document.getElementById('slotHoldCountdown');
-    if (countdown) countdown.style.display = 'none';
 }
 
-function startReservationCountdown() {
-    const countdown = document.getElementById('slotHoldCountdown');
-    if (!countdown || !reservationExpiresAt) return;
-    const update = function() {
-        const remaining = Math.max(0, reservationExpiresAt - Date.now());
-        const mins = Math.floor(remaining / 60000);
-        const secs = Math.floor((remaining % 60000) / 1000);
-        countdown.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
-        countdown.style.display = 'block';
-        if (remaining <= 0) {
-            clearReservation();
-            window.location.href = `/student/faculty/${facultyId}?expired=1`;
-        }
-    };
-    if (reservationCountdown) clearInterval(reservationCountdown);
-    update();
-    reservationCountdown = setInterval(update, 1000);
-}
-
-window.addEventListener('beforeunload', function () {
-    if (sessionStorage.getItem('skipReservationRelease') === '1') return;
-    clearReservation();
-});
-window.addEventListener('pagehide', function () {
-    if (sessionStorage.getItem('skipReservationRelease') === '1') return;
-    clearReservation();
-});
+// Release reservation when leaving the page
+window.addEventListener('beforeunload', clearReservation);
+window.addEventListener('pagehide',     clearReservation);
 
 function showSlotDetail(dayName, dayNum, daySlots) {
     const panel = document.getElementById('slotDetailPanel');
@@ -481,17 +412,14 @@ function showSlotDetail(dayName, dayNum, daySlots) {
     container.innerHTML = '';
 
     // Fully booked slots for this day (from server)
-    const selectedDateKey = toDateKey(new Date(viewYear, viewMonth, dayNum));
-    const takenForDay = (takenSlots[selectedDateKey] || []).map(t => t.trim());
+    const takenForDay = (takenSlots[dayName] || []).map(t => t.trim());
 
     let slotIndex = 0;
     daySlots.forEach(s => {
         const subSlots = chopSlot(s);
         subSlots.forEach((timeStr, subIdx) => {
             slotIndex++;
-            const selectedCalendarDate = new Date(viewYear, viewMonth, dayNum);
-            const isPast = hasSlotPassed(dayName, timeStr, selectedCalendarDate);
-            const isTaken = takenForDay.includes(timeStr.trim()) || isPast;
+            const isTaken = takenForDay.includes(timeStr.trim());
             const btn = document.createElement('button');
             btn.className = 'slot-select-btn' + (isTaken ? ' full' : '');
             btn.disabled = isTaken;
@@ -500,55 +428,11 @@ function showSlotDetail(dayName, dayNum, daySlots) {
                 <span style="flex:1;">${timeStr}</span>
                 <span class="slot-avail-tag${isTaken ? ' full' : ''}">${isTaken ? 'Not Available' : 'Available'}</span>`;
             if (!isTaken) {
-                btn.addEventListener('pointerdown', function (e) {
-                    if (btn.dataset.pending === '1') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return;
-                    }
-                    if (selectedSlotText === timeStr && reservationToken) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                });
-
-                btn.addEventListener('touchstart', function (e) {
-                    if (btn.dataset.pending === '1') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        return;
-                    }
-                    if (selectedSlotText === timeStr && reservationToken) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                }, { passive: false });
-
                 btn.addEventListener('click', async function() {
-                    if (btn.dataset.pending === '1') return;
-                    if (btn.dataset.locked === 'true') return;
-                    if (selectedSlotText === timeStr && reservationToken) {
-                        btn.classList.add('selected');
-                        updateBookButton();
-                        return;
-                    }
-
-                    // If this slot is already selected and reserved, do not re-submit it.
-                    if (selectedSlotText && selectedSlotText === timeStr) {
-                        return;
-                    }
-
-                    // Keep other slot buttons disabled while this request is in flight.
-                    container.querySelectorAll('.slot-select-btn').forEach(b => {
-                        if (b !== btn) b.disabled = true;
-                    });
-
-                    // Clear any previous reservation only if the user is intentionally changing slots,
-                    // not when simply navigating from this page to the booking form.
+                    // Clear any previous reservation
                     clearReservation();
 
-                    // Mark button as loading and block duplicate rapid clicks.
-                    btn.dataset.pending = '1';
+                    // Mark button as loading
                     btn.disabled = true;
                     const tag = btn.querySelector('.slot-avail-tag');
                     if (tag) tag.textContent = 'Checking...';
@@ -557,13 +441,7 @@ function showSlotDetail(dayName, dayNum, daySlots) {
                         const resp = await fetch('/student/slot/reserve', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                facultyId,
-                                date: selectedDateKey,
-                                day: dayName,
-                                slotTime: timeStr,
-                                reservationToken: reservationToken || null
-                            })
+                            body: JSON.stringify({ facultyId, day: dayName, slotTime: timeStr })
                         });
                         const data = await resp.json();
 
@@ -574,44 +452,31 @@ function showSlotDetail(dayName, dayNum, daySlots) {
                             if (!takenForDay.includes(timeStr.trim())) takenForDay.push(timeStr.trim());
                             selectedSlotText = null;
                             updateBookButton();
-                            btn.dataset.pending = '0';
-                            btn.disabled = false;
-                            container.querySelectorAll('.slot-select-btn').forEach(b => {
-                                if (b !== btn) b.disabled = false;
-                            });
                             return;
                         }
 
                         // Reserved successfully
                         reservationToken = data.token;
-                        reservationExpiresAt = data.expiresAt;
-                        startReservationCountdown();
                         btn.disabled = false;
-                        btn.dataset.pending = '0';
                         if (tag) tag.textContent = 'Reserved (5 min)';
 
-                        container.querySelectorAll('.slot-select-btn').forEach(b => {
-                            b.disabled = false;
-                            b.classList.remove('selected');
-                            if (b !== btn && !b.classList.contains('full')) {
-                                b.setAttribute('aria-disabled', 'true');
-                            }
-                        });
+                        container.querySelectorAll('.slot-select-btn').forEach(b => b.classList.remove('selected'));
                         btn.classList.add('selected');
-                        btn.setAttribute('aria-pressed', 'true');
-                        btn.setAttribute('data-locked', 'true');
-                        btn.disabled = true;
                         selectedSlotText = timeStr;
                         updateBookButton();
 
                         // Auto-release after 5 minutes → redirect back to profile
+                        reservationTimer = setTimeout(() => {
+                            clearReservation();
+                            selectedSlotText = null;
+                            updateBookButton();
+                            // Redirect back to profile with expired flag
+                            window.location.href = `/student/faculty/${facultyId}?expired=1`;
+                        }, RESERVATION_MS);
+
                     } catch (err) {
                             btn.disabled = false;
-                            btn.dataset.pending = '0';
                             if (tag) tag.textContent = 'Available';
-                            container.querySelectorAll('.slot-select-btn').forEach(b => {
-                                if (b !== btn) b.disabled = false;
-                            });
                             console.error('Reservation error:', err);
                         }
                     });
@@ -629,16 +494,8 @@ function updateBookButton() {
     if (!btn) return;
     if (selectedSlotText && selectedDate && reservationToken) {
         btn.classList.remove('disabled');
-        btn.href = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}&expiresAt=${encodeURIComponent(reservationExpiresAt || '')}`;
+        btn.href = `/student/faculty/${facultyId}/book?slot=${encodeURIComponent(selectedSlotText)}&date=${encodeURIComponent(selectedDate)}&token=${encodeURIComponent(reservationToken)}`;
         if (helper) helper.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Slot selected: <strong>${selectedSlotText}</strong> — <span style="color:#b45309;">5 min hold</span>`;
-
-        btn.addEventListener('click', function (event) {
-            if (!selectedSlotText || !selectedDate || !reservationToken) {
-                event.preventDefault();
-                return;
-            }
-            sessionStorage.setItem('skipReservationRelease', '1');
-        }, { once: true });
     } else {
         btn.classList.add('disabled');
         btn.href = '#';
