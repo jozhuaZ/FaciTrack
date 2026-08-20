@@ -18,7 +18,7 @@ const AuthController = {
         if (req.session.userId) {
             return AuthController.redirectByRole(res, req.session.role);
         }
-        res.render('pages/index', {
+        res.render('pages/login', {
             title: 'FaciTrack - Faculty Appointment & Monitoring System',
             error: errorMessage,
         });
@@ -30,7 +30,7 @@ const AuthController = {
 
             // Basic validation
             if (!email || !password) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Email and password are required.',
                 });
@@ -39,7 +39,7 @@ const AuthController = {
             // Find user
             const user = await UserModel.getUserByEmail(email);
             if (!user) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Invalid email or password.',
                 });
@@ -47,7 +47,7 @@ const AuthController = {
 
             // Check if account is active
             if (user.status !== 'Active') {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Your account is inactive. Please contact the administrator.',
                 });
@@ -56,7 +56,7 @@ const AuthController = {
             // Verify password
             const match = await bcrypt.compare(password, user.hashed_password);
             if (!match) {
-                return res.render('pages/index', {
+                return res.render('pages/login', {
                     title: 'FaciTrack - Faculty Appointment & Monitoring System',
                     error: 'Invalid email or password.',
                 });
@@ -71,6 +71,7 @@ const AuthController = {
             req.session.lastName = user.last_name;
             req.session.email = user.email;
             req.session.position = user.position;
+            req.session.departmentId = user.department_id;
             req.session.department = user.department_name;
             req.session.profilePhoto = user.profile_picture || null;
 
