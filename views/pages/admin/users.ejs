@@ -230,7 +230,6 @@
             </button>
         </div>
         <div class="modal-body">
-            <!-- Role selector (only shown on Add) -->
             <div id="roleTabsWrap">
                 <p style="font-size:0.8125rem;font-weight:600;color:var(--gray-700);margin:0 0 0.5rem;">Role</p>
                 <div class="role-tabs">
@@ -449,7 +448,7 @@ function openEditUserModal(index, publicId, firstName, middleName, lastName, ema
     editingUserIndex = index;
     selectedRole = role;
     document.getElementById('userModalTitle').textContent = 'Edit User';
-    document.getElementById('roleTabsWrap').style.display = 'none';
+    document.getElementById('roleTabsWrap').style.display = 'block';
     document.getElementById('pwdRequired').style.display = 'none';
     document.getElementById('userFirstName').value  = firstName;
     document.getElementById('userMiddleName').value = middleName;
@@ -498,33 +497,6 @@ async function saveUser() {
     if (!position) { showToast('error', 'Required', 'Position/Title is required.'); return; }
     if (!dept) { showToast('error', 'Required', 'Department is required.'); return; }
     if (!isEditing && !password) { showToast('error', 'Required', 'Password is required.'); return; }
-
-    // Update the row in the table to reflect new status/employment type
-    if (isEditing) {
-        const rows = getAllRows();
-        const row = rows[editingUserIndex];
-        if (row) {
-            const newStatus = document.getElementById('userStatus').value;
-            row.dataset.status = newStatus;
-            row.dataset.emptype = empType;
-            // Update status badge cell (index 5)
-            const statusCell = row.cells[5];
-            if (statusCell) statusCell.innerHTML = `<span class="table-badge ${newStatus==='active'?'confirmed':'declined'}">${newStatus==='active'?'Active':'Inactive'}</span>`;
-            // Update employment badge cell (index 3 — email column removed)
-            const empCell = row.cells[3];
-            if (empCell) {
-                const employmentTypeMap = {
-                    'Job Order': 'job-order',
-                    'COS': 'cos',
-                    'Casual': 'casual',
-                    'Permanent': 'permanent',
-                    'Co Terminus': 'co-terminus',
-                    'Temporary': 'temporary'
-                };
-                empCell.innerHTML = `<span class="emp-badge ${empType}">${empType}</span>`;
-            }
-        }
-    }
 
     const payload   = { firstName, middleName, lastName, email, role, departmentId: dept, status, employmentType: empType, position, password };
     
