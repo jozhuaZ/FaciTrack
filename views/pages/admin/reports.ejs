@@ -96,147 +96,9 @@
                 </div>
             </div>
 
-            <!-- Faculty Workload Report -->
-            <div class="content-card" style="margin-top:1.5rem;overflow:visible">
-                <div class="card-body">
-                    <div class="report-preview">
-                        <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-                            <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-                            <div>
-                                <p class="report-republic">Republic of the Philippines</p>
-                                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                                <p class="report-college">College of Computer Studies</p>
-                                <h4 class="report-title-block">Faculty Workload Report</h4>
-                                <p class="report-subtitle">Faculty Teaching Load and Consultation Summary</p>
-                                <p class="report-period">Period: <span id="fwReportPeriodText">All Records</span></p>
-                            </div>
-                            <div style="margin-left:auto">
-                                <button class="btn-header-action primary" id="btnExportFw" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                                    Export/Print
-                                </button>
-                            </div>
-                        </div>
-
-                        <%- include('../../partials/filter-bar', {
-                            filterId: 'fw',
-                            searchPlaceholder: 'Search faculty name…',
-                            filterSections: []
-                        }) %>
-
-                        <div style="padding:0 1.5rem 1.5rem">
-                            <div style="overflow-x:auto;margin-top:1rem">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Faculty Name</th>
-                                            <th>Position</th>
-                                            <th>Department</th>
-                                            <th style="text-align:center">Total Hours</th>
-                                            <th style="text-align:center">Total Consultations</th>
-                                            <th>Avg Duration</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="fwReportBody"></tbody>
-                                </table>
-                            </div>
-                            <div class="pagination-bar" id="fwReportPagBar">
-                                <span class="page-info" id="fwReportPageInfo">-</span>
-                                <div class="pagination-controls">
-                                    <button class="btn-page" id="fwReportPrev" disabled>Prev</button>
-                                    <button class="btn-page" id="fwReportNext" disabled>Next</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Consultation Logs Report -->
-            <div class="content-card" style="margin-top:1.5rem;overflow:visible">
-                <div class="card-body">
-                    <div class="report-preview">
-                        <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-                            <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-                            <div>
-                                <p class="report-republic">Republic of the Philippines</p>
-                                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                                <p class="report-college">College of Computer Studies</p>
-                                <h4 class="report-title-block">Consultation Logs Report</h4>
-                                <p class="report-subtitle">Student-Faculty Consultation Activity Records</p>
-                                <p class="report-period">Period: <span id="clReportPeriodText">All Records</span></p>
-                            </div>
-                            <div style="margin-left:auto">
-                                <button class="btn-header-action primary" id="btnExportCl" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                                    Export/Print
-                                </button>
-                            </div>
-                        </div>
-
-                        <%- include('../../partials/filter-bar', {
-                            filterId: 'cl',
-                            searchPlaceholder: 'Search student or faculty…',
-                            filterSections: [
-                                { label: 'By Date', key: 'period', type: 'buttons',
-                                    items: [{ value:'all', label:'All' }, { value:'week', label:'This Week' }, { value:'month', label:'This Month' }] },
-                                { label: 'By Status', key: 'status', type: 'buttons',
-                                    items: [{ value:'all', label:'All Status' }, { value:'confirmed', label:'Confirmed' },
-                                            { value:'pending', label:'Pending' }, { value:'declined', label:'Declined' }] }
-                            ]
-                        }) %>
-
-                        <div style="padding:0 1.5rem 1.5rem">
-                            <div style="overflow-x:auto;margin-top:1rem">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Student</th>
-                                            <th>Faculty</th>
-                                            <th>Date</th>
-                                            <th>Time</th>
-                                            <th>Topic</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="clReportBody"></tbody>
-                                </table>
-                            </div>
-                            <div class="pagination-bar" id="clReportPagBar">
-                                <span class="page-info" id="clReportPageInfo">-</span>
-                                <div class="pagination-controls">
-                                    <button class="btn-page" id="clReportPrev" disabled>Prev</button>
-                                    <button class="btn-page" id="clReportNext" disabled>Next</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Audit Logs Report -->
             <div class="content-card" style="overflow:visible">
-                <div class="card-body">
-                    <div class="report-preview">
-                        <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-                            <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-                            <div>
-                                <p class="report-republic">Republic of the Philippines</p>
-                                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                                <p class="report-college">College of Computer Studies</p>
-                                <h4 class="report-title-block">Audit Logs Report</h4>
-                                <p class="report-subtitle">System Activity and User Access Records</p>
-                                <p class="report-period">Filter: <span id="alReportFilterText">All Events</span></p>
-                            </div>
-                            <div style="margin-left:auto">
-                                <button class="btn-header-action primary" id="btnExportAl" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                                    Export/Print
-                                </button>
-                            </div>
-                        </div>
-
-                        <%- include('../../partials/filter-bar', {
+                <%- include('../../partials/filter-bar', {
                             filterId: 'al',
                             searchPlaceholder: 'Search user or action…',
                             filterSections: [
@@ -249,6 +111,23 @@
                                             { value:'Dean', label:'Dean' }, { value:'Instructor', label:'Instructor' }] }
                             ]
                         }) %>
+                <div class="card-body">
+                    <div class="report-preview">
+                        <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
+                            <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+                            <div>
+                                <p class="report-republic">Republic of the Philippines</p>
+                                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
+                                <p class="report-college">College of Computer Studies</p>
+                                <h4 class="report-title-block">Audit Logs Report</h4>
+                            </div>
+                            <div style="margin-left:auto">
+                                <button class="btn-header-action primary" id="btnExportAl" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                    Export/Print
+                                </button>
+                            </div>
+                        </div>
 
                         <div style="padding:0 1.5rem 1.5rem">
                             <div style="overflow-x:auto;margin-top:1rem">
