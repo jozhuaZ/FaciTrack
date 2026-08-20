@@ -64,7 +64,7 @@
 
 </style>
 <div class="instructor-layout">
-  <%- include('../../partials/instructor-sidebar', { activePage: 'reports', pendingCount: pendingCount }) %>
+  <%- include('../../partials/instructor-sidebar', { activePage: 'reports', pendingCount: 0 }) %>
   <main class="instructor-main">
     <div class="main-container">
       <div class="page-header">
@@ -102,40 +102,11 @@
           <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <div class="stat-card-content">
             <p class="stat-card-label">Avg Duration</p>
-            <h2 class="stat-card-value"><%= workloadStats.thisWeek.averageDuration %></h2>
+            <h2 class="stat-card-value"><%= averageDuration %></h2>
             <p class="stat-card-sublabel">Per consultation</p>
           </div>
         </div>
       </div>
-      <div class="analytics-grid">
-        <div class="content-card">
-          <div class="card-header">
-            <h3 class="card-title">Appointment Activity</h3>
-            <span style="font-size:.75rem;color:var(--gray-400)">Mon-Fri this week</span>
-          </div>
-          <div class="card-body">
-            <div class="bar-chart">
-              <%
-                var trendVals = workloadStats.trends.map(function(t){return t.consultations;});
-                var maxTrend = 1;
-                for(var ti=0;ti<trendVals.length;ti++){ if(trendVals[ti]>maxTrend) maxTrend=trendVals[ti]; }
-              %>
-              <% for(var ti2=0;ti2<workloadStats.trends.length;ti2++){ %>
-              <%   var tr = workloadStats.trends[ti2]; %>
-              <%   var pct = Math.round((tr.consultations/maxTrend)*100); %>
-              <div class="bar-chart-item">
-                <div class="bar-chart-bar-wrap">
-                  <div class="bar-chart-bar" style="height:<%= pct %>%" title="<%= tr.consultations %> consultations">
-                    <% if(pct>=30){ %><span class="bar-value"><%= tr.consultations %></span><% } %>
-                  </div>
-                </div>
-                <span class="bar-label"><%= tr.day %></span>
-              </div>
-              <% } %>
-            </div>
-            <p class="chart-legend">Consultations per day (this week)</p>
-          </div>
-        </div>
         <div class="content-card">
           <div class="card-header">
             <h3 class="card-title">Appointment Breakdown</h3>
@@ -143,10 +114,12 @@
           </div>
           <div class="card-body">
             <%
-              var bdTot  = appointments.length || 1;
-              var bdConf = appointments.filter(function(a){return a.status==='confirmed';}).length;
-              var bdDecl = appointments.filter(function(a){return a.status==='declined';}).length;
-              var bdPend = appointments.filter(function(a){return a.status==='pending';}).length;
+              var bdTot   = appointments.length || 1;
+              var bdConf  = appointments.filter(function(a){return a.status==='confirmed';}).length;
+              var bdComp  = appointments.filter(function(a){return a.status==='completed';}).length;
+              var bdPend  = appointments.filter(function(a){return a.status==='pending';}).length;
+              var bdDecl  = appointments.filter(function(a){return a.status==='declined';}).length;
+              var bdCanc  = appointments.filter(function(a){return a.status==='cancelled';}).length;
             %>
             <div class="workload-breakdown" id="breakdownList">
               <div class="breakdown-row">
@@ -155,95 +128,24 @@
                 <span class="breakdown-value"><%= bdConf %></span>
               </div>
               <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:.4rem;vertical-align:middle"></span>Declined</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdDecl/bdTot*100) %>%;background:linear-gradient(90deg,#dc2626,#ef4444)"></div></div>
-                <span class="breakdown-value"><%= bdDecl %></span>
+                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0a3d62;margin-right:.4rem;vertical-align:middle"></span>Completed</span>
+                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdComp/bdTot*100) %>%;background:linear-gradient(90deg,#0a3d62,#1e6091)"></div></div>
+                <span class="breakdown-value"><%= bdComp %></span>
               </div>
               <div class="breakdown-row">
                 <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ea580c;margin-right:.4rem;vertical-align:middle"></span>Pending</span>
                 <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdPend/bdTot*100) %>%;background:linear-gradient(90deg,#ea580c,#fb923c)"></div></div>
                 <span class="breakdown-value"><%= bdPend %></span>
               </div>
-            </div>
-            <div style="display:flex;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-100)">
-              <div style="flex:1;text-align:center;padding:.625rem;background:rgba(22,163,74,.06);border-radius:8px">
-                <p style="font-size:1.125rem;font-weight:800;color:#15803d;margin:0"><%= workloadStats.thisWeek.consultationsCompleted %></p>
-                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">This Week</p>
+              <div class="breakdown-row">
+                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:.4rem;vertical-align:middle"></span>Declined</span>
+                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdDecl/bdTot*100) %>%;background:linear-gradient(90deg,#dc2626,#ef4444)"></div></div>
+                <span class="breakdown-value"><%= bdDecl %></span>
               </div>
-              <div style="flex:1;text-align:center;padding:.625rem;background:rgba(10,61,98,.06);border-radius:8px">
-                <p style="font-size:1.125rem;font-weight:800;color:var(--primary-blue);margin:0"><%= workloadStats.thisMonth.consultationsCompleted %></p>
-                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">This Month</p>
-              </div>
-              <div style="flex:1;text-align:center;padding:.625rem;background:rgba(124,58,237,.06);border-radius:8px">
-                <p style="font-size:1.125rem;font-weight:800;color:#7c3aed;margin:0"><%= workloadStats.thisWeek.hoursLogged %>h</p>
-                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Hrs/Week</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- Schedule Logs Report -->
-      <div class="content-card" style="overflow:visible">
-        <div class="card-body">
-          <div class="report-preview">
-            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-              <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div>
-                <p class="report-republic">Republic of the Philippines</p>
-                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                <p class="report-college">College of Computer Studies</p>
-                <h4 class="report-title-block">Schedule Logs Report</h4>
-                <p class="report-subtitle">Instructor Schedule Summary</p>
-                <p class="report-period">Faculty: <strong><%= instructor.name %></strong> &middot; Filter: <span id="slReportFilterText">All Dates</span></p>
-              </div>
-              <div style="margin-left:auto">
-                <button class="btn-header-action primary" id="btnExportSl" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                  Export/Print
-                </button>
-              </div>
-            </div>
-
-            <%- include('../../partials/filter-bar', {
-              filterId: 'sl',
-              searchPlaceholder: 'Search date or time…',
-              filterSections: [
-                { label: 'By Date', type: 'date' },
-                { label: 'By Status', key: 'slstatus', type: 'buttons',
-                  items: [
-                    { value:'all',    label:'All Status' },
-                    { value:'open',   label:'Open'       },
-                    { value:'full',   label:'Full'       },
-                    { value:'closed', label:'Closed'     }
-                  ]
-                }
-              ]
-            }) %>
-
-            <div style="padding:0 1.5rem 1.5rem">
-              <div style="overflow-x:auto;margin-top:1rem">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Time Range</th>
-                      <th>Sub-slots</th>
-                      <th style="text-align:center">Max Students</th>
-                      <th style="text-align:center">Booked</th>
-                      <th style="text-align:center">Available</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody id="slReportBody"></tbody>
-                  <tfoot id="slReportFoot" style="border-top:2px solid var(--gray-200)"></tfoot>
-                </table>
-              </div>
-              <div class="pagination-bar" id="slReportPagBar">
-                <span class="page-info" id="slReportPageInfo">-</span>
-                <div class="pagination-controls">
-                  <button class="btn-page" id="slReportPrev" disabled>Prev</button>
-                  <button class="btn-page" id="slReportNext" disabled>Next</button>
-                </div>
+              <div class="breakdown-row">
+                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:.4rem;vertical-align:middle"></span>Cancelled</span>
+                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdCanc/bdTot*100) %>%;background:linear-gradient(90deg,#6b7280,#9ca3af)"></div></div>
+                <span class="breakdown-value"><%= bdCanc %></span>
               </div>
             </div>
           </div>
@@ -252,6 +154,18 @@
 
       <!-- Appointment Logs Report -->
       <div class="content-card" style="margin-top:1.5rem;overflow:visible">
+        <%- include('../../partials/filter-bar', {
+            filterId: 'log',
+            searchPlaceholder: 'Search student or topic…',
+            filterSections: [
+              { label: 'By Date', key: 'period', type: 'buttons',
+                items: [{ value:'all', label:'All' }, { value:'week', label:'This Week' }, { value:'month', label:'This Month' }] },
+              { label: 'Specific Day', type: 'date' },
+              { label: 'By Status', key: 'status', type: 'buttons',
+                items: [{ value:'all', label:'All Status' }, { value:'confirmed', label:'Confirmed' },
+                        { value:'pending', label:'Pending' }, { value:'declined', label:'Declined' }] }
+            ]
+          }) %>
         <div class="card-body">
           <div class="report-preview">
             <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
@@ -271,19 +185,6 @@
                 </button>
               </div>
             </div>
-
-            <%- include('../../partials/filter-bar', {
-              filterId: 'log',
-              searchPlaceholder: 'Search student or topic…',
-              filterSections: [
-                { label: 'By Date', key: 'period', type: 'buttons',
-                  items: [{ value:'all', label:'All' }, { value:'week', label:'This Week' }, { value:'month', label:'This Month' }] },
-                { label: 'Specific Day', type: 'date' },
-                { label: 'By Status', key: 'status', type: 'buttons',
-                  items: [{ value:'all', label:'All Status' }, { value:'confirmed', label:'Confirmed' },
-                          { value:'pending', label:'Pending' }, { value:'declined', label:'Declined' }] }
-              ]
-            }) %>
 
             <div style="padding:0 1.5rem 1.5rem">
               <div style="overflow-x:auto;margin-top:1rem">
@@ -306,73 +207,6 @@
                 <div class="pagination-controls">
                   <button class="btn-page" id="logReportPrev" disabled>Prev</button>
                   <button class="btn-page" id="logReportNext" disabled>Next</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Workload Logs Report -->
-      <div class="content-card" style="margin-top:1.5rem;overflow:visible">
-        <div class="card-body">
-          <div class="report-preview">
-            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-              <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div>
-                <p class="report-republic">Republic of the Philippines</p>
-                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                <p class="report-college">College of Computer Studies</p>
-                <h4 class="report-title-block">Workload Logs Report</h4>
-                <p class="report-subtitle">Instructor Teaching Load Summary</p>
-                <p class="report-period">Faculty: <strong><%= instructor.name %></strong> &middot; Filter: <span id="wlReportFilterText">All Subjects</span></p>
-              </div>
-              <div style="margin-left:auto">
-                <button class="btn-header-action primary" id="btnExportWl" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                  Export/Print
-                </button>
-              </div>
-            </div>
-
-            <%- include('../../partials/filter-bar', {
-              filterId: 'wl',
-              searchPlaceholder: 'Search subject or room…',
-              filterSections: [
-                { label: 'Filter Day', type: 'date' },
-                { label: 'By Type', key: 'type', type: 'buttons',
-                  items: [
-                    { value:'all',           label:'All Types'    },
-                    { value:'Regular',       label:'Regular'      },
-                    { value:'Make Up Class', label:'Make-Up'      }
-                  ]
-                }
-              ]
-            }) %>
-
-            <div style="padding:0 1.5rem 1.5rem">
-              <div style="overflow-x:auto;margin-top:1rem">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Subject Code</th>
-                      <th>Subject Name</th>
-                      <th>Room</th>
-                      <th>Type</th>
-                      <th style="text-align:center">Hours</th>
-                    </tr>
-                  </thead>
-                  <tbody id="wlReportBody"></tbody>
-                  <tfoot id="wlReportFoot" style="border-top:2px solid var(--gray-200)"></tfoot>
-                </table>
-              </div>
-              <div class="pagination-bar" id="wlReportPagBar">
-                <span class="page-info" id="wlReportPageInfo">-</span>
-                <div class="pagination-controls">
-                  <button class="btn-page" id="wlReportPrev" disabled>Prev</button>
-                  <button class="btn-page" id="wlReportNext" disabled>Next</button>
                 </div>
               </div>
             </div>
@@ -403,11 +237,35 @@
 <script>
 (function(){
   var APPOINTMENTS = <%- JSON.stringify(appointments || []) %>;
-  var WORKLOAD_LOGS = <%- JSON.stringify(workloadLogs || []) %>;
-  var SCHEDULE_SLOTS = <%- JSON.stringify(consultationSlots || []) %>;
   var logState = { search:'', period:'all', status:'all', date:'', page:1, pageSize:10 };
   var wlState  = { search:'', day:'all', type:'all', date:'', page:1, pageSize:10 };
   var slState  = { search:'', date:'', slstatus:'all', page:1, pageSize:10 };
+
+  function getWeekRange(referenceDate = new Date()) {
+    const now = new Date(referenceDate);
+    now.setHours(0, 0, 0, 0);
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay()); // Sunday
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  function buildDailyTrends(appointments) {
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const dayIndexMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const { start, end } = getWeekRange();
+
+    return dayLabels.map(day => {
+        const count = appointments.filter(a => {
+            if (a.status !== 'confirmed') return false; // "completed" = confirmed
+            const d = new Date(a.date);
+            return d >= start && d <= end && d.getDay() === dayIndexMap[day];
+        }).length;
+        return { day, consultations: count };
+    });
+  }
   function getDateForDay(dayName){
     var now = new Date();
     var currentDay = now.getDay(); // 0=Sunday, 1=Monday, etc.
@@ -510,148 +368,6 @@
     next.disabled = logState.page >= pages;
   }
 
-  function applySlFilters(){
-    // Build enriched rows from SCHEDULE_SLOTS
-    var rows = SCHEDULE_SLOTS.map(function(s){
-      var timeStr = s.time || ((s.timeStart || '') + ' – ' + (s.timeEnd || ''));
-      var cap = Math.max(1, parseInt(s.maxCapacity, 10) || 1);
-      var booked = parseInt(s.bookedCount, 10) || 0;
-      var available = Math.max(0, cap - booked);
-      // Compute sub-slots label
-      var subSlots = cap + ' sub-slot' + (cap !== 1 ? 's' : '');
-      var date = getDateForDay(s.day);
-      return {
-        day: s.day || '—',
-        date: date,
-        timeRange: timeStr,
-        subSlots: subSlots,
-        maxCapacity: cap,
-        booked: booked,
-        available: available,
-        status: s.status || 'open'
-      };
-    });
-    if(slState.search){
-      var q = slState.search.toLowerCase();
-      rows = rows.filter(function(r){
-        return (formatDate(r.date, true) || '').toLowerCase().includes(q) || (r.timeRange || '').toLowerCase().includes(q);
-      });
-    }
-    if(slState.date){
-      var target = parseDate(slState.date);
-      rows = rows.filter(function(r){
-        return target && r.date && r.date.toDateString() === target.toDateString();
-      });
-    }
-    if(slState.slstatus !== 'all') rows = rows.filter(function(r){ return r.status === slState.slstatus; });
-    return rows;
-  }
-
-  function renderSlTable(){
-    var rows = applySlFilters();
-    var body = document.getElementById('slReportBody');
-    var foot = document.getElementById('slReportFoot');
-    var pageInfo = document.getElementById('slReportPageInfo');
-    var prev = document.getElementById('slReportPrev');
-    var next = document.getElementById('slReportNext');
-    var filterText = document.getElementById('slReportFilterText');
-    var total = rows.length;
-    var pages = Math.max(1, Math.ceil(total / slState.pageSize));
-    if(slState.page > pages) slState.page = pages;
-    var start = (slState.page - 1) * slState.pageSize;
-    var slice = rows.slice(start, start + slState.pageSize);
-    var totalBooked = rows.reduce(function(sum, r){ return sum + r.booked; }, 0);
-    var totalCap    = rows.reduce(function(sum, r){ return sum + r.maxCapacity; }, 0);
-
-    filterText.textContent = slState.date ? formatDate(slState.date, true) : 'All Dates';
-    body.innerHTML = '';
-    if(!slice.length){
-      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400)">No schedule slots found.</td></tr>';
-    } else {
-      slice.forEach(function(r){
-        var statusClass = r.status === 'open' ? 'confirmed' : (r.status === 'full' ? 'pending' : 'declined');
-        var statusLabel = r.status.charAt(0).toUpperCase() + r.status.slice(1);
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td><strong>' + esc(formatDate(r.date, true)) + '</strong></td>' +
-          '<td>' + esc(r.timeRange) + '</td>' +
-          '<td style="color:var(--gray-500);font-size:.8rem">' + esc(r.subSlots) + '</td>' +
-          '<td style="text-align:center">' + esc(String(r.maxCapacity)) + '</td>' +
-          '<td style="text-align:center;font-weight:700;color:' + (r.booked > 0 ? '#0a3d62' : 'var(--gray-400)') + '">' + esc(String(r.booked)) + '</td>' +
-          '<td style="text-align:center;font-weight:700;color:' + (r.available > 0 ? '#15803d' : '#dc2626') + '">' + esc(String(r.available)) + '</td>' +
-          '<td><span class="table-badge ' + esc(statusClass) + '">' + esc(statusLabel) + '</span></td>';
-        body.appendChild(tr);
-      });
-    }
-    pageInfo.textContent = total ? ('Showing ' + (start + 1) + '-' + Math.min(start + slState.pageSize, total) + ' of ' + total) : 'No entries found';
-    document.getElementById('slReportPagBar').style.display = pages > 1 ? 'flex' : 'none';
-    prev.disabled = slState.page <= 1;
-    next.disabled = slState.page >= pages;
-  }
-
-  function applyWlFilters(){
-    var rows = WORKLOAD_LOGS.slice();
-    if(wlState.search){
-      var q = wlState.search.toLowerCase();
-      rows = rows.filter(function(r){
-        return (r.subjectCode || '').toLowerCase().includes(q) ||
-               (r.subjectName || '').toLowerCase().includes(q) ||
-               (r.room || '').toLowerCase().includes(q);
-      });
-    }
-    if(wlState.date){
-      var target = parseDate(wlState.date);
-      if(target){
-        var dayName = DAYS[target.getDay()];
-        rows = rows.filter(function(r){ return r.day === dayName; });
-      }
-    } else if(wlState.day !== 'all') {
-      rows = rows.filter(function(r){ return r.day === wlState.day; });
-    }
-    if(wlState.type !== 'all') rows = rows.filter(function(r){ return r.type === wlState.type; });
-    return rows;
-  }
-
-  function renderWlTable(){
-    var rows = applyWlFilters();
-    var body = document.getElementById('wlReportBody');
-    var foot = document.getElementById('wlReportFoot');
-    var pageInfo = document.getElementById('wlReportPageInfo');
-    var prev = document.getElementById('wlReportPrev');
-    var next = document.getElementById('wlReportNext');
-    var filterText = document.getElementById('wlReportFilterText');
-    var total = rows.length;
-    var pages = Math.max(1, Math.ceil(total / wlState.pageSize));
-    if(wlState.page > pages) wlState.page = pages;
-    var start = (wlState.page - 1) * wlState.pageSize;
-    var slice = rows.slice(start, start + wlState.pageSize);
-    var totalHours = rows.reduce(function(sum, r){ return sum + ((Number(r.duration) || 0) / 2); }, 0);
-
-    var displayDate = wlState.date ? formatDate(wlState.date, true) : '—';
-    filterText.textContent = wlState.date ? formatDate(wlState.date, true) : (wlState.day === 'all' ? 'All Subjects' : wlState.day);
-    body.innerHTML = '';
-    if(!slice.length){
-      body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400)">No workload logs found.</td></tr>';
-    } else {
-      slice.forEach(function(r){
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + esc(displayDate) + '</td>' +
-          '<td>' + esc(r.timeRange || '—') + '</td>' +
-          '<td><strong>' + esc(r.subjectCode || '—') + '</strong></td>' +
-          '<td>' + esc(r.subjectName || '—') + '</td>' +
-          '<td>' + esc(r.room || '—') + '</td>' +
-          '<td><span class="table-badge ' + ((r.type === 'Make Up Class') ? 'pending' : 'confirmed') + '">' + esc(r.type || 'Regular') + '</span></td>' +
-          '<td style="text-align:center">' + esc(((Number(r.duration) || 0) / 2).toString()) + '</td>';
-        body.appendChild(tr);
-      });
-    }
-    pageInfo.textContent = total ? ('Showing ' + (start + 1) + '-' + Math.min(start + wlState.pageSize, total) + ' of ' + total) : 'No entries found';
-    document.getElementById('wlReportPagBar').style.display = pages > 1 ? 'flex' : 'none';
-    prev.disabled = wlState.page <= 1;
-    next.disabled = wlState.page >= pages;
-  }
-
   function openDetail(id){
     var row = APPOINTMENTS.find(function(r){ return String(r.id) === String(id); });
     if(!row) return;
@@ -670,12 +386,6 @@
     if(e.detail.filterId === 'log'){
       logState.search = e.detail.value || ''; logState.page = 1; renderLogTable();
     }
-    if(e.detail.filterId === 'wl'){
-      wlState.search = e.detail.value || ''; wlState.page = 1; renderWlTable();
-    }
-    if(e.detail.filterId === 'sl'){
-      slState.search = e.detail.value || ''; slState.page = 1; renderSlTable();
-    }
   });
 
   document.addEventListener('fbChange', function(e){
@@ -686,35 +396,12 @@
       logState.page = 1;
       renderLogTable();
     }
-    if(e.detail.filterId === 'wl'){
-      if(e.detail.section === 'day') wlState.day = e.detail.value;
-      if(e.detail.section === 'type') wlState.type = e.detail.value;
-      if(e.detail.section === 'date'){ wlState.date = e.detail.value; }
-      wlState.page = 1;
-      renderWlTable();
-    }
-    if(e.detail.filterId === 'sl'){
-      if(e.detail.section === 'date'){ slState.date = e.detail.value; }
-      if(e.detail.section === 'slstatus') slState.slstatus = e.detail.value;
-      slState.page = 1;
-      renderSlTable();
-    }
   });
 
   document.getElementById('logReportPrev').addEventListener('click', function(){ if(logState.page > 1){ logState.page--; renderLogTable(); } });
   document.getElementById('logReportNext').addEventListener('click', function(){
     var pages = Math.max(1, Math.ceil(applyLogFilters().length / logState.pageSize));
     if(logState.page < pages){ logState.page++; renderLogTable(); }
-  });
-  document.getElementById('wlReportPrev').addEventListener('click', function(){ if(wlState.page > 1){ wlState.page--; renderWlTable(); } });
-  document.getElementById('wlReportNext').addEventListener('click', function(){
-    var pages = Math.max(1, Math.ceil(applyWlFilters().length / wlState.pageSize));
-    if(wlState.page < pages){ wlState.page++; renderWlTable(); }
-  });
-  document.getElementById('slReportPrev').addEventListener('click', function(){ if(slState.page > 1){ slState.page--; renderSlTable(); } });
-  document.getElementById('slReportNext').addEventListener('click', function(){
-    var pages = Math.max(1, Math.ceil(applySlFilters().length / slState.pageSize));
-    if(slState.page < pages){ slState.page++; renderSlTable(); }
   });
 
   document.getElementById('logReportBody').addEventListener('click', function(e){
@@ -840,143 +527,7 @@
     win.print();
   }
 
-  function exportWlReport(action){
-    var filtered = applyWlFilters();
-    var rows = filtered.map(function(r){
-      return [
-        wlState.date ? formatDate(wlState.date) : esc(r.day),
-        esc(r.timeRange || '—'),
-        esc(r.subjectCode || '—'),
-        esc(r.subjectName || '—'),
-        esc(r.room || '—'),
-        esc(r.type || 'Regular')
-      ];
-    });
-    var period = wlState.date ? formatDate(wlState.date, true) : (wlState.day === 'all' ? 'All Subjects' : wlState.day);
-    
-    // Create printable HTML and open print dialog directly
-    var now = new Date();
-    var formattedDate = (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getDate().toString().padStart(2, '0') + '/' + now.getFullYear();
-    var tableHtml = '<table style="width:100%;border-collapse:collapse;margin-top:15px;font-family:Arial,sans-serif;font-size:9pt">' +
-      '<thead><tr style="background:#e5e7eb;border:1px solid #000">' +
-      ['Date', 'Time', 'Subject Code', 'Subject Name', 'Room', 'Type'].map(function(c){ return '<th style="border:1px solid #000;padding:10px;text-align:left;font-weight:700;color:#000">' + c + '</th>'; }).join('') +
-      '</tr></thead><tbody>';
-    
-    rows.forEach(function(r){
-      tableHtml += '<tr style="border:1px solid #000">' + r.map(function(cell){ return '<td style="border:1px solid #000;padding:8px;text-align:left">' + cell + '</td>'; }).join('') + '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    
-    var printContent = '<div style="font-family:Arial,sans-serif;color:#000;font-size:11pt;line-height:1.4">' +
-      '<div style="text-align:center;padding-bottom:10px;border-bottom:3px solid #000">' +
-        '<p style="margin:0;font-size:9pt">Republic of the Philippines</p>' +
-        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0">' +
-          '<img src="/images/CSPC-logo.png" style="width:45px;height:45px" onerror="this.style.display:none">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0;font-size:11pt;font-weight:700">CAMARINES SUR POLYTECHNIC COLLEGES</p>' +
-            '<p style="margin:0;font-size:9pt">Nabua, Camarines Sur</p>' +
-          '</div>' +
-        '</div>' +
-        '<p style="margin:5px 0 0;font-size:10pt;font-weight:700;text-decoration:underline">Workload Logs Report</p>' +
-        '<p style="margin:3px 0;font-size:9pt">Period: ' + period + '</p>' +
-      '</div>' +
-      tableHtml +
-      '<div style="margin-top:20px;font-size:9pt">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:10px">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0">Faculty: <strong><%= instructor.name %></strong></p>' +
-            '<p style="margin:5px 0 0;font-size:8pt">Date Generated: ' + formattedDate + '</p>' +
-          '</div>' +
-          '<div style="text-align:right;width:220px">' +
-            '<div style="border-bottom:1px solid #000;height:40px;margin-bottom:3px"></div>' +
-            '<p style="margin:0;font-weight:700;font-size:9pt"><%= instructor.name %></p>' +
-            '<p style="margin:0;font-size:8pt">Signature over Printed Name</p>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-    
-    var win = window.open('', '_blank', 'width=900,height=600');
-    win.document.open();
-    win.document.write(printContent);
-    win.document.close();
-    win.focus();
-    win.print();
-  }
-  
-  function exportSlReport(){
-    var filtered = applySlFilters();
-    var rows = filtered.map(function(r){
-      return [
-        esc(r.day),
-        esc(r.timeRange),
-        esc(r.subSlots),
-        esc(String(r.maxCapacity)),
-        esc(String(r.booked)),
-        esc(String(r.available)),
-        esc(r.status.charAt(0).toUpperCase() + r.status.slice(1))
-      ];
-    });
-    var totalCap    = filtered.reduce(function(s,r){ return s + r.maxCapacity; }, 0);
-    var totalBooked = filtered.reduce(function(s,r){ return s + r.booked; }, 0);
-    var totalAvail  = Math.max(0, totalCap - totalBooked);
-    var filterLabel = slState.day !== 'all' ? slState.day : 'All Days';
-    var now = new Date();
-    var formattedDate = (now.getMonth()+1).toString().padStart(2,'0') + '/' + now.getDate().toString().padStart(2,'0') + '/' + now.getFullYear();
-    var headers = ['Day','Time Range','Sub-slots','Max Students','Booked','Available','Status'];
-    var tableHtml = '<table style="width:100%;border-collapse:collapse;margin-top:15px;font-family:Arial,sans-serif;font-size:9pt">' +
-      '<thead><tr style="background:#e5e7eb">' +
-      headers.map(function(c){ return '<th style="border:1px solid #000;padding:10px;text-align:left;font-weight:700">' + c + '</th>'; }).join('') +
-      '</tr></thead><tbody>';
-    rows.forEach(function(r){
-      tableHtml += '<tr>' + r.map(function(cell){ return '<td style="border:1px solid #000;padding:8px">' + cell + '</td>'; }).join('') + '</tr>';
-    });
-    tableHtml += '</tbody><tfoot><tr>' +
-      '<td colspan="3" style="border:1px solid #000;padding:8px;text-align:right;font-weight:700">Totals</td>' +
-      '<td style="border:1px solid #000;padding:8px;text-align:center;font-weight:700">' + totalCap + '</td>' +
-      '<td style="border:1px solid #000;padding:8px;text-align:center;font-weight:700">' + totalBooked + '</td>' +
-      '<td style="border:1px solid #000;padding:8px;text-align:center;font-weight:700">' + totalAvail + '</td>' +
-      '<td style="border:1px solid #000;padding:8px"></td>' +
-      '</tr></tfoot></table>';
-    var printContent = '<div style="font-family:Arial,sans-serif;color:#000;font-size:11pt;line-height:1.4">' +
-      '<div style="text-align:center;padding-bottom:10px;border-bottom:3px solid #000">' +
-        '<p style="margin:0;font-size:9pt">Republic of the Philippines</p>' +
-        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0">' +
-          '<img src="/images/CSPC-logo.png" style="width:45px;height:45px" onerror="this.style.display:none">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0;font-size:11pt;font-weight:700">CAMARINES SUR POLYTECHNIC COLLEGES</p>' +
-            '<p style="margin:0;font-size:9pt">Nabua, Camarines Sur</p>' +
-          '</div>' +
-        '</div>' +
-        '<p style="margin:5px 0 0;font-size:10pt;font-weight:700;text-decoration:underline">Schedule Logs Report</p>' +
-        '<p style="margin:3px 0;font-size:9pt">Filter: ' + filterLabel + '</p>' +
-      '</div>' +
-      tableHtml +
-      '<div style="margin-top:20px;font-size:9pt">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:10px">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0">Faculty: <strong><%= instructor.name %></strong></p>' +
-            '<p style="margin:5px 0 0;font-size:8pt">Date Generated: ' + formattedDate + '</p>' +
-          '</div>' +
-          '<div style="text-align:right;width:220px">' +
-            '<div style="border-bottom:1px solid #000;height:40px;margin-bottom:3px"></div>' +
-            '<p style="margin:0;font-weight:700;font-size:9pt"><%= instructor.name %></p>' +
-            '<p style="margin:0;font-size:8pt">Signature over Printed Name</p>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-    var win = window.open('', '_blank', 'width=900,height=600');
-    win.document.open();
-    win.document.write(printContent);
-    win.document.close();
-    win.focus();
-    win.print();
-  }
-
   renderLogTable();
-  renderSlTable();
-  renderWlTable();
 }());
 
 function preparePrintReport(item){
