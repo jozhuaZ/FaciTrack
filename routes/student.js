@@ -366,106 +366,107 @@ router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservati
 
 router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);
 router.post('/faculty/schedule/:slotId/book', StudentController.submitBooking);
+router.post('/faculty/consultation/:slotId/cancel', StudentController.updateStatus);
 
-router.post('/faculty/:id/book', (req, res) => {
-    const faculty = getFaculty(parseInt(req.params.id));
-    if (!faculty) return res.redirect('/student/dashboard');
+// router.post('/faculty/:id/book', (req, res) => {
+//     const faculty = getFaculty(parseInt(req.params.id));
+//     if (!faculty) return res.redirect('/student/dashboard');
 
-    const { selectedSlot, consultTopic, consultNotes, selectedDate, reservationToken } = req.body;
+//     const { selectedSlot, consultTopic, consultNotes, selectedDate, reservationToken } = req.body;
 
-    // Get logged-in student info
-    const student = req.currentUser;
-    const studentName = student.name;
-    const studentId = student.studentNo || student.id.toString();
-    const studentEmail = student.email;
+//     // Get logged-in student info
+//     const student = req.currentUser;
+//     const studentName = student.name;
+//     const studentId = student.studentNo || student.id.toString();
+//     const studentEmail = student.email;
 
-    const renderError = (msg) => res.render('pages/student/book', {
-        title: `FaciTrack - Book Appointment with ${faculty.name}`,
-        faculty, student, error: msg,
-        selectedSlot, selectedDate, reservationToken
-    });
+//     const renderError = (msg) => res.render('pages/student/book', {
+//         title: `FaciTrack - Book Appointment with ${faculty.name}`,
+//         faculty, student, error: msg,
+//         selectedSlot, selectedDate, reservationToken
+//     });
 
-    if (!selectedSlot) return renderError('Please select a consultation slot.');
-    if (!consultTopic || !consultTopic.trim()) return renderError('Please describe your consultation topic.');
+//     if (!selectedSlot) return renderError('Please select a consultation slot.');
+//     if (!consultTopic || !consultTopic.trim()) return renderError('Please describe your consultation topic.');
 
-    const sanitizedTopic = consultTopic.trim().substring(0, 500);
-    const sanitizedNotes = (consultNotes || '').trim().substring(0, 1000);
-    const normalizedEmail = studentEmail.toLowerCase().trim();
+//     const sanitizedTopic = consultTopic.trim().substring(0, 500);
+//     const sanitizedNotes = (consultNotes || '').trim().substring(0, 1000);
+//     const normalizedEmail = studentEmail.toLowerCase().trim();
 
-    const dayFromSlot = selectedDate ? selectedDate.split(',')[0].trim() : '';
+//     const dayFromSlot = selectedDate ? selectedDate.split(',')[0].trim() : '';
 
-    // Check if slot is taken by a permanent booking
-    if (isSlotTaken(faculty.id, dayFromSlot, selectedSlot)) {
-        // Release their reservation token since slot is gone
-        if (reservationToken) releaseReservation(reservationToken);
-        return renderError('This slot has already been booked. Please go back and select a different slot.');
-    }
+//     // Check if slot is taken by a permanent booking
+//     if (isSlotTaken(faculty.id, dayFromSlot, selectedSlot)) {
+//         // Release their reservation token since slot is gone
+//         if (reservationToken) releaseReservation(reservationToken);
+//         return renderError('This slot has already been booked. Please go back and select a different slot.');
+//     }
 
-    // Validate reservation token — if expired, redirect back with session expired message
-    if (reservationToken) {
-        const reservation = slotReservations[reservationToken];
-        if (!reservation || reservation.expiresAt < Date.now()) {
-            releaseReservation(reservationToken);
-            return res.redirect(
-                `/student/faculty/${faculty.id}?expired=1&slot=${encodeURIComponent(selectedSlot)}&date=${encodeURIComponent(selectedDate || '')}`
-            );
-        }
-        // Release the reservation — we're converting it to a permanent booking
-        releaseReservation(reservationToken);
-    }
+//     // Validate reservation token — if expired, redirect back with session expired message
+//     if (reservationToken) {
+//         const reservation = slotReservations[reservationToken];
+//         if (!reservation || reservation.expiresAt < Date.now()) {
+//             releaseReservation(reservationToken);
+//             return res.redirect(
+//                 `/student/faculty/${faculty.id}?expired=1&slot=${encodeURIComponent(selectedSlot)}&date=${encodeURIComponent(selectedDate || '')}`
+//             );
+//         }
+//         // Release the reservation — we're converting it to a permanent booking
+//         releaseReservation(reservationToken);
+//     }
 
-    // Check duplicate booking by same student with same instructor
-    const existingBooking = Object.values(refStore).find(r =>
-        r.facultyId === faculty.id &&
-        r.studentEmail === normalizedEmail &&
-        (r.status === 'pending' || r.status === 'confirmed')
-    );
-    if (existingBooking) {
-        return renderError(`You already have an active booking with ${faculty.name} (Ref: ${existingBooking.refNumber}). Please wait for the instructor to respond before booking again.`);
-    }
+//     // Check duplicate booking by same student with same instructor
+//     const existingBooking = Object.values(refStore).find(r =>
+//         r.facultyId === faculty.id &&
+//         r.studentEmail === normalizedEmail &&
+//         (r.status === 'pending' || r.status === 'confirmed')
+//     );
+//     if (existingBooking) {
+//         return renderError(`You already have an active booking with ${faculty.name} (Ref: ${existingBooking.refNumber}). Please wait for the instructor to respond before booking again.`);
+//     }
 
-    // Generate reference number and lock the slot permanently
-    const refNumber = generateRefNumber();
-    lockSlot(faculty.id, dayFromSlot, selectedSlot, refNumber, normalizedEmail);
+//     // Generate reference number and lock the slot permanently
+//     const refNumber = generateRefNumber();
+//     lockSlot(faculty.id, dayFromSlot, selectedSlot, refNumber, normalizedEmail);
 
-    refStore[refNumber] = {
-        refNumber, facultyId: faculty.id, facultyName: faculty.name,
-        studentName: studentName, studentId: studentId, studentEmail: normalizedEmail,
-        slot: selectedSlot, day: dayFromSlot, date: selectedDate || '', topic: sanitizedTopic,
-        notes: sanitizedNotes, status: 'pending', requestedAt: new Date().toISOString()
-    };
+//     refStore[refNumber] = {
+//         refNumber, facultyId: faculty.id, facultyName: faculty.name,
+//         studentName: studentName, studentId: studentId, studentEmail: normalizedEmail,
+//         slot: selectedSlot, day: dayFromSlot, date: selectedDate || '', topic: sanitizedTopic,
+//         notes: sanitizedNotes, status: 'pending', requestedAt: new Date().toISOString()
+//     };
 
-    console.log(`[Booking] Ref: ${refNumber} | ${studentName} booked with ${faculty.name}`);
+//     console.log(`[Booking] Ref: ${refNumber} | ${studentName} booked with ${faculty.name}`);
 
-    // Send booking confirmation email (backend-ready)
-    emailService.sendBookingConfirmation({
-        studentEmail: normalizedEmail,
-        studentName: studentName,
-        refNumber,
-        facultyName: faculty.name,
-        slot: selectedSlot,
-        date: selectedDate || '',
-        topic: sanitizedTopic
-    });
+//     // Send booking confirmation email (backend-ready)
+//     emailService.sendBookingConfirmation({
+//         studentEmail: normalizedEmail,
+//         studentName: studentName,
+//         refNumber,
+//         facultyName: faculty.name,
+//         slot: selectedSlot,
+//         date: selectedDate || '',
+//         topic: sanitizedTopic
+//     });
 
-    const backHref = `/student/faculty/${faculty.id}/book?` + new URLSearchParams({
-        slot: selectedSlot,
-        date: selectedDate || ''
-    }).toString();
+//     const backHref = `/student/faculty/${faculty.id}/book?` + new URLSearchParams({
+//         slot: selectedSlot,
+//         date: selectedDate || ''
+//     }).toString();
 
-    res.render('pages/student/booking-confirm', {
-        title: 'FaciTrack - Booking Confirmed',
-        email: normalizedEmail,
-        refNumber,
-        backHref,
-        bookingData: {
-            facultyName: faculty.name,
-            topic: sanitizedTopic,
-            slot: selectedSlot,
-            date: selectedDate || ''
-        }
-    });
-});
+//     res.render('pages/student/booking-confirm', {
+//         title: 'FaciTrack - Booking Confirmed',
+//         email: normalizedEmail,
+//         refNumber,
+//         backHref,
+//         bookingData: {
+//             facultyName: faculty.name,
+//             topic: sanitizedTopic,
+//             slot: selectedSlot,
+//             date: selectedDate || ''
+//         }
+//     });
+// });
 
 router.get('/appointments', StudentController.renderAppointmentsPage);
 router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
