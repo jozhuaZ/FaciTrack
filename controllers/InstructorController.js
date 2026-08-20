@@ -11,17 +11,10 @@ function computeDuration(startTime, endTime) {
     return `${mins} min`;
 }
 
-function formatRequestedAt(createdAt) {
-    if (!createdAt) return '—';
-    return new Date(createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function toDateKey(d) {
-    const date = new Date(d);
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+function computeDurationMinutes(startTime, endTime) {
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    return (eh * 60 + em) - (sh * 60 + sm);
 }
 
 const InstructorController = {
@@ -290,6 +283,49 @@ const InstructorController = {
         } catch (err) {
             console.error('[InstructorController.declineAppointment]', err);
             res.status(500).json({ success: false, error: 'Failed to decline appointment.' });
+        }
+    },
+
+    async renderReportsPage(req, res) {
+        try {
+            const instructor = buildInstructorUser(req.session);
+
+            const instructorPublicId = req.session.userId;
+            const rawAppointments = await AppointmentModel.getAppointmentsByInstructor(instructorPublicId);
+
+            const appointments = rawAppointments.map(row => ({
+                id: row.id,
+                status: row.status,
+                studentName: `${row.student_last_name}, ${row.student_first_name}`,
+                studentId: row.student_number,
+                topic: row.topic,
+                date: row.consultation_date,
+                dayOfWeek: row.day_of_the_week,
+                time: `${to12Hour(row.start_time)} – ${to12Hour(row.end_time)}`,
+                duration: computeDuration(row.start_time, row.end_time),
+                durationMinutes: computeDurationMinutes(row.start_time, row.end_time),
+                buildingName: row.building_name,
+                notes: row.notes,
+                sectionGroupName: row.section_group_name,
+                courseSubject: row.course_subject,
+                createdAt: row.created_at,
+            }));
+
+            const averageDurationMinutes = appointments.length
+                ? Math.round(appointments.reduce((sum, a) => sum + a.durationMinutes, 0) / appointments.length)
+                : 0;
+
+            const averageDuration = `${averageDurationMinutes} min`;
+
+            res.render('pages/instructor/reports', {
+                title: 'FaciTrack - Reports',
+                instructor,
+                averageDuration,
+                appointments,
+            });
+        } catch (err) {
+            console.error('[InstructorController.renderReportsPage]', err);
+            res.status(500).send('Failed to load schedule page.');
         }
     },
 };
