@@ -605,58 +605,8 @@ router.post('/workload/ocr-import', upload.single('schedule'), async (req, res) 
     }
 });
 
-// Workload page
-// router.get('/workload', (req, res) => {
-//     const data = getSharedData();
-//     res.render('pages/instructor/workload', {
-//         title: 'FaciTrack - Workload',
-//         ...data,
-//         pendingCount: data.appointments.filter(a => a.status === 'pending').length
-//     });
-// });
+router.get('/reports', InstructorController.renderReportsPage);
 
-// Reports
-router.get('/reports', (req, res) => {
-    const data = getSharedData();
-    const timetable = getTimetable(1);
-
-    // Build workload log rows from timetable blocks
-    // Each block: key = "Day_slotIndex", value = { subjectCode, subjectName, room, duration, type }
-    const DAYS_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const workloadLogs = [];
-    const { subjects, blocks } = timetable;
-    const subjectMap = {};
-    (subjects || []).forEach(s => { subjectMap[s.code] = s.name || s.code; });
-
-    Object.entries(blocks || {}).forEach(([key, block]) => {
-        const parts = key.split('_');
-        const day = parts[0];
-        const slotIdx = parseInt(parts[1], 10);
-        const timeLabel = slotToLabel(slotIdx);
-        const endLabel  = slotToLabel(slotIdx + (block.duration || 1));
-        workloadLogs.push({
-            day,
-            dayOrder: DAYS_ORDER.indexOf(day),
-            slotIdx,
-            timeRange: `${timeLabel} – ${endLabel}`,
-            subjectCode: block.subjectCode || '—',
-            subjectName: subjectMap[block.subjectCode] || block.subjectName || block.subjectCode || '—',
-            room: block.room || '—',
-            type: block.type || 'Regular',
-            duration: block.duration || 1
-        });
-    });
-
-    // Sort by day order then slot
-    workloadLogs.sort((a, b) => a.dayOrder - b.dayOrder || a.slotIdx - b.slotIdx);
-
-    res.render('pages/instructor/reports', {
-        title: 'FaciTrack - Reports',
-        ...data,
-        workloadLogs,
-        pendingCount: data.appointments.filter(a => a.status === 'pending').length
-    });
-});
 
 // Settings
 router.get('/settings', (req, res) => {
