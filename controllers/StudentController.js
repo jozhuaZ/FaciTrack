@@ -67,13 +67,15 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const StudentController = {
 
     async renderDashboardPage(req, res) {
-        const student = buildStudentUser(req.session);
-
         try {
+            const studentId = req.session.userId;
+            const user = await UserModel.getUserByPublicId(studentId);
+            const student = buildStudentUser(req.session);
+
             const [departments, faculties, appointmentCount] = await Promise.all([
                 DepartmentModel.getDepartments(),
                 UserModel.getFacultiesConsultation(),
-                AppointmentModel.getCount(),
+                AppointmentModel.getStudentCount(user.internal_id),
             ]);
 
             const { windowStart, windowEnd } = getTwoWeekWindow();
@@ -387,6 +389,20 @@ const StudentController = {
             res.status(500).json({ success: false, error: 'Failed to cancel appointment.' });
         }
     },
+
+    async updateStatus(req, res) {
+        try {
+            const { slotId } = req.params;
+            const { facultyId } = req.body;
+
+            await ConsultationModel.updateStatusById(slotId, 'Available');
+
+            res.redirect('/student/faculty/' + facultyId);
+        } catch (error) {
+            console.error('Error cancelling slot:', error);
+            res.redirect('back');
+        }
+    }
 };
 
 module.exports = StudentController;
