@@ -91,6 +91,15 @@ const SlotReservation = {
         );
         return rows;
     },
+
+    async deleteReservationBySlotId(slotId) {
+        const [result] = await pool.execute(
+            'DELETE FROM slot_reservations WHERE slot_id = ?',
+            [slotId]
+        );
+        if (result.affectedRows === 0) return { success: false };
+        return { success: true };
+    }
 };
 
 module.exports = SlotReservation;
