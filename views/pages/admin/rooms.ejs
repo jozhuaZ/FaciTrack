@@ -190,18 +190,14 @@
                 </div> -->
                 <div class="form-field">
                     <label>Department <span style="color:#e53e3e;">*</span></label>
-                    <select id="roomDept">
-                        <option value="">Select department...</option>
-                        <% departments.forEach(d => { %>
-                        <option value="<%= d.id %>"><%= d.full_name %></option>
-                        <% }); %>
-                    </select>
+                    <input type="hidden" id="roomDept" name="departmentId" value="<%= admin.departmentId %>">
+                    <input type="text" value="<%= admin.department %>" style="cursor:not-allowed;" placeholder="<%= admin.department %>" readonly>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-field">
                     <label>Room Type <span style="color:#e53e3e;">*</span></label>
-                    <select id="roomType">
+                    <select id="roomType">  
                         <option value="Lecture">Lecture</option>
                         <option value="Faculty Office">Faculty Office</option>
                         <option value="Consultation Room">Consultation Room</option>
@@ -332,7 +328,7 @@ function closeRoomModal() {
     document.getElementById('roomDept').value = '';
     document.getElementById('roomType').value = 'Faculty Office';
     document.getElementById('roomBle').value = 'false';
-    document.getElementById('roomStatus').value = 'active';
+    document.getElementById('roomStatus').value = 'Active';
 }
 
 function getAllRows() {
@@ -353,21 +349,6 @@ async function saveRoom() {
     const action = editingRoomIndex !== null ? 'updated' : 'added';
 
     const isEditing = editingRoomIndex !== null;
-
-    if (isEditing) {
-        const rows = getAllRows();
-        const row = rows[editingRoomIndex];
-
-        if (row) {
-            const newStatus = document.getElementById('roomStatus').value
-            row.dataset.status = newStatus;
-            
-            const statusCell = row.cells[6];
-            if (statusCell) {
-                statusCell.innerHTML = `<span class="table-badge ${newStatus==='active'?'confirmed':'declined'}">${newStatus==='active'?'Active':'Inactive'}</span>`;
-            }
-        }
-    }
 
     const payload = { roomNumber, department, roomType, bleStatus, assignedFaculty, status };
 
