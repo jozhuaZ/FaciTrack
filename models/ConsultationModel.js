@@ -1,6 +1,7 @@
 const pool = require('../configs/db');
 const crypto = require('crypto');
 const { to12Hour, to24Hour, toMins, fromMins } = require('../utils/timeFormat');
+const SlotReservation = require('./SlotReservationModel');
 
 function generateSubSlots(timeStart, timeEnd, maxCapacity) {
     const start = toMins(timeStart);
@@ -355,6 +356,19 @@ const ConsultationModel = {
 
         return affected;
     },
+
+    async updateStatusById(slotId, status = 'Available') {
+        const [affected] = await pool.execute(
+            'UPDATE consultation_hours SET status = ? WHERE id = ?',
+            [status, slotId]
+        );
+
+        if (status === 'Available') {
+            await SlotReservation.deleteReservationBySlotId(slotId);
+        }
+
+        return affected;
+    }
 
 };
 
