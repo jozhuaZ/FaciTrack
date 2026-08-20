@@ -45,6 +45,12 @@ const AppointmentModel = {
         return count;
     },
 
+    async getStudentCount (studentId) {
+        const [[{ count }]] = await pool.execute('SELECT COUNT(*) AS count FROM appointments WHERE student_id = ?', [studentId]);
+
+        return count;
+    },
+
     // userId could be studentId or instructorId
     async getAppointmentsByUser(userId) {
         const query = `SELECT
