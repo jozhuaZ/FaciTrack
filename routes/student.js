@@ -362,6 +362,7 @@ router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
 
 router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
 router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);
+router.post('/schedule/reserve/:slotId/release', StudentController.deleteSlotReservation);
 router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservation);
 
 router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);

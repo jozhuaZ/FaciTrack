@@ -2,6 +2,200 @@ const pool = require('../configs/db');
 const { to12Hour, to24Hour } = require('../utils/timeFormat');
 
 const ConsultationRoomModel = {
+    // ──────────────────────────────────────────────────────────
+    // Settings Management
+    // ──────────────────────────────────────────────────────────
+    
+    async getSettings() {
+        const query = `
+            SELECT setting_key, setting_value, description, updated_at
+            FROM consultation_settings
+        `;
+        const [rows] = await pool.execute(query);
+        const settings = {};
+        rows.forEach(row => {
+            settings[row.setting_key] = {
+                value: row.setting_value,
+                description: row.description,
+                updated_at: row.updated_at
+            };
+        });
+        return settings;
+    },
+
+    async getSetting(key) {
+        const query = `SELECT setting_value FROM consultation_settings WHERE setting_key = ?`;
+        const [rows] = await pool.execute(query, [key]);
+        return rows[0] ? rows[0].setting_value : null;
+    },
+
+    async updateSetting(key, value, updatedBy = null) {
+        const query = `
+            UPDATE consultation_settings
+            SET setting_value = ?, updated_by = ?
+            WHERE setting_key = ?
+        `;
+        await pool.execute(query, [value, updatedBy, key]);
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // Daily Synchronous Count & Limit Checking
+    // ──────────────────────────────────────────────────────────
+
+    async getDailySynchronousCount(date) {
+        const query = `
+            SELECT COUNT(*) as count
+            FROM appointments a
+            INNER JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+            WHERE ch.consultation_date = ?
+              AND a.mode = 'Synchronous'
+              AND a.status IN ('pending', 'confirmed')
+        `;
+        const [rows] = await pool.execute(query, [date]);
+        return rows[0].count;
+    },
+
+    async getMultiDaySynchronousCount(startDate, endDate) {
+        const query = `
+            SELECT 
+                DATE_FORMAT(ch.consultation_date, '%Y-%m-%d') AS consultation_date,
+                COUNT(*) as sync_count
+            FROM appointments a
+            INNER JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+            WHERE ch.consultation_date BETWEEN ? AND ?
+              AND a.mode = 'Synchronous'
+              AND a.status IN ('pending', 'confirmed')
+            GROUP BY ch.consultation_date
+            ORDER BY ch.consultation_date
+        `;
+        const [rows] = await pool.execute(query, [startDate, endDate]);
+        return rows;
+    },
+
+    async checkSynchronousAvailability(date) {
+        const limit = await this.getSetting('daily_sync_limit');
+        const count = await this.getDailySynchronousCount(date);
+        return {
+            limit: parseInt(limit, 10),
+            current: count,
+            available: count < parseInt(limit, 10),
+            remaining: Math.max(0, parseInt(limit, 10) - count)
+        };
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // Multi-Day Slot View (Unified, All Instructors)
+    // ──────────────────────────────────────────────────────────
+
+    async getMultiDaySlots(startDate, endDate, filters = {}) {
+        let query = `
+            SELECT 
+                cs.id AS slot_id,
+                DATE_FORMAT(cs.consultation_date, '%Y-%m-%d') AS consultation_date,
+                cs.day_of_the_week,
+                TIME_FORMAT(cs.start_time, '%H:%i:%s') AS start_time,
+                TIME_FORMAT(cs.end_time, '%H:%i:%s') AS end_time,
+                cs.status AS slot_status,
+                cs.is_booked,
+                u.id AS instructor_internal_id,
+                u.public_id AS instructor_id,
+                u.first_name AS instructor_first_name,
+                u.last_name AS instructor_last_name,
+                u.position AS instructor_position,
+                u.email AS instructor_email,
+                d.id AS department_id,
+                d.full_name AS department_name,
+                d.program_code,
+                a.id AS appointment_id,
+                a.student_id,
+                a.mode AS appointment_mode,
+                a.status AS appointment_status,
+                a.topic,
+                a.created_at AS appointment_created_at,
+                s.first_name AS student_first_name,
+                s.last_name AS student_last_name,
+                s.email AS student_email,
+                r.id AS room_id,
+                r.room_number,
+                sr.student_id AS reserved_by_student_id,
+                sr.expires_at AS reservation_expires_at
+            FROM consultation_hours cs
+            INNER JOIN users u ON cs.instructor_id = u.id
+            LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN appointments a ON cs.id = a.consultation_hour_id 
+                AND a.status IN ('pending', 'confirmed')
+            LEFT JOIN users s ON a.student_id = s.id
+            LEFT JOIN rooms r ON a.room_id = r.id
+            LEFT JOIN slot_reservations sr ON cs.id = sr.slot_id AND sr.expires_at > NOW()
+            WHERE cs.consultation_date BETWEEN ? AND ?
+              AND cs.status != 'closed'
+        `;
+
+        const params = [startDate, endDate];
+
+        if (filters.instructorId) {
+            query += ` AND u.public_id = ?`;
+            params.push(filters.instructorId);
+        }
+
+        if (filters.status) {
+            if (filters.status === 'Available') {
+                query += ` AND cs.status = 'Available' AND a.id IS NULL AND sr.slot_id IS NULL`;
+            } else if (filters.status === 'Booked') {
+                query += ` AND a.id IS NOT NULL`;
+            } else if (filters.status === 'Booking') {
+                query += ` AND sr.slot_id IS NOT NULL AND a.id IS NULL`;
+            }
+        }
+
+        if (filters.mode) {
+            query += ` AND a.mode = ?`;
+            params.push(filters.mode);
+        }
+
+        if (filters.programCode) {
+            query += ` AND d.program_code = ?`;
+            params.push(filters.programCode);
+        }
+
+        query += ` ORDER BY cs.consultation_date, cs.start_time, u.last_name, u.first_name`;
+
+        const [rows] = await pool.execute(query, params);
+
+        return rows.map(row => ({
+            ...row,
+            computed_status: this._computeSlotStatus(row),
+            status: this._computeSlotStatus(row),
+            mode: row.appointment_mode || null,
+            is_reserved_by_other: row.reserved_by_student_id && !row.appointment_id,
+            instructor_full_name: `${row.instructor_first_name} ${row.instructor_last_name}`.trim(),
+            student_full_name: row.student_first_name 
+                ? `${row.student_first_name} ${row.student_last_name}`.trim()
+                : null
+        }));
+    },
+
+    _computeSlotStatus(row) {
+        if (row.appointment_id) {
+            return 'Booked';
+        }
+        if (row.reserved_by_student_id && row.reservation_expires_at) {
+            const now = new Date();
+            const expires = new Date(row.reservation_expires_at);
+            if (expires > now) {
+                return 'Booking';
+            }
+        }
+        if (row.slot_status === 'Available') {
+            return 'Available';
+        }
+        return row.slot_status;
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // Legacy methods (keep for backward compatibility)
+    // ──────────────────────────────────────────────────────────
+
     /**
      * Get all program-based consultation tables (BSIT, BLIS, BSCS, BSIS)
      */
@@ -71,6 +265,9 @@ const ConsultationRoomModel = {
         if (date) {
             query += ` AND cs.consultation_date = ?`;
             params.push(date);
+        } else {
+            // No date filter — show only today and future slots
+            query += ` AND cs.consultation_date >= CURDATE()`;
         }
 
         query += ` ORDER BY cs.consultation_date, cs.start_time, u.last_name`;
@@ -295,7 +492,7 @@ const ConsultationRoomModel = {
                  INNER JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
                  WHERE a.room_id = r.id
                    AND a.status IN ('pending', 'confirmed')
-                   AND a.mode = 'Face-to-Face'
+                   AND a.mode = 'Synchronous'
                    AND ch.consultation_date = ?
                    AND ch.start_time < ?
                    AND ch.end_time > ?
@@ -335,7 +532,7 @@ const ConsultationRoomModel = {
         return {
             hasAvailability: availableRooms.length > 0,
             availableRooms: availableRooms,
-            faceToFaceAvailable: availableRooms.length > 0
+            synchronousAvailable: availableRooms.length > 0
         };
     },
 
@@ -351,7 +548,7 @@ const ConsultationRoomModel = {
                 SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END) AS completed_count,
                 SUM(CASE WHEN a.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
                 SUM(CASE WHEN a.status = 'declined' THEN 1 ELSE 0 END) AS declined_count,
-                SUM(CASE WHEN a.mode = 'Face-to-Face' THEN 1 ELSE 0 END) AS face_to_face_count,
+                SUM(CASE WHEN a.mode = 'Synchronous' THEN 1 ELSE 0 END) AS synchronous_count,
                 SUM(CASE WHEN a.mode = 'Online' THEN 1 ELSE 0 END) AS online_count
             FROM appointments a
             INNER JOIN consultation_hours ch ON a.consultation_hour_id = ch.id

@@ -7,7 +7,7 @@
   html,body{width:100%!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important;color:#000!important;font-family:'Arial','Helvetica',sans-serif!important}
   body.print-mode .report-preview:not(.print-only){display:none!important}
   .instructor-layout,.instructor-main,.main-container{width:100%!important;margin:0!important;padding:0!important;display:block!important;overflow:visible!important}
-  .instructor-sidebar,.sidebar-footer,.header-actions,.stats-overview,.pagination-bar,.toast-container,.page-header,.filter-bar-container,.fb-bar,.fb-filter-menu,.dropdown-menu,.btn-header-action,.main-header{display:none!important}
+  .instructor-sidebar,.sidebar-footer,.header-actions,.stats-overview,.pagination-bar,.toast-container,.page-header,.filter-bar-container,.fb-bar,.fb-filter-menu,.dropdown-menu,.btn-header-action,.main-header,.report-switcher{display:none!important}
   .content-card{box-shadow:none!important;border:none!important;border-radius:0!important;background:#fff!important;margin:0!important;padding:0!important}
   .card-header,.card-body{padding:0!important;margin:0!important;background:transparent!important;border:none!important;box-shadow:none!important}
   .report-preview{display:block!important;margin:0!important;padding:0!important;width:100%!important}
@@ -48,7 +48,7 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Reports</h1>
-                    <p class="page-subtitle">Faculty workload, consultation logs, and system audit records — College of Computer Studies</p>
+                    <p class="page-subtitle">Consultation slots, faculty records, and system audit reports — College of Computer Studies</p>
                 </div>
             </div>
 
@@ -92,6 +92,75 @@
                         <p class="stat-card-label">Average Duration</p>
                         <h2 class="stat-card-value">42<span style="font-size:0.6em;margin-left:0.25rem">min</span></h2>
                         <p class="stat-card-sublabel">Per consultation</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consultation Slots Report -->
+            <div class="content-card" style="overflow:visible">
+                <%- include('../../partials/filter-bar', {
+                            filterId: 'cs',
+                            searchPlaceholder: 'Search instructor or student…',
+                            filterSections: [
+                                { label: 'By Period', key: 'period', type: 'buttons',
+                                    items: [{ value:'all', label:'All Records' }, { value:'week', label:'This Week' },
+                                            { value:'month', label:'This Month' }] },
+                                { label: 'By Status', key: 'status', type: 'buttons',
+                                    items: [{ value:'all', label:'All Statuses' }, { value:'Available', label:'Available' },
+                                            { value:'Booking', label:'Booking' }, { value:'Booked', label:'Booked' }] },
+                                { label: 'By Mode', key: 'mode', type: 'buttons',
+                                    items: [{ value:'all', label:'All Modes' }, { value:'Synchronous', label:'Synchronous' },
+                                            { value:'Online', label:'Online' }] }
+                            ]
+                        }) %>
+                <div class="card-body">
+                    <div class="report-preview">
+                        <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
+                            <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+                            <div>
+                                <p class="report-republic">Republic of the Philippines</p>
+                                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
+                                <p class="report-college">College of Computer Studies</p>
+                                <h4 class="report-title-block">Consultation Slots Report</h4>
+                                <p class="report-subtitle" style="margin:0.25rem 0 0;font-size:0.8125rem;color:#555">Sourced from Consultation Room slot records</p>
+                                <p class="report-period" id="csReportPeriodText" style="margin:0.15rem 0 0;font-size:0.75rem;color:#666">All Records</p>
+                            </div>
+                            <div style="margin-left:auto">
+                                <button class="btn-header-action primary" id="btnExportCs" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                    Export/Print
+                                </button>
+                            </div>
+                        </div>
+                        <div style="padding:0 1.5rem 1.5rem">
+                            <div style="overflow-x:auto;margin-top:1rem">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Date &amp; Day</th>
+                                            <th>Time</th>
+                                            <th>Instructor</th>
+                                            <th>Program</th>
+                                            <th>Mode</th>
+                                            <th>Status</th>
+                                            <th>Student</th>
+                                            <th>Room</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="csReportBody">
+                                        <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray-400)">Loading slots…</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-bar" id="csReportPagBar">
+                                <span class="page-info" id="csReportPageInfo">-</span>
+                                <div class="pagination-controls">
+                                    <button class="btn-page" id="csReportPrev" disabled>Prev</button>
+                                    <button class="btn-page" id="csReportNext" disabled>Next</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -172,8 +241,7 @@
   const PAGE = 10;
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function parseDate(v){ var d = new Date(v); return isNaN(d.getTime()) ? null : d; }
-  function formatDate(v){ var d = parseDate(v); return d ? d.toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' }) : '—'; }
+  function parseDate(v){ var d = new Date(v); return isNaN(d.getTime()) ? null : d; }  function formatDate(v){ var d = parseDate(v); return d ? d.toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' }) : '—'; }
 
   function weekRange(){
     var d=new Date(), s=new Date(d);
@@ -186,7 +254,7 @@
     return {s:new Date(d.getFullYear(),d.getMonth(),1), e:new Date(d.getFullYear(),d.getMonth()+1,0)};
   }
 
-  // ===== Faculty Workload Report =====
+  // ===== Faculty Workload Report (optional section) =====
   var fwPage = 1;
   var fwBody = document.getElementById('fwReportBody');
   var fwPageInfo = document.getElementById('fwReportPageInfo');
@@ -197,6 +265,7 @@
   }
 
   function renderFwTable(rows){
+    if(!fwBody) return;
     var total=rows.length, pages=Math.max(1,Math.ceil(total/PAGE));
     if(fwPage>pages) fwPage=pages;
     var s=(fwPage-1)*PAGE, slice=rows.slice(s,s+PAGE);
@@ -215,23 +284,24 @@
         fwBody.appendChild(tr);
       });
     }
-    fwPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
-    document.getElementById('fwReportPrev').disabled = fwPage<=1;
-    document.getElementById('fwReportNext').disabled = fwPage>=pages;
+    if(fwPageInfo) fwPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
+    var fwPrev = document.getElementById('fwReportPrev');
+    var fwNext = document.getElementById('fwReportNext');
+    if(fwPrev) fwPrev.disabled = fwPage<=1;
+    if(fwNext) fwNext.disabled = fwPage>=pages;
   }
 
-  // Filter handlers for Faculty Workload Report
-  // No filters currently
-
-  document.getElementById('fwReportPrev').addEventListener('click', function(){
+  var fwPrevBtn = document.getElementById('fwReportPrev');
+  var fwNextBtn = document.getElementById('fwReportNext');
+  if(fwPrevBtn) fwPrevBtn.addEventListener('click', function(){
     if(fwPage>1){ fwPage--; renderFwTable(filterFwRows()); }
   });
-  document.getElementById('fwReportNext').addEventListener('click', function(){
+  if(fwNextBtn) fwNextBtn.addEventListener('click', function(){
     var r=filterFwRows(), pages=Math.ceil(r.length/PAGE);
     if(fwPage<pages){ fwPage++; renderFwTable(r); }
   });
 
-  // ===== Consultation Logs Report =====
+  // ===== Consultation Logs Report (optional section) =====
   var clPage = 1, clPeriod = 'all', clStatus = 'all';
   var clBody = document.getElementById('clReportBody');
   var clPageInfo = document.getElementById('clReportPageInfo');
@@ -250,6 +320,7 @@
   }
 
   function renderClTable(rows){
+    if(!clBody) return;
     var total=rows.length, pages=Math.max(1,Math.ceil(total/PAGE));
     if(clPage>pages) clPage=pages;
     var s=(clPage-1)*PAGE, slice=rows.slice(s,s+PAGE);
@@ -269,29 +340,167 @@
         clBody.appendChild(tr);
       });
     }
-    clPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
-    document.getElementById('clReportPrev').disabled = clPage<=1;
-    document.getElementById('clReportNext').disabled = clPage>=pages;
+    if(clPageInfo) clPageInfo.textContent = total ? ('Showing '+(s+1)+'-'+Math.min(s+PAGE,total)+' of '+total) : 'No results';
+    var clPrev = document.getElementById('clReportPrev');
+    var clNext = document.getElementById('clReportNext');
+    if(clPrev) clPrev.disabled = clPage<=1;
+    if(clNext) clNext.disabled = clPage>=pages;
   }
 
-  // Filter handlers for Consultation Logs Report
   document.querySelectorAll('[data-filterid="cl"]').forEach(function(item){
     if(item.dataset.group){
       item.addEventListener('click', function(){
         if(item.dataset.group==='period'){ clPeriod=item.dataset.value||'all'; clPage=1; }
         else if(item.dataset.group==='status'){ clStatus=item.dataset.value||'all'; clPage=1; }
         renderClTable(filterClRows());
-        document.getElementById('clReportPeriodText').textContent = {all:'All Records',week:'This Week',month:'This Month'}[clPeriod]||'All Records';
+        var clPeriodEl = document.getElementById('clReportPeriodText');
+        if(clPeriodEl) clPeriodEl.textContent = {all:'All Records',week:'This Week',month:'This Month'}[clPeriod]||'All Records';
       });
     }
   });
 
-  document.getElementById('clReportPrev').addEventListener('click', function(){
+  var clPrevBtn = document.getElementById('clReportPrev');
+  var clNextBtn = document.getElementById('clReportNext');
+  if(clPrevBtn) clPrevBtn.addEventListener('click', function(){
     if(clPage>1){ clPage--; renderClTable(filterClRows()); }
   });
-  document.getElementById('clReportNext').addEventListener('click', function(){
+  if(clNextBtn) clNextBtn.addEventListener('click', function(){
     var r=filterClRows(), pages=Math.ceil(r.length/PAGE);
     if(clPage<pages){ clPage++; renderClTable(r); }
+  });
+
+  // ===== Consultation Slots Report =====
+  // Same /admin/consultation-room/multi-day-slots API as Consultation Room.
+  var CS_SLOTS = [];
+  var csPage = 1, csStatus = 'all', csMode = 'all', csPeriod = 'all', csSearch = '';
+  var csBody    = document.getElementById('csReportBody');
+  var csPageInfo = document.getElementById('csReportPageInfo');
+  var csPeriodText = document.getElementById('csReportPeriodText');
+
+  function slotDate(slot){
+    return parseDate(slot.consultation_date);
+  }
+  function slotMode(slot){
+    var m = slot.mode || slot.appointment_mode || '';
+    if(m === 'Face-to-Face') return 'Synchronous';
+    return m;
+  }
+  function slotStatus(slot){
+    return slot.computed_status || slot.status || slot.slot_status || '';
+  }
+  function formatSlotDate(iso){
+    if(!iso) return '—';
+    var d = parseDate(typeof iso === 'string' ? iso.slice(0,10) : iso);
+    return d ? d.toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' }) : String(iso).slice(0,10);
+  }
+  function formatSlotTime(t){
+    if(!t) return '';
+    var parts = String(t).split(':');
+    var h = parseInt(parts[0], 10), m = parts[1] || '00';
+    if(isNaN(h)) return String(t);
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    return (h % 12 || 12) + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+
+  function filterCsRows(){
+    var rows = CS_SLOTS.slice();
+    if(csPeriod === 'week'){
+      var wr = weekRange();
+      rows = rows.filter(function(s){ var d = slotDate(s); return d && d>=wr.s && d<=wr.e; });
+    } else if(csPeriod === 'month'){
+      var mr = monthRange();
+      rows = rows.filter(function(s){ var d = slotDate(s); return d && d>=mr.s && d<=mr.e; });
+    }
+    if(csStatus !== 'all') rows = rows.filter(function(s){ return slotStatus(s) === csStatus; });
+    if(csMode   !== 'all') rows = rows.filter(function(s){ return slotMode(s) === csMode; });
+    if(csSearch){
+      rows = rows.filter(function(s){
+        var inst = (s.instructor_full_name||'').toLowerCase();
+        var stu  = (s.student_full_name||'').toLowerCase();
+        var prog = (s.program_code||'').toLowerCase();
+        return inst.indexOf(csSearch) !== -1 || stu.indexOf(csSearch) !== -1 || prog.indexOf(csSearch) !== -1;
+      });
+    }
+    return rows;
+  }
+
+  function renderCsTable(rows){
+    if(!csBody) return;
+    var total = rows.length, pages = Math.max(1, Math.ceil(total/PAGE));
+    if(csPage > pages) csPage = pages;
+    var start = (csPage-1)*PAGE, slice = rows.slice(start, start+PAGE);
+    csBody.innerHTML = '';
+    if(!slice.length){
+      csBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray-400)">No slots found.</td></tr>';
+    } else {
+      slice.forEach(function(slot, idx){
+        var st = slotStatus(slot) || '—';
+        var md = slotMode(slot);
+        var statusClass = st==='Available' ? 'confirmed' : st==='Booked' ? 'declined' : 'pending';
+        var modeClass   = md==='Synchronous' ? 'workload' : md==='Online' ? 'presence' : '';
+        var timeLabel = [formatSlotTime(slot.start_time), formatSlotTime(slot.end_time)].filter(Boolean).join(' – ');
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td style="color:var(--gray-400);font-size:.8125rem">'+(start+idx+1)+'</td>'
+          +'<td style="white-space:nowrap"><p style="font-weight:600;font-size:.875rem;color:var(--gray-900);margin:0">'+esc(formatSlotDate(slot.consultation_date))+'</p>'
+          +  '<p style="font-size:.6875rem;color:var(--gray-400);margin:0">'+esc(slot.day_of_the_week||'')+'</p></td>'
+          +'<td style="white-space:nowrap;font-size:.875rem;color:var(--gray-700)">'+esc(timeLabel||'—')+'</td>'
+          +'<td style="font-size:.875rem;font-weight:600;color:var(--gray-900)">'+esc(slot.instructor_full_name||'—')+'</td>'
+          +'<td style="font-size:.875rem;color:var(--gray-600)">'+esc(slot.program_code||'—')+'</td>'
+          +'<td>'+(md?'<span class="table-badge '+modeClass+'">'+esc(md)+'</span>':'<span style="color:var(--gray-400)">—</span>')+'</td>'
+          +'<td><span class="table-badge '+statusClass+'">'+esc(st)+'</span></td>'
+          +'<td style="font-size:.875rem;color:var(--gray-700)">'+esc(slot.student_full_name||'—')+'</td>'
+          +'<td style="font-size:.875rem;color:var(--gray-600)">'+esc(slot.room_number||'—')+'</td>';
+        csBody.appendChild(tr);
+      });
+    }
+    if(csPageInfo) csPageInfo.textContent = total ? ('Showing '+(start+1)+'-'+Math.min(start+PAGE,total)+' of '+total) : 'No results';
+    var csPrev = document.getElementById('csReportPrev');
+    var csNext = document.getElementById('csReportNext');
+    if(csPrev) csPrev.disabled = csPage <= 1;
+    if(csNext) csNext.disabled = csPage >= pages;
+    if(csPeriodText) csPeriodText.textContent = {all:'All Records',week:'This Week',month:'This Month'}[csPeriod]||'All Records';
+  }
+
+  (function loadCsSlots(){
+    var pad = function(n){ return String(n).padStart(2,'0'); };
+    var fmt = function(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+    var today = new Date();
+    var start = new Date(today); start.setDate(today.getDate()-90);
+    var end   = new Date(today); end.setDate(today.getDate()+180);
+    fetch('/admin/consultation-room/multi-day-slots?startDate='+fmt(start)+'&endDate='+fmt(end))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        CS_SLOTS = (data && data.success && Array.isArray(data.slots)) ? data.slots
+          : (Array.isArray(data && data.slots) ? data.slots : []);
+        renderCsTable(filterCsRows());
+      })
+      .catch(function(){
+        if(csBody) csBody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray-400)">Failed to load slots.</td></tr>';
+      });
+  }());
+
+  document.addEventListener('fbChange', function(e){
+    if(e.detail.filterId !== 'cs') return;
+    if(e.detail.section === 'status'){ csStatus = e.detail.value||'all'; csPage=1; }
+    if(e.detail.section === 'mode'){   csMode   = e.detail.value||'all'; csPage=1; }
+    if(e.detail.section === 'period'){ csPeriod = e.detail.value||'all'; csPage=1; }
+    renderCsTable(filterCsRows());
+  });
+
+  document.addEventListener('fbSearch', function(e){
+    if(e.detail.filterId !== 'cs') return;
+    csSearch = e.detail.value.toLowerCase();
+    csPage = 1;
+    renderCsTable(filterCsRows());
+  });
+
+  document.getElementById('csReportPrev').addEventListener('click', function(){
+    if(csPage>1){ csPage--; renderCsTable(filterCsRows()); }
+  });
+  document.getElementById('csReportNext').addEventListener('click', function(){
+    var r=filterCsRows(), pages=Math.ceil(r.length/PAGE);
+    if(csPage<pages){ csPage++; renderCsTable(r); }
   });
 
   // ===== Audit Logs Report =====
@@ -340,6 +549,7 @@
   }
 
   function updateAlFilter(){
+    if(!alFilterText) return;
     var parts = [];
     if(alType !== 'all') parts.push('Type: '+{login:'Login',logout:'Logout',update:'Update',create:'Create',delete:'Delete'}[alType]);
     if(alRole !== 'all') parts.push('Role: '+alRole);
@@ -373,7 +583,7 @@
   // Initial render
   renderFwTable(filterFwRows());
   renderClTable(filterClRows());
-  renderAlTable(filterAlRows());
+  if(alBody) renderAlTable(filterAlRows());
 }());
 
 function preparePrintReport(item){
