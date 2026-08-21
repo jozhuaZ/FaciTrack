@@ -1,0 +1,208 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/admin/consultation-logs.css?v=<%= Date.now() %>">
+
+<div class="instructor-layout">
+    <%- include('../../partials/admin-sidebar', { activePage: 'consultation-logs' }) %>
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Consultation Logs</h1>
+                    <p class="page-subtitle">Complete history of all consultations across programs</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-header-action" id="exportLogsBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export CSV
+                    </button>
+                    <a href="/admin/consultation-room" class="btn-header-action primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l-6 6v3h3l6-6M22 22v-7l-7 7h7zM9 9v3l3-3h-3z"/></svg>
+                        Manage Rooms
+                    </a>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="programFilterLogs">Program:</label>
+                        <select id="programFilterLogs" class="form-select">
+                            <option value="">All Programs</option>
+                            <% programTables.forEach(program => { %>
+                                <option value="<%= program.program_code %>"><%= program.program_code %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="statusFilterLogs">Status:</label>
+                        <select id="statusFilterLogs" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                            <option value="declined">Declined</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="instructorFilterLogs">Instructor:</label>
+                        <select id="instructorFilterLogs" class="form-select">
+                            <option value="">All Instructors</option>
+                            <% instructors.forEach(instructor => { %>
+                                <option value="<%= instructor.id %>">
+                                    <%= instructor.first_name %> <%= instructor.last_name %>
+                                </option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateFromFilter">Date From:</label>
+                        <input type="date" id="dateFromFilter" class="form-input" />
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateToFilter">Date To:</label>
+                        <input type="date" id="dateToFilter" class="form-input" />
+                    </div>
+                    <button class="btn-filter" id="applyLogsFilterBtn">Apply Filter</button>
+                    <button class="btn-filter secondary" id="clearLogsFilterBtn">Clear</button>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-overview">
+                <div class="stat-card pending">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Total Consultations</p>
+                        <h3 class="stat-card-value" id="totalConsultations"><%= total %></h3>
+                    </div>
+                </div>
+                <div class="stat-card confirmed">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Completed</p>
+                        <h3 class="stat-card-value" id="completedCount">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card workload">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Face-to-Face</p>
+                        <h3 class="stat-card-value" id="faceToFaceCount">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card presence">
+                    <div class="stat-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                    </div>
+                    <div class="stat-card-content">
+                        <p class="stat-card-label">Online</p>
+                        <h3 class="stat-card-value" id="onlineCount">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Table -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h3 class="card-title">Consultation History</h3>
+                    <div class="card-actions">
+                        <span class="result-count" id="resultCount">Showing <%= logs.length %> of <%= total %></span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="logs-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Instructor</th>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Mode</th>
+                                    <th>Room</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <% if (logs.length === 0) { %>
+                                <tr>
+                                    <td colspan="10" class="no-data">No consultation logs found</td>
+                                </tr>
+                                <% } else { %>
+                                    <% logs.forEach(log => { %>
+                                    <tr>
+                                        <td><span class="log-id">#<%= log.appointmentId %></span></td>
+                                        <td>
+                                            <div class="instructor-cell">
+                                                <strong><%= log.instructor.fullName %></strong>
+                                                <span class="text-muted"><%= log.instructor.position %></span>
+                                            </div>
+                                        </td>
+                                        <td><%= log.student.fullName %></td>
+                                        <td><%= log.course %></td>
+                                        <td><%= new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></td>
+                                        <td><%= log.timeStart %> - <%= log.timeEnd %></td>
+                                        <td>
+                                            <span class="mode-badge <%= log.mode.toLowerCase().replace(' ', '-') %>">
+                                                <%= log.mode %>
+                                            </span>
+                                        </td>
+                                        <td><%= log.room %></td>
+                                        <td>
+                                            <span class="status-badge <%= log.status %>">
+                                                <%= log.status.charAt(0).toUpperCase() + log.status.slice(1) %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-action view" data-id="<%= log.appointmentId %>">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination" id="paginationContainer">
+                        <button class="btn-pagination" id="prevPageBtn" disabled>Previous</button>
+                        <span class="page-info" id="pageInfo">Page 1</span>
+                        <button class="btn-pagination" id="nextPageBtn">Next</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Log Details Modal -->
+<div id="logDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Consultation Details</h3>
+            <button class="modal-close" id="closeLogModal">&times;</button>
+        </div>
+        <div class="modal-body" id="logDetailsContent">
+            <!-- Content will be dynamically populated -->
+        </div>
+    </div>
+</div>
+
+<script src="/js/admin-consultation-logs.js?v=<%= Date.now() %>"></script>
+
+<%- include('../../partials/footer') %>

@@ -1,0 +1,102 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/admin/consultation-room.css?v=<%= Date.now() %>">
+
+<div class="instructor-layout">
+    <%- include('../../partials/admin-sidebar', { activePage: 'consultation-room' }) %>
+    <main class="instructor-main">
+        <div class="main-container">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Consultation Room Management</h1>
+                    <p class="page-subtitle">Manage program-based consultation schedules and room availability</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/admin/consultation-logs" class="btn-header-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        View Logs
+                    </a>
+                    <button class="btn-header-action primary" id="refreshAllBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        Refresh All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="dateFilter">Filter by Date:</label>
+                        <input type="date" id="dateFilter" class="form-input" value="<%= today %>" />
+                    </div>
+                    <div class="filter-group">
+                        <label for="programFilter">Filter by Program:</label>
+                        <select id="programFilter" class="form-select">
+                            <option value="">All Programs</option>
+                            <% programTables.forEach(program => { %>
+                                <option value="<%= program.program_code %>"><%= program.program_code %> - <%= program.program_name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                    <button class="btn-filter" id="applyFilterBtn">Apply Filter</button>
+                    <button class="btn-filter secondary" id="clearFilterBtn">Clear</button>
+                </div>
+            </div>
+
+            <!-- Program Tables -->
+            <div class="program-tables-container">
+                <% programTables.forEach(program => { %>
+                <div class="program-table-card" data-program="<%= program.program_code %>">
+                    <div class="program-table-header">
+                        <div class="program-info">
+                            <h3 class="program-title"><%= program.program_code %></h3>
+                            <p class="program-subtitle"><%= program.program_name %></p>
+                        </div>
+                        <div class="program-stats">
+                            <span class="stat-badge capacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                <span class="table-count">0</span> / <%= program.table_capacity %> Tables
+                            </span>
+                            <span class="stat-badge status-<%= program.status.toLowerCase() %>">
+                                <%= program.status %>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="consultation-slots-container">
+                        <div class="loading-state">
+                            <div class="spinner"></div>
+                            <p>Loading consultation slots...</p>
+                        </div>
+                    </div>
+
+                    <div class="program-table-footer">
+                        <button class="btn-load-more" data-program="<%= program.program_code %>">
+                            Load More Slots
+                        </button>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Slot Details Modal -->
+<div id="slotDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Consultation Slot Details</h3>
+            <button class="modal-close" id="closeSlotModal">&times;</button>
+        </div>
+        <div class="modal-body" id="slotDetailsContent">
+            <!-- Content will be dynamically populated -->
+        </div>
+    </div>
+</div>
+
+<script src="/js/admin-consultation-room.js?v=<%= Date.now() %>"></script>
+
+<%- include('../../partials/footer') %>

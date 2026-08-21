@@ -241,6 +241,29 @@ const UserModel = {
         );
         return rows[0] || null;
     },
+
+    async getUsersByRole(role) {
+        const [rows] = await pool.execute(
+            `SELECT 
+                u.id,
+                u.public_id,
+                u.first_name,
+                u.last_name,
+                u.middle_name,
+                u.email,
+                u.role,
+                u.position,
+                u.status,
+                u.department_id,
+                d.full_name AS department_name
+             FROM users u
+             LEFT JOIN departments d ON u.department_id = d.id
+             WHERE u.role = ?
+             ORDER BY u.last_name, u.first_name`,
+            [role]
+        );
+        return rows;
+    },
 }
 
 module.exports = UserModel;

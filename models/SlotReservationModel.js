@@ -1,5 +1,5 @@
 const pool = require('../configs/db');
-const RESERVATION_MS = 5 * 60 * 1000;
+const RESERVATION_MS = 2 * 60 * 1000; // Changed from 5 to 2 minutes
 
 const SlotReservation = {
     async reserveSlot(slotId, studentPublicId) {

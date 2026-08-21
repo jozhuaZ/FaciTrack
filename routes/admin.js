@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AdminController = require('../controllers/AdminController');
+const ConsultationRoomController = require('../controllers/ConsultationRoomController');
 const { authenticateUser, createSession, getRoleRedirect, revokeSession, createOTP, verifyOTP } = require('../services/auth');
 const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
 
@@ -345,5 +346,19 @@ router.get('/departments', (req, res) => {
         ...data
     });
 });
+
+// Consultation Room Management Routes
+router.get('/consultation-room', ConsultationRoomController.renderConsultationRoomPage);
+router.get('/consultation-room/slots', ConsultationRoomController.getSlotsByProgram);
+router.get('/consultation-room/availability', ConsultationRoomController.checkSlotAvailability);
+router.get('/consultation-room/rooms/available', ConsultationRoomController.getAvailableRooms);
+router.get('/consultation-room/stats', ConsultationRoomController.getConsultationStats);
+
+// Consultation Logs Routes
+router.get('/consultation-logs', ConsultationRoomController.renderConsultationLogsPage);
+router.get('/consultation-logs/data', ConsultationRoomController.getConsultationLogs);
+
+// Appointment Management Routes
+router.put('/appointments/:appointmentId/status', ConsultationRoomController.updateAppointmentStatus);
 
 module.exports = router;
