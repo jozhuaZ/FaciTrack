@@ -3,34 +3,28 @@ const b = require('bcrypt');
 const UserModel = require('../models/UserModel');
 const DepartmentModel = require('../models/DepartmentModel');
 const RoomModel = require('../models/RoomModel');
+const AuditLogModel = require('../models/AuditLogModel');
+const { buildAdminUser } = require('../utils/sessionUser');
 
 const AdminController = {
 
     // USERS
     async renderUsersPage(req, res) {
-        const admin = {
-            id: req.session?.userId,
-            name: req.session?.name,
-            firstName: req.session.firstName,
-            middleName: req.session.middleName,
-            lastName: req.session.lastName,
-            status: req.session.status,
-            email: req.session?.email,
-            position: req.session.position,
-            role: req.session.role,
-            profilePhoto: req.session?.profilePhoto || 'N/A',
-            department: req.session?.department,
-        }
+        const admin = buildAdminUser(req.session);
 
-        const [users, departments] = await Promise.all([
+        const [users, departments, rooms] = await Promise.all([
             UserModel.getUsersWithDepartment(),
-            DepartmentModel.getDepartments()
+            DepartmentModel.getDepartments(),
+            RoomModel.getRooms({
+                fields: 'r.id, r.room_type, r.room_number'
+            })
         ]);
 
         res.render('pages/admin/users', {
             title: 'FaciTrack - Faculty Management',
             admin: admin,
             users: users,
+            rooms: rooms,
             departments: departments
         })
     },
@@ -38,7 +32,7 @@ const AdminController = {
     async createUser(req, res) {
         try {
             const { firstName, middleName, lastName, role,
-                status, email, departmentId, password,
+                status, email, roomId, departmentId, password,
                 employmentType, position, profilePicture } = req.body;
 
             const errors = {};
@@ -49,6 +43,7 @@ const AdminController = {
             if (!employmentType?.trim()) errors.employmentType = 'Employment Type is required.';
             if (!position?.trim()) errors.position = 'Position/Title is required.';
             if (!password.trim()) errors.password = 'Password is required.';
+            if (!roomId) errors.baseRoom = 'Base Room is required.';
             else if (password.length < 8) errors.password = 'Password must be at least 8 characters.';
 
             if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -69,12 +64,20 @@ const AdminController = {
                 lastName,
                 email,
                 role,
+                roomId,
                 departmentId,
                 status,
                 employmentType,
                 position,
                 hashedPassword,
             });
+
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Created user', 'users');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log users:', logErr);
+            }
 
             res.json({
                 success: true,
@@ -100,7 +103,7 @@ const AdminController = {
     async updateUser(req, res) {
         try {
             const { publicId } = req.params;
-            const { firstName, middleName, lastName, email, role, departmentId, status, employmentType, position } = req.body;
+            const { firstName, middleName, lastName, email, role, roomId, departmentId, status, employmentType, position } = req.body;
 
             const errors = {};
             if (!publicId) errors.id = `User's identifier is missing.`;
@@ -110,6 +113,7 @@ const AdminController = {
             if (!role?.trim()) errors.role = 'Role is required.';
             if (!employmentType?.trim()) errors.employmentType = 'Employment type is required.';
             if (!position?.trim()) errors.position = 'Position/Title is required.';
+            if (!roomId) errors.baseRoom = 'Base Room is required';
 
             if (Object.keys(errors).length > 0) {
                 return res.status(422).json({ success: false, errors });
@@ -117,8 +121,15 @@ const AdminController = {
 
             await UserModel.updateUser(publicId, {
                 firstName, middleName, lastName, email,
-                role, departmentId, status, employmentType, position
+                role, roomId, departmentId, status, employmentType, position
             });
+
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Updated user', 'users');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log users:', logErr);
+            }
 
             res.json({ success: true, message: `${firstName} ${lastName} updated successfully!` });
 
@@ -143,6 +154,13 @@ const AdminController = {
                 return res.status(404).json({ success: false, error: 'User not found.' });
             }
 
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Deleted user', 'users');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log users:', logErr);
+            }
+
             res.json({ success: true, message: `User deleted successfully!` });
 
         } catch (err) {
@@ -153,19 +171,7 @@ const AdminController = {
 
     // ROOMS 
     async renderRoomsPage(req, res) {
-        const admin = {
-            id: req.session?.instructorId,
-            name: req.session?.name,
-            firstName: req.session.firstName,
-            middleName: req.session.middleName,
-            lastName: req.session.lastName,
-            status: req.session.status,
-            email: req.session?.email,
-            position: req.session.position,
-            role: req.session.role,
-            profilePhoto: req.session?.profilePhoto || 'N/A',
-            department: req.session?.department,
-        };
+        const admin = buildAdminUser(req.session);
 
         const [departments, rooms] = await Promise.all([
             DepartmentModel.getDepartments(),
@@ -199,7 +205,7 @@ const AdminController = {
             if (!roomNumber) errors.roomNumber = 'Room Number is required.';
             if (!department) errors.department = 'Department is required.';
             if (!roomType) errors.roomType = 'Room Type is required.';
-            if (bleStatus == null || bleStatus === '') errors.bleStatus = 'BLE Scanner status is required.';   
+            if (bleStatus == null || bleStatus === '') errors.bleStatus = 'BLE Scanner status is required.';
             if (!status) errors.status = 'Status is required.';
 
             // return early if at least one error is present
@@ -222,6 +228,13 @@ const AdminController = {
                 status,
                 capacity
             });
+
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Created room', 'rooms');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log room:', logErr);
+            }
 
             return res.status(200).json({
                 success: true,
@@ -263,6 +276,13 @@ const AdminController = {
                 status
             });
 
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Updated room', 'rooms');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log room:', logErr);
+            }
+
             return res.status(200).json({
                 success: true,
                 message: 'Room updated successfully!'
@@ -288,11 +308,35 @@ const AdminController = {
                 return res.status(404).json({ success: false, error: 'Room not found.' });
             }
 
+            try {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(user.internal_id, user.role, 'Deleted room', 'rooms');
+            } catch (logErr) {
+                console.error('[AuditLog] Failed to log room:', logErr);
+            }
+
             res.json({ success: true, message: `Room deleted successfully!` });
 
         } catch (err) {
             console.error('[AdminController.deleteRoom]', err);
             res.status(500).json({ success: false, error: 'Failed to delete room.' });
+        }
+    },
+
+    async renderReportsPage(req, res) {
+        try {
+            const admin = buildAdminUser(req.session);
+
+            const auditLogs = await AuditLogModel.getAll();
+
+            res.render('pages/admin/reports', { 
+                title: 'FaciTrack - Reports', 
+                admin,
+                logs: auditLogs,
+            });
+        } catch (err) {
+            console.error('[AdminController.renderReportsPage]', err);
+            res.status(500).send('Failed to load reports page.');
         }
     }
 }
