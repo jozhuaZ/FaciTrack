@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
 <div class="instructor-layout">
-    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: appointmentCount }) %>
 
     <main class="instructor-main">
         <div class="main-container">
@@ -346,7 +346,7 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
         group.subSlots.forEach(sub => {
             slotIndex++;
             const timeStr = `${sub.timeStart} – ${sub.timeEnd}`;
-            const isTaken = sub.isBooked || sub.isReservedByOther;
+            const isTaken = sub.isBooked || sub.status === 'Booked' || sub.isReservedByOther;
 
             const btn = document.createElement('button');
             btn.className = 'slot-select-btn' + (isTaken ? ' full' : '');
