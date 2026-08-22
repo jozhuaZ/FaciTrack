@@ -27,7 +27,6 @@
                 </div>
             </div>
             <div class="header-institution">
-            <% if (typeof instructor !== 'undefined' || typeof dean !== 'undefined') { %>
                 <% const _notifSource = (typeof notifications !== 'undefined') ? notifications : []; %>
                 <% const unreadCount = _notifSource.filter(n => !n.read).length; %>
                     <div class="notif-wrapper">
@@ -40,7 +39,6 @@
                             <% } %>
                         </button>
                     </div>
-                <% } %>
                 <span>Camarines Sur Polytechnic Colleges</span>
             </div>
         </div>
