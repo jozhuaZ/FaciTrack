@@ -124,6 +124,7 @@ const StudentController = {
         try {
             const facultyPublicId = req.params.id;
             const studentId = req.session.userId;
+            const user = await UserModel.getUserByPublicId(studentId);
 
             const faculty = await UserModel.getUserByPublicId(facultyPublicId);
             if (!faculty) return res.redirect('/student/dashboard');
@@ -152,14 +153,18 @@ const StudentController = {
                         timeEnd: sub.timeEnd,
                         isBooked: sub.isBooked,
                         isReservedByOther: reservedByOther.has(sub.id),
+                        status: sub.status,
                     })),
                 }));
 
             faculty.nextAvailable = findNextAvailable(consultationSlots);
 
+            const appointmentCount = await AppointmentModel.getStudentCount(user.internal_id);
+
             res.render('pages/student/profile', {
                 title: `FaciTrack - ${faculty.first_name} ${faculty.last_name}`,
                 student: student,
+                appointmentCount,
                 faculty,
                 consultationSlots,
                 unavailableDates: unavailability.map(u => u.date),
@@ -177,6 +182,7 @@ const StudentController = {
         try {
             const slotId = parseInt(req.params.slotId, 10);
             const studentPublicId = req.session.userId;
+            const user = await UserModel.getUserByPublicId(studentPublicId);
 
             const slotDetails = await ConsultationModel.getSlotWithFaculty(slotId);
             if (!slotDetails) {
@@ -200,6 +206,8 @@ const StudentController = {
                 return res.redirect(`/student/faculty/${slotDetails.faculty.id}?reserveFailed=1`);
             }
 
+            const appointmentCount = await AppointmentModel.getStudentCount(user.internal_id);
+
             res.render('pages/student/book', {
                 title: 'FaciTrack - Book Appointment',
                 student,
@@ -213,6 +221,7 @@ const StudentController = {
                     timeEnd: slotDetails.timeEnd
                 },
                 expiresAt: result.expiresAt.toISOString(),
+                appointmentCount,
             });
         } catch (err) {
             console.error('[StudentController.renderFacultyFormConsultationPage]', err);
@@ -351,6 +360,20 @@ const StudentController = {
                 );
             }
 
+            try {
+                await ConsultationModel.updateStatusById(slotId, 'Booked');
+            } catch (error) {
+                console.error('Error cancelling slot:', error);
+                res.redirect('back');
+            }
+
+            try {
+                const student = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(student.internal_id, student.role, 'Booked appointment', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log appointment:', err);
+            }
+
             return res.render('pages/student/booking-confirm', {
                 title: 'FaciTrack - Booking Confirmed',
                 student: student,
@@ -381,6 +404,22 @@ const StudentController = {
                     ? 'Not authorized.'
                     : 'Appointment not found or already resolved.';
                 return res.status(status).json({ success: false, error: message });
+            }
+
+            const slotId = await AppointmentModel.getConsultationHourId(appointmentId);
+
+            try {
+                await ConsultationModel.updateStatusById(slotId, 'Booked');
+            } catch (error) {
+                console.error('Error cancelling slot:', error);
+                res.redirect('back');
+            }
+
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Cancelled appointment', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log appointment:', err);
             }
 
             res.json({ success: true });
