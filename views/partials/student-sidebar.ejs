@@ -24,7 +24,7 @@
             </svg>
             <span>Faculty Directory</span>
         </a>
-        <a href="/student/appointments" class="nav-item <%= activePage === 'appointments' ? 'active' : '' %>">
+        <a href="/student/appointments" class="nav-item <%= activePage === 'appointments' ? 'active' : '' %>" id="aptNavLink">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>
@@ -32,7 +32,7 @@
             </svg>
             <span>My Appointments</span>
             <% if (typeof appointmentCount !== 'undefined' && appointmentCount > 0) { %>
-            <span class="nav-badge"><%= appointmentCount %></span>
+            <span class="nav-badge" id="aptNavBadge" data-count="<%= appointmentCount %>"><%= appointmentCount %></span>
             <% } %>
         </a>
         <a href="/student/availability" class="nav-item <%= activePage === 'availability' ? 'active' : '' %>">
@@ -53,3 +53,25 @@
         </a>
     </div>
 </aside>
+
+<script>
+(function () {
+    var badge   = document.getElementById('aptNavBadge');
+    var navLink = document.getElementById('aptNavLink');
+    if (!badge || !navLink) return;
+
+    var currentCount = parseInt(badge.dataset.count, 10) || 0;
+    var seenCount    = parseInt(localStorage.getItem('apt_badge_seen') || '0', 10);
+
+    // Hide badge if the student has already seen this count (or higher)
+    if (seenCount >= currentCount) {
+        badge.style.display = 'none';
+    }
+
+    // When "My Appointments" is clicked, record this count as seen
+    navLink.addEventListener('click', function () {
+        localStorage.setItem('apt_badge_seen', String(currentCount));
+        badge.style.display = 'none';
+    });
+})();
+</script>

@@ -1,4 +1,5 @@
 const express = require('express');
+const { buildStudentUser } = require('../utils/sessionUser');
 const router = express.Router();
 const { requireRole, setSessionCookie } = require('../middleware/auth');
 const { createSession, getRoleRedirect, authenticateUser } = require('../services/auth');
@@ -472,10 +473,28 @@ router.post('/faculty/consultation/:slotId/cancel', StudentController.updateStat
 router.get('/appointments', StudentController.renderAppointmentsPage);
 router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
 
-router.get('/availability', (req, res) => {
-    res.render('pages/student/availability', {
-        title: 'FaciTrack - Faculty Availability', facultyList
-    });
+router.get('/availability', async (req, res) => {
+    const student = buildStudentUser(req.session);
+    try {
+        const UserModel = require('../models/UserModel');
+        const AppointmentModel = require('../models/AppointmentModel');
+        const user = await UserModel.getUserByPublicId(req.session.userId);
+        const appointmentCount = user ? await AppointmentModel.getStudentPendingCount(user.internal_id) : 0;
+        res.render('pages/student/availability', {
+            title: 'FaciTrack - Faculty Availability',
+            student,
+            appointmentCount,
+            facultyList,
+        });
+    } catch (err) {
+        console.error('[availability route]', err);
+        res.render('pages/student/availability', {
+            title: 'FaciTrack - Faculty Availability',
+            student,
+            appointmentCount: 0,
+            facultyList,
+        });
+    }
 });
 
 // ── Auto-reschedule endpoint (called by instructor/admin when marking unavailable) ──

@@ -72,10 +72,10 @@ const StudentController = {
             const user = await UserModel.getUserByPublicId(studentId);
             const student = buildStudentUser(req.session);
 
-            const [departments, faculties, appointmentCount] = await Promise.all([
+            const [departments, faculties, pendingCount] = await Promise.all([
                 DepartmentModel.getDepartments(),
                 UserModel.getFacultiesConsultation(),
-                AppointmentModel.getStudentCount(user.internal_id),
+                AppointmentModel.getStudentPendingCount(user.internal_id),
             ]);
 
             const { windowStart, windowEnd } = getTwoWeekWindow();
@@ -108,7 +108,7 @@ const StudentController = {
             res.render('pages/student/dashboard', {
                 title: 'FaciTrack - Faculty Directory',
                 student: student,
-                appointmentCount: appointmentCount,
+                appointmentCount: pendingCount,
                 departments: departments,
                 facultyList: formattedFaculties,
             });
@@ -127,6 +127,9 @@ const StudentController = {
 
             const faculty = await UserModel.getUserByPublicId(facultyPublicId);
             if (!faculty) return res.redirect('/student/dashboard');
+
+            const user = await UserModel.getUserByPublicId(studentId);
+            const pendingCount = user ? await AppointmentModel.getStudentPendingCount(user.internal_id) : 0;
 
             const { windowStart, windowEnd } = getTwoWeekWindow();
             const grouped = await ConsultationModel.getBookableSlotsByInstructor(facultyPublicId);
@@ -160,6 +163,7 @@ const StudentController = {
             res.render('pages/student/profile', {
                 title: `FaciTrack - ${faculty.first_name} ${faculty.last_name}`,
                 student: student,
+                appointmentCount: pendingCount,
                 faculty,
                 consultationSlots,
                 unavailableDates: unavailability.map(u => u.date),
@@ -180,11 +184,7 @@ const StudentController = {
 
             const slotDetails = await ConsultationModel.getSlotWithFaculty(slotId);
             if (!slotDetails) {
-                return res.redirect('/student/dashboard?bookingError=slotTaken');
-            }
-
-            if (!slotDetails) {
-                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=slotNotFound`);
+                return res.redirect('/student/dashboard?bookingError=slotNotFound');
             }
 
             if (slotDetails.isBooked) {
@@ -204,9 +204,13 @@ const StudentController = {
             const ConsultationRoomModel = require('../models/ConsultationRoomModel');
             const syncAvailability = await ConsultationRoomModel.checkSynchronousAvailability(slotDetails.date);
 
+            const user = await UserModel.getUserByPublicId(studentPublicId);
+            const pendingCount = user ? await AppointmentModel.getStudentPendingCount(user.internal_id) : 0;
+
             res.render('pages/student/book', {
                 title: 'FaciTrack - Book Appointment',
                 student,
+                appointmentCount: pendingCount,
                 faculty: slotDetails.faculty,
                 slot: {
                     id: slotDetails.id,
@@ -269,6 +273,7 @@ const StudentController = {
             res.render('pages/student/appointments', {
                 title: 'FaciTrack - My Appointments',
                 student,
+                appointmentCount: rawAppointments.filter(r => ['pending','confirmed'].includes(r.status)).length,
                 appointments,
             });
         } catch (err) {

@@ -83,6 +83,8 @@ const UserModel = {
     },
 
     async getFacultiesConsultation({ limit, offset } = {}) {
+        // Use a correlated subquery to fetch the single nearest upcoming slot
+        // for each instructor, avoiding ONLY_FULL_GROUP_BY violations.
         let query = `
         SELECT
             u.public_id          AS instructor_id,
@@ -94,26 +96,32 @@ const UserModel = {
             u.department_id,
             d.full_name          AS department_name,
             u.profile_picture,
-            -- Next available slot fields
-            next_slot.consultation_date AS next_date,
-            next_slot.day_of_the_week   AS next_day,
-            next_slot.start_time        AS next_start_time
+            -- Next available slot fields (correlated subquery picks the earliest row)
+            (SELECT ch.consultation_date
+             FROM consultation_hours ch
+             WHERE ch.instructor_id = u.id
+               AND ch.status = 'Available'
+               AND ch.consultation_date >= CURDATE()
+             ORDER BY ch.consultation_date ASC, ch.start_time ASC
+             LIMIT 1) AS next_date,
+            (SELECT ch.day_of_the_week
+             FROM consultation_hours ch
+             WHERE ch.instructor_id = u.id
+               AND ch.status = 'Available'
+               AND ch.consultation_date >= CURDATE()
+             ORDER BY ch.consultation_date ASC, ch.start_time ASC
+             LIMIT 1) AS next_day,
+            (SELECT ch.start_time
+             FROM consultation_hours ch
+             WHERE ch.instructor_id = u.id
+               AND ch.status = 'Available'
+               AND ch.consultation_date >= CURDATE()
+             ORDER BY ch.consultation_date ASC, ch.start_time ASC
+             LIMIT 1) AS next_start_time
         FROM users u
         LEFT JOIN departments d ON u.department_id = d.id
-        LEFT JOIN (
-            SELECT
-                instructor_id,
-                consultation_date,
-                day_of_the_week,
-                start_time
-            FROM consultation_hours
-            WHERE status = 'Available'
-            AND consultation_date > CURDATE() 
-            ORDER BY consultation_date ASC, start_time ASC
-        ) next_slot ON u.id = next_slot.instructor_id
         WHERE u.role = 'Instructor'
           AND u.status = 'Active'
-        GROUP BY u.id
     `;
 
         const params = [];
@@ -129,10 +137,6 @@ const UserModel = {
 
         const [rows] = await pool.execute(query, params);
         return rows;
-    },
-
-    async getFacultyWithConsultation() {
-        let query = `SELECT `
     },
 
     async insertUserByAdmin(newUser) {
