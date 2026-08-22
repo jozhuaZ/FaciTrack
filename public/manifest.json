@@ -2,7 +2,7 @@
   "name": "FaciTrack",
   "short_name": "FaciTrack",
   "description": "Faculty Appointment and Real-Time Monitoring System — CSPC",
-  "start_url": "/roles",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
