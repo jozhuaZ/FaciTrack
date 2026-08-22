@@ -189,6 +189,9 @@
                                             data-lastname="<%= u.last_name %>"
                                             data-email="<%= u.email %>"
                                             data-role="<%= u.role %>"
+                                            data-roomid="<%= u.base_room_id %>"
+                                            data-roomnumber="<%= u.room_number %>"
+                                            data-roomtype="<%= u.room_type %>"
                                             data-departmentid="<%= u.department_id %>"
                                             data-departmentname="<%= u.department_name || '' %>"
                                             data-status="<%= u.status %>"
@@ -278,10 +281,18 @@
                     <input type="password" id="userPassword" placeholder="Minimum of 8 characters">
                 </div>
                 <div class="form-field">
-                    <label>Status</label>
-                    <select id="userStatus">
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                    <label>Base Room/Office</label>
+                    <select id="userRoom">
+                        <option value="">Select base room/office...</option>
+
+                        <% rooms.forEach(r => { %>
+                            <option 
+                                value="<%= r.id %>"
+                                <%= r.room_type && r.room_type.trim().toLowerCase() === 'faculty lounge' ? 'selected' : '' %>
+                            >
+                                <%= r.room_number %> (<%= r.room_type %>)
+                            </option>
+                        <% }); %>
                     </select>
                 </div>
             </div>
@@ -295,6 +306,13 @@
                         <option value="Co-Terminus">Co-Terminus</option>
                         <option value="Temporary">Temporary</option>
                         <option value="Casual">Casual</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Status</label>
+                    <select id="userStatus">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
                     </select>
                 </div>
             </div>
@@ -436,7 +454,18 @@ function openAddUserModal() {
     document.getElementById('roleTabsWrap').style.display = '';
     document.getElementById('pwdRequired').style.display = '';
     document.querySelectorAll('.role-tab').forEach((t,i) => t.classList.toggle('active', i === 0));
-    ['userFirstName', 'userMiddleName', 'userLastName', 'userEmail','userPosition','userPassword'].forEach(id => document.getElementById(id).value = '');
+
+    ['userFirstName', 'userMiddleName', 'userLastName', 'userEmail', 'userPosition', 'userPassword']
+        .forEach(id => document.getElementById(id).value = '');
+
+    const roomSelect = document.getElementById('userRoom');
+    const facultyLounge = [...roomSelect.options]
+        .find(option => option.textContent.trim() === 'Faculty Lounge');
+
+    if (facultyLounge) {
+        roomSelect.value = facultyLounge.value;
+    }
+
     document.getElementById('userDept').value = '';
     document.getElementById('userStatus').value = 'Active';
     document.getElementById('userEmploymentType').value = 'Permanent';
@@ -444,7 +473,7 @@ function openAddUserModal() {
 }
 
 // Edit User
-function openEditUserModal(index, publicId, firstName, middleName, lastName, email, role, departmentId, departmentName, status, empType, position) {
+function openEditUserModal(index, publicId, firstName, middleName, lastName, email, role, roomId, roomNumber, roomName, departmentId, departmentName, status, empType, position) {
     editingUserIndex = index;
     selectedRole = role;
     document.getElementById('userModalTitle').textContent = 'Edit User';
@@ -454,6 +483,7 @@ function openEditUserModal(index, publicId, firstName, middleName, lastName, ema
     document.getElementById('userMiddleName').value = middleName;
     document.getElementById('userLastName').value   = lastName;
     document.getElementById('userEmail').value      = email;
+    document.getElementById('userRoom').value      = roomId;
     document.getElementById('userDept').value       = departmentId;
     document.getElementById('userStatus').value     = status;
     document.getElementById('userEmploymentType').value = empType;
@@ -482,6 +512,7 @@ async function saveUser() {
     const email = document.getElementById('userEmail').value.trim();
     const empType = document.getElementById('userEmploymentType').value;
     const dept = document.getElementById('userDept').value;
+    const room = document.getElementById('userRoom').value;
     const position = document.getElementById('userPosition').value.trim();
     const status = document.getElementById('userStatus').value;
     const password = document.getElementById('userPassword').value.trim();
@@ -496,9 +527,10 @@ async function saveUser() {
     if (!empType) { showToast('error', 'Required', 'Employee Type is required.'); return; }
     if (!position) { showToast('error', 'Required', 'Position/Title is required.'); return; }
     if (!dept) { showToast('error', 'Required', 'Department is required.'); return; }
+    if (!room) { showToast('error', 'Required', 'Base room is required.'); return; }
     if (!isEditing && !password) { showToast('error', 'Required', 'Password is required.'); return; }
 
-    const payload   = { firstName, middleName, lastName, email, role, departmentId: dept, status, employmentType: empType, position, password };
+    const payload   = { firstName, middleName, lastName, email, role, roomId: room, departmentId: dept, status, employmentType: empType, position, password };
     
     try {
         let res, data;
@@ -607,6 +639,9 @@ document.addEventListener('click', e => {
         d.lastname,
         d.email,
         d.role,
+        d.roomid,
+        d.roomnumber,
+        d.roomtype,
         d.departmentid,
         d.departmentname,
         d.status,
