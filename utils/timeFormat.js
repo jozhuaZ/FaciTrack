@@ -35,4 +35,9 @@ function fromMins(mins) {
     return `${h}:${String(m).padStart(2, '0')} ${p}`;
 }
 
-module.exports = { to12Hour, to24Hour, toMins, fromMins };
+function formatFullDate(dateStr) {
+    const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+    return d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+module.exports = { to12Hour, to24Hour, toMins, fromMins, formatFullDate };
