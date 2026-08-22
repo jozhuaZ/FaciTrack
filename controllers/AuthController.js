@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const UserModel = require('../models/UserModel');
+const AuditLogModel = require('../models/AuditLogModel');
 
 const AuthController = {
 
@@ -78,6 +79,12 @@ const AuthController = {
             // Update last login
             await UserModel.updateLastLogin(user.internal_id);
 
+            try {
+                await AuditLogModel.log(user.internal_id, user.role, 'Logged in', 'login');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log login:', err);
+            }
+
             // Redirect based on role
             AuthController.redirectByRole(res, user.role);
 
@@ -90,7 +97,18 @@ const AuthController = {
         }
     },
 
-    logout(req, res) {
+    async logout(req, res) {
+        try {
+            if (req.session?.userId && req.session?.role) {
+                const user = await UserModel.getUserByPublicId(req.session.userId);
+                if (user) {
+                    await AuditLogModel.log(user.id, req.session.role, 'Logged out', 'logout');
+                }
+            }
+        } catch (err) {
+            console.error('[AuditLog] Failed to log logout:', err);
+        }
+
         req.session.destroy(() => {
             res.redirect('/login');
         });
@@ -106,7 +124,7 @@ const AuthController = {
         res.redirect(destinations[role] || '/login');
     },
 
-    handleGoogleCallback(req, res) {
+    async handleGoogleCallback(req, res) {
         // passport already verified the user — req.user is set
         const user = req.user;
 
@@ -123,6 +141,12 @@ const AuthController = {
         req.session.profilePhoto = user.profile_picture || null;
 
         UserModel.updateLastLogin(user.internal_id).catch(() => { });
+
+        try {
+            await AuditLogModel.log(user.internal_id, user.role, 'Logged in', 'login');
+        } catch (err) {
+            console.error('[AuditLog] Failed to log login:', err);
+        }
 
         req.session.save((err) => {
             if (err) return res.redirect('/login');
