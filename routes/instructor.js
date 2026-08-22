@@ -4,9 +4,7 @@ const multer = require('multer');
 const { createWorker } = require('tesseract.js');
 const WorkloadController = require('../controllers/WorkloadController');
 const InstructorController = require('../controllers/InstructorController');
-const { authenticateUser, createSession, getRoleRedirect, revokeSession } = require('../services/auth');
-const { requireRole, setSessionCookie, clearSessionCookie } = require('../middleware/auth');
-const { bookingConflictsWithBlock, getBlockDateKeys, normalizeDateKey } = require('../services/scheduling');
+const NotificationController = require('../controllers/NotificationController');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // ── PDF upload middleware for make-up class requests ──
@@ -1022,88 +1020,6 @@ router.get('/makeup/requests', (req, res) => {
 // ── Unavailability Store ──
 // key: 'YYYY-MM-DD' → { date, reason, blockedAt, cancelledRefs: [] }
 const unavailabilityStore = {};
-
-// ── Normalise a date string or Date to 'YYYY-MM-DD' ──
-function toDateKey(d) {
-    const dt = typeof d === 'string' ? new Date(d) : d;
-    if (isNaN(dt)) return null;
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, '0');
-    const day = String(dt.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
-// ── Check whether a booking's date matches a given YYYY-MM-DD key ──
-// Booking dates come in formats like "Monday, July 28, 2025" or "2025-07-28"
-function bookingMatchesDate(booking, dateKey) {
-    // Try direct ISO match first
-    if (booking.date) {
-        const isoKey = toDateKey(booking.date);
-        if (isoKey === dateKey) return true;
-    }
-    // Parse verbose format "Monday, July 28, 2025"
-    if (booking.date) {
-        const parsed = new Date(booking.date);
-        if (!isNaN(parsed)) {
-            if (toDateKey(parsed) === dateKey) return true;
-        }
-    }
-    return false;
-}
-
-// ── Core: cancel all pending/confirmed bookings that overlap with a block ──
-async function cancelBookingsForBlock(instructorId, block, dateKeys, reason) {
-    const emailService = require('../services/email');
-    const sr = getStudentRouter();
-    if (!sr || !sr.refStore) return [];
-
-    const cancelled = [];
-    for (const [refNumber, booking] of Object.entries(sr.refStore)) {
-        if (booking.facultyId !== instructorId) continue;
-        if (booking.status !== 'pending' && booking.status !== 'confirmed') continue;
-
-        const bookingDateKey = normalizeDateKey(booking.date);
-        const overlaps = dateKeys.some(dateKey => bookingConflictsWithBlock(booking, block, dateKey));
-        if (!bookingDateKey || !overlaps) continue;
-
-        booking.status = 'cancelled';
-        booking.cancellationReason = reason || 'Instructor unavailability';
-        booking.cancelledAt = new Date().toISOString();
-        booking.blockedSchedule = {
-            type: block.type,
-            date: bookingDateKey,
-            reason: booking.cancellationReason,
-            startTime: block.startTime || null,
-            endTime: block.endTime || null
-        };
-
-        if (booking.day && booking.slot) {
-            sr.releaseSlot(booking.facultyId, booking.day, booking.slot);
-        }
-
-        cancelled.push({
-            refNumber,
-            studentName: booking.studentName,
-            studentEmail: booking.studentEmail,
-            date: booking.date,
-            slot: booking.slot
-        });
-
-        console.log(`[Unavailability] Cancelled booking ${refNumber} for ${booking.studentName} on ${bookingDateKey}`);
-
-        emailService.sendUnavailabilityCancellation({
-            studentEmail: booking.studentEmail,
-            studentName: booking.studentName,
-            refNumber,
-            facultyName: booking.facultyName,
-            date: booking.date,
-            slot: booking.slot,
-            reason: booking.cancellationReason,
-            bookingUrl: `https://facitrack.cspc.edu.ph/student/faculty/${booking.facultyId}`
-        }).catch(err => console.error('[Unavailability] Email error:', err.message));
-    }
-    return cancelled;
-}
 
 router.requestStore         = requestStore;
 router.timetableStore       = timetableStore;
