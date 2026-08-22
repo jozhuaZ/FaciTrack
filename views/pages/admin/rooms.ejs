@@ -191,7 +191,7 @@
                 <div class="form-field">
                     <label>Department <span style="color:#e53e3e;">*</span></label>
                     <input type="hidden" id="roomDept" name="departmentId" value="<%= admin.departmentId %>">
-                    <input type="text" value="<%= admin.department %>" style="cursor:not-allowed;" placeholder="<%= admin.department %>" readonly>
+                    <input type="text" value="<%= admin.department %>" class="form-input" disabled style="background-color:#f7fafc; cursor:not-allowed;">
                 </div>
             </div>
             <div class="form-row">
@@ -375,7 +375,7 @@ async function saveRoom() {
         if (!res.ok || !data.success) {
             // show first server-side validation error if it is present
             const firstError = data.errors ? Object.values(data.errors)[0] : data.error;
-            showToast('error', 'Failed', firstError || 'Something went wrong.');r
+            showToast('error', 'Failed', firstError || 'Something went wrong.');
             return;
         }
 
