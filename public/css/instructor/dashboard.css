@@ -892,7 +892,7 @@
     padding: 0.875rem;
     border: 1px solid var(--gray-200);
     border-radius: var(--radius-md);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); */
     position: relative;
     background: white;
 }
@@ -905,7 +905,7 @@
 
 .notification-row:hover {
     background: linear-gradient(135deg, rgba(10, 61, 98, 0.06) 0%, rgba(30, 136, 229, 0.08) 100%);
-    transform: translateX(2px);
+    /* transform: translateX(2px); */
     box-shadow: 0 2px 8px rgba(10, 61, 98, 0.1);
 }
 
@@ -920,9 +920,9 @@
     transition: all 0.3s ease;
 }
 
-.notification-row:hover .notif-row-icon {
+/* .notification-row:hover .notif-row-icon {
     transform: scale(1.15) rotate(5deg);
-}
+} */
 
 .notif-row-icon.new-request {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.1) 100%);
