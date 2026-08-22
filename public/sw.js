@@ -2,16 +2,17 @@ const CACHE_NAME = 'facitrack-v3';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [
-    '/roles',
     '/css/style.css',
     '/css/header.css',
     '/css/footer.css',
-    '/css/roles.css',
+
     '/css/student/dashboard.css',
     '/css/student/profile.css',
     '/css/instructor/dashboard.css',
+
     '/js/main.js',
     '/js/instructor-dashboard.js',
+
     '/images/FaciTrack-logo.png',
     '/manifest.json'
 ];
