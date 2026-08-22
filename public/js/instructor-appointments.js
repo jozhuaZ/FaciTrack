@@ -20,6 +20,7 @@ let popoverOpen = false;
 let singleClickTimer = null;
 let dayPanelEl = null;
 let popReschedPicker = null;
+let blockedDates = {}; // key: 'YYYY-MM-DD'
 
 const $ = id => document.getElementById(id);
 const MONTHS = ['January','February','March','April','May','June',
@@ -53,7 +54,14 @@ function refreshStats() {
 function initCalendar() {
     const now = new Date();
     calYear = now.getFullYear(); calMonth = now.getMonth();
-    renderCalendar();
+    // Load blocked dates from backend, then render
+    fetch('/instructor/unavailability/list')
+        .then(r => r.json())
+        .then(data => {
+            (data.records || []).forEach(rec => { blockedDates[rec.date] = true; });
+        })
+        .catch(() => {})
+        .finally(() => { renderCalendar(); });
     $('aptCalPrev').addEventListener('click', () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); });
     $('aptCalNext').addEventListener('click', () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); });
     $('aptCalToday').addEventListener('click', () => { const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth(); renderCalendar(); });
@@ -88,6 +96,15 @@ function renderCalendar() {
         }
         if (isOther) cell.classList.add('other-month');
         if (dateStr === today) cell.classList.add('today');
+
+        // Past days — gray and non-interactive
+        const cellDate = new Date(dateStr + 'T00:00:00');
+        const todayDate = new Date(); todayDate.setHours(0,0,0,0);
+        if (cellDate < todayDate) cell.classList.add('past');
+
+        // Blocked days — red border
+        if (blockedDates[dateStr]) cell.classList.add('blocked');
+
         cell.dataset.date = dateStr;
 
         const numEl = document.createElement('div');

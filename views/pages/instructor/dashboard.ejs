@@ -127,7 +127,40 @@
 .unavail-mode-btn.active{border-color:#0a3d62;background:#e8f2ff;color:#0a3d62;}
 .unavail-time-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem;}
 .unavail-summary{margin-top:.9rem;padding:.8rem .95rem;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff;color:#1d4ed8;font-size:.8rem;line-height:1.55;}
-.notif-card{display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .2rem;border-bottom:1px solid var(--gray-50);} .notif-card:last-child{border-bottom:none;} .notif-badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;background:var(--gray-100);color:var(--gray-700);flex-shrink:0;} .notif-card.unread{background:rgba(10,61,98,.03);} .notif-title{font-size:.78rem;font-weight:700;color:var(--gray-900);margin:0 0 .18rem;} .notif-message{font-size:.74rem;color:var(--gray-600);margin:0;line-height:1.45;} .notif-meta{font-size:.66rem;color:var(--gray-400);margin-top:.2rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;} .notif-dot{width:7px;height:7px;border-radius:50%;background:#0a3d62;flex-shrink:0;margin-top:.35rem;}
+
+/* ── Workload full-width section ── */
+.wl-glance-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.875rem;}
+.wl-glance-item{display:flex;align-items:center;gap:.875rem;padding:1rem 1.125rem;border:1px solid var(--gray-100);border-radius:var(--radius-lg);background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.wl-glance-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wl-glance-text{display:flex;flex-direction:column;gap:.1rem;min-width:0;}
+.wl-glance-label{font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin:0;}
+.wl-glance-value{font-size:1.5rem;font-weight:800;line-height:1.1;margin:0;}
+.wl-glance-sub{font-size:.68rem;color:var(--gray-500);margin:0;}
+/* Bar chart */
+.wl-bar-section{margin-top:1.25rem;}
+.wl-bar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;}
+.wl-bar-title{font-size:.75rem;font-weight:700;color:var(--gray-600);display:flex;align-items:center;gap:.4rem;}
+.wl-bar-legend{display:flex;align-items:center;gap:1rem;}
+.wl-bar-legend-item{display:flex;align-items:center;gap:.35rem;font-size:.69rem;color:var(--gray-500);}
+.wl-bar-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.wl-bar-chart{display:flex;align-items:flex-end;gap:0;border-bottom:1.5px solid var(--gray-100);padding:0 .5rem;height:110px;}
+.wl-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:0 .375rem;}
+.wl-bar-count{font-size:.72rem;font-weight:800;color:var(--gray-600);line-height:1;}
+.wl-bar{width:100%;border-radius:6px 6px 0 0;transition:height .45s ease;min-height:3px;}
+.wl-bar-day{font-size:.68rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-top:.625rem;}
+@media(max-width:900px){.wl-glance-grid{grid-template-columns:1fr 1fr;}.wl-bar-col{padding:0 .5rem;}}
+@media(max-width:640px){.wl-glance-grid{grid-template-columns:1fr 1fr;}}
+
+/* ── Make-up Class summary ── */
+.mu-summary-row{display:flex;align-items:center;gap:.875rem;padding:.75rem 1rem;border:1px solid var(--gray-100);border-radius:var(--radius-md);background:#fff;transition:border-color .15s;}
+.mu-summary-row:hover{border-color:var(--gray-300);}
+.mu-icon-wrap{width:36px;height:36px;border-radius:10px;background:rgba(234,88,12,.1);color:#c2410c;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mu-info{flex:1;min-width:0;}
+.mu-label{font-size:.8rem;font-weight:700;color:var(--gray-900);margin:0 0 .1rem;}
+.mu-sub{font-size:.69rem;color:var(--gray-500);margin:0;}
+.mu-badge{font-size:.65rem;font-weight:700;padding:.22rem .6rem;border-radius:6px;flex-shrink:0;}
+.mu-badge.has-pending{background:rgba(234,88,12,.12);color:#c2410c;}
+.mu-badge.all-clear{background:rgba(22,163,74,.1);color:#15803d;}
 
 /* ── Auto-refresh indicator ── */
 .refresh-indicator{display:inline-flex;align-items:center;gap:.35rem;font-size:.69rem;color:var(--gray-400);margin-left:.5rem;}
@@ -174,6 +207,49 @@
               <div class="status-option" data-status="ot" role="menuitem"><span class="status-indicator ot"></span><div><span class="status-option-label">Official Travel</span><span class="status-option-desc">On official business trip</span></div></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ── Today Strip ── -->
+      <%
+        const _todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
+        const _todayLabel = new Date().toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+        const _todayApts = appointments.filter(a => a.isToday || (a.date && (new Date(a.date).toDateString() === new Date().toDateString())));
+        const _todayConfirmed = _todayApts.filter(a => a.status === 'confirmed');
+        const _todayPending   = _todayApts.filter(a => a.status === 'pending');
+      %>
+      <div class="today-strip">
+        <div>
+          <p class="today-strip-label">Today</p>
+          <p class="today-strip-date"><%= _todayLabel %></p>
+        </div>
+        <div class="today-strip-divider"></div>
+        <div class="today-strip-items">
+          <% if (_todayApts.length === 0) { %>
+            <span class="today-strip-empty">No consultations scheduled for today</span>
+          <% } else { %>
+            <% _todayConfirmed.slice(0, 4).forEach(apt => { %>
+            <span class="today-pill confirmed">
+              <span class="today-pill-dot"></span>
+              <%= apt.time %> · <%= apt.studentName %>
+            </span>
+            <% }); %>
+            <% _todayPending.slice(0, 2).forEach(apt => { %>
+            <span class="today-pill pending">
+              <span class="today-pill-dot"></span>
+              <%= apt.time %> · <%= apt.studentName %> (Pending)
+            </span>
+            <% }); %>
+            <% if (_todayApts.length > 6) { %>
+            <span class="today-pill" style="background:rgba(255,255,255,.1);">+<%= _todayApts.length - 6 %> more</span>
+            <% } %>
+          <% } %>
+        </div>
+        <div class="today-strip-actions">
+          <button type="button" class="btn-mark-unavail" id="btnMarkUnavailStrip">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            Mark Unavailable
+          </button>
         </div>
       </div>
 
@@ -225,49 +301,6 @@
         </div>
       </div>
 
-      <!-- ── Today Strip ── -->
-      <%
-        const _todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
-        const _todayLabel = new Date().toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
-        const _todayApts = appointments.filter(a => a.isToday || (a.date && (new Date(a.date).toDateString() === new Date().toDateString())));
-        const _todayConfirmed = _todayApts.filter(a => a.status === 'confirmed');
-        const _todayPending   = _todayApts.filter(a => a.status === 'pending');
-      %>
-      <div class="today-strip">
-        <div>
-          <p class="today-strip-label">Today</p>
-          <p class="today-strip-date"><%= _todayLabel %></p>
-        </div>
-        <div class="today-strip-divider"></div>
-        <div class="today-strip-items">
-          <% if (_todayApts.length === 0) { %>
-            <span class="today-strip-empty">No consultations scheduled for today</span>
-          <% } else { %>
-            <% _todayConfirmed.slice(0, 4).forEach(apt => { %>
-            <span class="today-pill confirmed">
-              <span class="today-pill-dot"></span>
-              <%= apt.time %> · <%= apt.studentName %>
-            </span>
-            <% }); %>
-            <% _todayPending.slice(0, 2).forEach(apt => { %>
-            <span class="today-pill pending">
-              <span class="today-pill-dot"></span>
-              <%= apt.time %> · <%= apt.studentName %> (Pending)
-            </span>
-            <% }); %>
-            <% if (_todayApts.length > 6) { %>
-            <span class="today-pill" style="background:rgba(255,255,255,.1);">+<%= _todayApts.length - 6 %> more</span>
-            <% } %>
-          <% } %>
-        </div>
-        <div class="today-strip-actions">
-          <button type="button" class="btn-mark-unavail" id="btnMarkUnavailStrip">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-            Mark Unavailable
-          </button>
-        </div>
-      </div>
-
       <!-- ── Main Dashboard Grid ── -->
       <div class="dash-grid">
 
@@ -281,7 +314,7 @@
                 Pending Requests
                 <% if (pendingApts.length > 0) { %><span class="card-count-badge"><%= pendingApts.length %></span><% } %>
               </h3>
-              <a href="/instructor/consultations?status=pending" class="card-link">View all →</a>
+              <a href="/instructor/appointments?status=pending" class="card-link">View all →</a>
             </div>
             <div class="card-body">
               <% if (pendingApts.length === 0) { %>
@@ -315,18 +348,18 @@
                 </div>
                 <% }); %>
                 <% if (pendingApts.length > 5) { %>
-                <a href="/instructor/consultations?status=pending" class="view-more-link">+<%= pendingApts.length - 5 %> more pending requests →</a>
+                <a href="/instructor/appointments?status=pending" class="view-more-link">+<%= pendingApts.length - 5 %> more pending requests →</a>
                 <% } %>
               </div>
               <% } %>
             </div>
           </div>
 
-          <!-- Consultation Schedule -->
+          <!-- Consultation Slots -->
           <div class="content-card">
             <div class="card-header">
               <h3 class="card-title">Consultation Slots</h3>
-              <a href="/instructor/schedule" class="card-link">Manage →</a>
+              <a href="/instructor/consultation-schedule" class="card-link">Manage →</a>
             </div>
             <div class="card-body">
               <% if (!consultationSlots || consultationSlots.length === 0) { %>
@@ -334,7 +367,7 @@
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <strong>No slots set up yet</strong>
                 <p>Set your consultation availability so students can book appointments.</p>
-                <a href="/instructor/schedule" style="font-size:.8rem;color:var(--primary-blue);font-weight:700;">Set up slots →</a>
+                <a href="/instructor/consultation-schedule" style="font-size:.8rem;color:var(--primary-blue);font-weight:700;">Set up slots →</a>
               </div>
               <% } else { %>
               <div class="slot-strip">
@@ -360,7 +393,7 @@
                 </div>
                 <% }); %>
                 <% if (consultationSlots.length > 6) { %>
-                <a href="/instructor/schedule" class="view-more-link">+<%= consultationSlots.length - 6 %> more slots →</a>
+                <a href="/instructor/consultation-schedule" class="view-more-link">+<%= consultationSlots.length - 6 %> more slots →</a>
                 <% } %>
               </div>
               <% } %>
@@ -382,7 +415,7 @@
                   <button class="upco-tab" data-filter="today">Today</button>
                   <button class="upco-tab" data-filter="week">This Week</button>
                 </div>
-                <a href="/instructor/consultations" class="card-link">View all →</a>
+                <a href="/instructor/appointments" class="card-link">View all →</a>
               </div>
             </div>
             <div class="card-body">
@@ -423,61 +456,166 @@
                 </div>
                 <% }); %>
                 <% if (_allUpcoming.length > 8) { %>
-                <a href="/instructor/consultations" class="view-more-link">+<%= _allUpcoming.length - 8 %> more appointments →</a>
+                <a href="/instructor/appointments" class="view-more-link">+<%= _allUpcoming.length - 8 %> more appointments →</a>
                 <% } %>
               </div>
               <% } %>
             </div>
           </div>
 
-          <!-- Recent Activity / Notifications -->
+          <!-- Make-Up Class Summary -->
+          <%
+            const _pendingMakeup   = appointments.filter(a => a.topic && a.topic.toLowerCase().includes('make') && a.status === 'pending').length;
+            const _confirmedMakeup = appointments.filter(a => a.topic && a.topic.toLowerCase().includes('make') && a.status === 'confirmed').length;
+          %>
           <div class="content-card">
             <div class="card-header">
-              <h3 class="card-title">Notifications</h3>
-              <% const unreadCount = notifications.filter(n => !n.read).length; %>
-              <% if (unreadCount > 0) { %><span class="card-count-badge"><%= unreadCount %></span><% } %>
+              <h3 class="card-title">Make-Up Class</h3>
+              <a href="/instructor/makeup/requests" class="card-link">View all →</a>
             </div>
-            <div class="card-body" style="padding:0 .75rem .75rem;">
-              <% if (!notifications || notifications.length === 0) { %>
-              <div class="empty-dash" style="padding:2rem 1rem;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                <p>No recent activity.</p>
-              </div>
-              <% } else { %>
-              <div>
-                <% notifications.slice(0, 6).forEach(notif => { %>
-                <div class="notif-card <%= notif.read ? '' : 'unread' %>">
-                  <div class="notif-badge">
-                    <% if (notif.type === 'new-request' || notif.type === 'appointment') { %>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <% } else if (notif.type === 'cancellation') { %>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    <% } else if (notif.type === 'schedule-block-created' || notif.type === 'unavailability') { %>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-                    <% } else if (notif.type === 'reminder') { %>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <% } else { %>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-                    <% } %>
-                  </div>
-                  <div style="flex:1;min-width:0;">
-                    <p class="notif-title"><%= notif.title %></p>
-                    <p class="notif-message"><%= notif.message %></p>
-                    <div class="notif-meta">
-                      <span><%= notif.time %></span>
-                      <% if (!notif.read) { %><span>•</span><span>Unread</span><% } %>
-                    </div>
-                  </div>
-                  <% if (!notif.read) { %><span class="notif-dot"></span><% } %>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:.5rem;">
+              <div class="mu-summary-row">
+                <div class="mu-icon-wrap">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
-                <% }); %>
+                <div class="mu-info">
+                  <p class="mu-label">Pending Requests</p>
+                  <p class="mu-sub">Awaiting your review &amp; approval</p>
+                </div>
+                <span class="mu-badge <%= _pendingMakeup > 0 ? 'has-pending' : 'all-clear' %>">
+                  <%= _pendingMakeup > 0 ? _pendingMakeup + ' pending' : 'All clear' %>
+                </span>
               </div>
-              <% } %>
+              <div class="mu-summary-row">
+                <div class="mu-icon-wrap" style="background:rgba(22,163,74,.1);color:#15803d;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div class="mu-info">
+                  <p class="mu-label">Approved This Week</p>
+                  <p class="mu-sub">Confirmed make-up sessions</p>
+                </div>
+                <span class="mu-badge all-clear"><%= _confirmedMakeup %> confirmed</span>
+              </div>
+              <div class="mu-summary-row">
+                <div class="mu-icon-wrap" style="background:rgba(99,102,241,.1);color:#4f46e5;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                </div>
+                <div class="mu-info">
+                  <p class="mu-label">Schedule a Make-Up</p>
+                  <p class="mu-sub">Submit a new make-up class request</p>
+                </div>
+                <a href="/instructor/makeup/requests" style="font-size:.72rem;font-weight:700;color:var(--primary-blue);white-space:nowrap;text-decoration:none;">Open →</a>
+              </div>
             </div>
           </div>
 
         </div><!-- /right col -->
       </div><!-- /dash-grid -->
+
+      <!-- ── Workload at a Glance (full width) ── -->
+      <%
+        const _wkWeek   = workloadStats && workloadStats.thisWeek  ? workloadStats.thisWeek  : {};
+        const _wkMonth  = workloadStats && workloadStats.thisMonth ? workloadStats.thisMonth : {};
+        const _trends   = workloadStats && workloadStats.trends    ? workloadStats.trends    : [];
+        const _maxTrend = Math.max(1, ..._trends.map(t => t.consultations || 0));
+        const _todayDow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date().getDay()];
+        const _trendColors = ['#6366f1','#3b82f6','#0ea5e9','#14b8a6','#22c55e'];
+      %>
+      <div class="content-card" style="margin-top:0;">
+        <div class="card-header">
+          <h3 class="card-title">Workload at a Glance</h3>
+          <a href="/instructor/workload" class="card-link">Full view →</a>
+        </div>
+        <div class="card-body">
+
+          <!-- Stat tiles with icons -->
+          <div class="wl-glance-grid">
+            <div class="wl-glance-item">
+              <div class="wl-glance-icon" style="background:rgba(99,102,241,.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div class="wl-glance-text">
+                <p class="wl-glance-label">This Week</p>
+                <p class="wl-glance-value" style="color:#4f46e5;"><%= _wkWeek.consultationsCompleted || 0 %></p>
+                <p class="wl-glance-sub">consultations done</p>
+              </div>
+            </div>
+            <div class="wl-glance-item">
+              <div class="wl-glance-icon" style="background:rgba(59,130,246,.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <div class="wl-glance-text">
+                <p class="wl-glance-label">Hours Logged</p>
+                <p class="wl-glance-value" style="color:#2563eb;"><%= (_wkWeek.hoursLogged || 0).toFixed(1) %><span style="font-size:.85rem;font-weight:600;color:var(--gray-400);">h</span></p>
+                <p class="wl-glance-sub">this week</p>
+              </div>
+            </div>
+            <div class="wl-glance-item">
+              <div class="wl-glance-icon" style="background:rgba(14,165,233,.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div class="wl-glance-text">
+                <p class="wl-glance-label">This Month</p>
+                <p class="wl-glance-value" style="color:#0284c7;"><%= _wkMonth.consultationsCompleted || 0 %></p>
+                <p class="wl-glance-sub">total consultations</p>
+              </div>
+            </div>
+            <div class="wl-glance-item">
+              <div class="wl-glance-icon" style="background:rgba(34,197,94,.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              <div class="wl-glance-text">
+                <p class="wl-glance-label">Avg. Duration</p>
+                <p class="wl-glance-value" style="font-size:1.1rem;color:#15803d;"><%= _wkWeek.averageDuration || '—' %></p>
+                <p class="wl-glance-sub">per consultation</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bar chart -->
+          <% if (_trends.length > 0) { %>
+          <div class="wl-bar-section">
+            <div class="wl-bar-header">
+              <span class="wl-bar-title">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Daily consultations this week
+              </span>
+              <div class="wl-bar-legend">
+                <div class="wl-bar-legend-item">
+                  <span class="wl-bar-legend-dot" style="background:#1565c0;"></span>Today
+                </div>
+                <div class="wl-bar-legend-item">
+                  <span class="wl-bar-legend-dot" style="background:#6366f1;"></span>Other days
+                </div>
+              </div>
+            </div>
+            <div class="wl-bar-chart">
+              <% _trends.forEach((t, i) => { %>
+              <%
+                const _barH    = Math.max(3, Math.round((t.consultations / _maxTrend) * 84));
+                const _isToday = t.day === _todayDow;
+                const _barColor = _isToday ? '#1565c0' : _trendColors[i % _trendColors.length];
+              %>
+              <div class="wl-bar-col">
+                <span class="wl-bar-count" style="color:<%= _barColor %>;"><%= t.consultations %></span>
+                <div class="wl-bar" style="height:<%= _barH %>px;background:<%= _barColor %>;<%= _isToday ? 'box-shadow:0 2px 10px rgba(21,101,192,.35);' : 'opacity:.82;' %>"></div>
+              </div>
+              <% }); %>
+            </div>
+            <!-- Day labels sit below the baseline, outside the chart area -->
+            <div style="display:flex;gap:0;padding:0 .5rem;">
+              <% _trends.forEach((t) => { %>
+              <%  const _isToday = t.day === _todayDow; %>
+              <div style="flex:1;display:flex;justify-content:center;padding:0 .375rem;">
+                <span class="wl-bar-day" style="<%= _isToday ? 'color:#1565c0;font-weight:800;' : '' %>"><%= t.day %></span>
+              </div>
+              <% }); %>
+            </div>
+          </div>
+          <% } %>
+
+        </div>
+      </div>
 
     </div><!-- /main-container -->
   </main>

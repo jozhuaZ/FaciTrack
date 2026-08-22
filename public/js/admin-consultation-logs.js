@@ -308,7 +308,7 @@ async function loadStats() {
 
             document.getElementById('totalConsultations').textContent = stats.total_consultations || 0;
             document.getElementById('completedCount').textContent = stats.completed_count || 0;
-            document.getElementById('faceToFaceCount').textContent = stats.face_to_face_count || 0;
+            document.getElementById('synchronousCount').textContent = stats.synchronous_count || 0;
             document.getElementById('onlineCount').textContent = stats.online_count || 0;
         }
     } catch (error) {

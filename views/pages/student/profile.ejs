@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
 <div class="instructor-layout">
-    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: typeof appointmentCount !== 'undefined' ? appointmentCount : 0 }) %>
 
     <main class="instructor-main">
         <div class="main-container">
@@ -33,7 +33,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
                     <h3 style="font-size:1.25rem;font-weight:700;color:#92400e;margin:0 0 .625rem;">Session Expired</h3>
-                    <p style="font-size:.9rem;color:var(--gray-600);margin:0 0 1.75rem;line-height:1.6;">Your slot reservation timed out after 5 minutes. Please select a slot again.</p>
+                    <p style="font-size:.9rem;color:var(--gray-600);margin:0 0 1.75rem;line-height:1.6;">Your slot reservation timed out after 2 minutes. Please select a slot again.</p>
                     <button type="button" id="expiredOkBtn" style="width:100%;padding:.75rem;background:var(--primary-blue);color:#fff;border:none;border-radius:var(--radius-md);font-size:.9375rem;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:background .2s;">OK</button>
                 </div>
             </div>
@@ -319,7 +319,7 @@ function renderCalendar() {
 // ── Slot reservation state ──
 let reservedSlotId = null;
 let reservationTimer = null;
-const RESERVATION_MS = 5 * 60 * 1000;
+const RESERVATION_MS = 2 * 60 * 1000;
 
 function clearReservation() {
     if (reservedSlotId) {
@@ -346,15 +346,27 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
         group.subSlots.forEach(sub => {
             slotIndex++;
             const timeStr = `${sub.timeStart} – ${sub.timeEnd}`;
-            const isTaken = sub.isBooked || sub.isReservedByOther;
+            const isBooked  = sub.isBooked;
+            const isBooking = !sub.isBooked && sub.isReservedByOther;
+            const isTaken   = isBooked || isBooking;
+
+            const btnClass  = isBooked  ? 'slot-select-btn full'
+                            : isBooking ? 'slot-select-btn booking'
+                            : 'slot-select-btn';
+            const tagClass  = isBooked  ? 'slot-avail-tag full'
+                            : isBooking ? 'slot-avail-tag booking'
+                            : 'slot-avail-tag';
+            const tagText   = isBooked  ? 'Booked'
+                            : isBooking ? 'Booking…'
+                            : 'Available';
 
             const btn = document.createElement('button');
-            btn.className = 'slot-select-btn' + (isTaken ? ' full' : '');
+            btn.className = btnClass;
             btn.disabled = isTaken;
             btn.innerHTML = `
                 <span class="slot-num-badge">${slotIndex}</span>
                 <span style="flex:1;">${timeStr}</span>
-                <span class="slot-avail-tag${isTaken ? ' full' : ''}">${isTaken ? 'Not Available' : 'Available'}</span>`;
+                <span class="${tagClass}">${tagText}</span>`;
 
             if (!isTaken) {
                 btn.addEventListener('click', function() {

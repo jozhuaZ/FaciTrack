@@ -349,6 +349,14 @@ router.get('/departments', (req, res) => {
 
 // Consultation Room Management Routes
 router.get('/consultation-room', ConsultationRoomController.renderConsultationRoomPage);
+
+// NEW: Multi-day calendar endpoints
+router.get('/consultation-room/multi-day-slots', ConsultationRoomController.getMultiDaySlots);
+router.get('/consultation-room/multi-day-sync-counts', ConsultationRoomController.getMultiDaySyncCounts);
+router.get('/consultation-room/settings', ConsultationRoomController.getSettings);
+router.put('/consultation-room/settings', ConsultationRoomController.updateSettings);
+
+// LEGACY: Old program-based endpoints (keep for backward compatibility)
 router.get('/consultation-room/slots', ConsultationRoomController.getSlotsByProgram);
 router.get('/consultation-room/availability', ConsultationRoomController.checkSlotAvailability);
 router.get('/consultation-room/rooms/available', ConsultationRoomController.getAvailableRooms);

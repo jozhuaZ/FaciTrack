@@ -554,6 +554,9 @@
 .cal-nav-btn:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
 .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
 .cal-day-label { text-align:center; font-size:.6875rem; font-weight:700; color:var(--gray-500); text-transform:uppercase; padding:.5rem .25rem; border-bottom:1px solid var(--gray-100); }
+/* Weekend column headers — Sun (1st col) and Sat (7th col) */
+.cal-day-label:nth-child(7n+1),
+.cal-day-label:nth-child(7n+7) { color:#c0392b; }
 .cal-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:.8125rem; color:var(--gray-400); cursor:default; position:relative; border-radius:var(--radius-sm); margin:2px; }
 .cal-cell.other-month { color:var(--gray-300); }
 /* Today: highlighted box instead of dot */
@@ -610,10 +613,13 @@
 .slot-select-btn:hover { border-color:#16a34a; background:rgba(34,197,94,.06); }
 .slot-select-btn.selected { border-color:#16a34a; background:rgba(34,197,94,.12); font-weight:700; color:#15803d; }
 .slot-select-btn.full { opacity:.5; cursor:not-allowed; background:var(--gray-50); border-color:var(--gray-200); color:var(--gray-400); }
+.slot-select-btn.booking { opacity:.85; cursor:not-allowed; background:#fffbeb; border-color:#fcd34d; color:#92400e; }
 .slot-num-badge { width:20px; height:20px; border-radius:50%; background:rgba(34,197,94,.2); color:#15803d; font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .slot-select-btn.selected .slot-num-badge { background:#16a34a; color:#fff; }
+.slot-select-btn.booking .slot-num-badge { background:#fcd34d; color:#92400e; }
 .slot-avail-tag { margin-left:auto; font-size:.6875rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; flex-shrink:0; }
 .slot-avail-tag.full { background:var(--gray-100); color:var(--gray-400); border-color:var(--gray-200); }
+.slot-avail-tag.booking { background:#fffbeb; color:#92400e; border-color:#fcd34d; }
 /* Book button with slot selected */
 .btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
 .btn-book-slot:hover { background:var(--primary-dark); }
@@ -819,6 +825,19 @@
             color: var(--primary-blue);
         }
 
+        .consult-type-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--gray-100);
+            color: var(--gray-400);
+            border-color: var(--gray-200);
+        }
+
+        .consult-type-btn:disabled:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-200);
+        }
+
         .btn-submit-book {
             display: inline-flex;
             align-items: center;
@@ -987,3 +1006,243 @@
                 justify-content: center;
             }
         }
+
+/* =============================================
+   RESPONSIVE — Profile / Calendar (Task 4)
+   ============================================= */
+
+/* Narrow the sidebar column further before it collapses */
+@media (max-width: 900px) {
+    .prof-layout {
+        grid-template-columns: 200px 1fr;
+    }
+}
+
+/* Single-column layout — sidebar becomes a horizontal strip */
+@media (max-width: 768px) {
+    /* Calendar shrinks gracefully */
+    .consult-calendar-wrap {
+        overflow: hidden;
+    }
+
+    .cal-grid {
+        /* smaller cells on narrow screens */
+        gap: 0;
+    }
+
+    .cal-cell {
+        font-size: 0.75rem;
+        margin: 1px;
+    }
+
+    .cal-day-label {
+        font-size: 0.5625rem;
+        padding: 0.375rem 0.1rem;
+    }
+
+    .cal-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .cal-legend {
+        gap: 0.625rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.6875rem;
+    }
+
+    /* Slot detail panel full-width */
+    .slot-detail-panel,
+    .no-schedule-panel {
+        margin-top: 0.5rem;
+        padding: 0.875rem 1rem;
+    }
+
+    /* consult-calendar-wrap inside prof-content fills width */
+    .prof-content {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .cal-cell {
+        font-size: 0.6875rem;
+        margin: 1px;
+        border-radius: 3px;
+    }
+
+    .cal-day-label {
+        font-size: 0.5rem;
+        padding: 0.25rem 0;
+    }
+
+    .cal-title {
+        font-size: 0.875rem;
+    }
+
+    .cal-nav-btn {
+        width: 26px;
+        height: 26px;
+    }
+
+    /* Slot select buttons stack label and badge */
+    .slot-select-btn {
+        flex-wrap: wrap;
+        gap: 0.375rem;
+    }
+
+    .slot-avail-tag {
+        margin-left: 0;
+    }
+
+    /* Profile sidebar: tighter on very small screens */
+    .prof-sidebar {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+
+    .sidebar-avatar {
+        width: 52px;
+        height: 52px;
+        font-size: 1rem;
+    }
+
+    .sidebar-name {
+        font-size: 0.9375rem;
+    }
+
+    .sidebar-meta li {
+        font-size: 0.75rem;
+    }
+
+    /* next-available box inside sidebar */
+    .consult-calendar-wrap .cal-legend {
+        flex-direction: column;
+        gap: 0.375rem;
+    }
+}
+
+/* =============================================
+   RESPONSIVE — Book Appointment Form (Task 5)
+   ============================================= */
+
+@media (max-width: 768px) {
+    .book-scroll {
+        padding: 1rem 0;
+    }
+
+    .book-form-card {
+        padding: 1.25rem;
+        max-width: 100%;
+    }
+
+    .faculty-summary-card {
+        padding: 0.875rem 1rem;
+        gap: 0.75rem;
+    }
+
+    .faculty-summary-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 0.875rem;
+    }
+
+    .consult-type-toggle {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.625rem;
+    }
+
+    .consult-type-btn {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+    }
+
+    .book-actions-row {
+        flex-wrap: wrap;
+        gap: 0.625rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .book-scroll {
+        padding: 0.75rem 0;
+    }
+
+    .book-form-card {
+        padding: 1rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .faculty-summary-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .slot-readonly-box {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .slot-readonly-change {
+        width: 100%;
+        text-align: left;
+    }
+
+    .consult-type-toggle {
+        grid-template-columns: 1fr;
+    }
+
+    .book-actions-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-submit-book,
+    .btn-cancel-book {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Booking confirm success card */
+    .success-card {
+        padding: 1.5rem 1rem;
+    }
+
+    .success-icon {
+        width: 56px;
+        height: 56px;
+    }
+
+    .success-title {
+        font-size: 1.0625rem;
+    }
+
+    .success-card > div:last-child {
+        flex-direction: column;
+        gap: 0.625rem;
+    }
+
+    /* Session expired modal on book page */
+    #expiredBanner > div {
+        padding: 1.75rem 1.25rem !important;
+    }
+}
+
+@media (max-width: 360px) {
+    .book-form-card {
+        padding: 0.875rem;
+    }
+
+    .form-section-title {
+        font-size: 0.875rem;
+    }
+
+    .btn-submit-book,
+    .btn-cancel-book {
+        font-size: 0.875rem;
+        padding: 0.625rem 1rem;
+    }
+}

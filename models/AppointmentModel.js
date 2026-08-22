@@ -51,6 +51,14 @@ const AppointmentModel = {
         return count;
     },
 
+    async getStudentPendingCount(studentId) {
+        const [[{ count }]] = await pool.execute(
+            `SELECT COUNT(*) AS count FROM appointments WHERE student_id = ? AND status IN ('pending','confirmed')`,
+            [studentId]
+        );
+        return count;
+    },
+
     // userId could be studentId or instructorId
     async getAppointmentsByUser(userId) {
         const query = `SELECT
@@ -114,7 +122,7 @@ const AppointmentModel = {
             }
 
             let roomId = null;
-            if (mode === 'Face-to-Face') {
+            if (mode === 'Synchronous') {
                 roomId = await assignConsultationRoom(conn, departmentId, consultationDate, timeStart, timeEnd);
                 if (roomId === null) {
                     await conn.rollback();
@@ -318,7 +326,7 @@ const AppointmentModel = {
             }
 
             let roomId = oldApt.room_id;
-            if (oldApt.mode === 'Face-to-Face') {
+            if (oldApt.mode === 'Synchronous') {
                 roomId = await assignConsultationRoom(
                     conn, oldApt.department_id_snapshot ?? instructor.department_id,
                     newSlot.consultation_date, newSlot.start_time, newSlot.end_time
