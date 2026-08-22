@@ -332,9 +332,14 @@
 <script>
 let currentDeclineRef = null;
 
+function formatFullDate(dateStr) {
+    const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+    return d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
 function showDeclineModal(appointmentId, facultyName, date, slot) {
     currentDeclineRef = appointmentId;
-    const text = `You are about to cancel your appointment with ${facultyName} scheduled for ${date} at ${slot}. This action cannot be undone.`;
+    const text = `You are about to cancel your appointment with ${facultyName} scheduled for ${formatFullDate(date)} at ${slot}. This action cannot be undone.`;
     document.getElementById('declineModalText').textContent = text;
     document.getElementById('declineModal').classList.add('show');
 }
