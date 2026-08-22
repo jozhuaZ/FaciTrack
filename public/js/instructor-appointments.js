@@ -946,6 +946,76 @@ function showToast(type, title, msg) {
 
 document.addEventListener('DOMContentLoaded', () => {
     refreshStats(); initCalendar(); initPopover(); initSearchFilter(); initViewToggle();
+
+    const params = new URLSearchParams(window.location.search);
+    const openAptId = params.get('openApt');
+    if (openAptId) {
+        const targetId = parseInt(openAptId, 10);
+        const apt = appointments.find(a => a.id === targetId);
+        if (apt) {
+            // Keep calendar view
+            currentView = 'calendar';
+            document.querySelectorAll('.apt-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'calendar'));
+            $('aptCalView').style.display = 'block';
+            $('aptListView').style.display = 'none';
+
+            // Find the date of the appointment and navigate calendar to that month
+            const aptDate = new Date(apt.date + 'T00:00:00');
+            calYear = aptDate.getFullYear();
+            calMonth = aptDate.getMonth();
+            
+            // Re-render calendar with the target date
+            renderCalendar();
+
+            // Find the calendar cell for that date
+            const dateStr = fmtDate(aptDate);
+            const cell = document.querySelector(`.apt-cal-cell[data-date="${dateStr}"]`);
+            
+            if (cell) {
+                // Scroll to the cell
+                cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Highlight the cell
+                document.querySelectorAll('.apt-cal-cell.selected-instant').forEach(c => c.classList.remove('selected-instant', 'selected'));
+                cell.classList.add('selected-instant', 'selected');
+                
+                // Find the badge for this appointment within the cell
+                const badge = cell.querySelector(`.apt-badge[data-apt-id="${targetId}"]`);
+                
+                // Open popover after a slight delay to allow scrolling to complete
+                setTimeout(() => {
+                    if (badge) {
+                        openPopover(targetId, badge);
+                    } else {
+                        // If badge not found (maybe filtered out), try to open from the cell
+                        openPopover(targetId, cell);
+                    }
+                }, 400);
+            } else {
+                // If cell not found (appointment date might be in another month), try list view as fallback
+                currentView = 'list';
+                document.querySelectorAll('.apt-view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'list'));
+                $('aptCalView').style.display = 'none';
+                $('aptListView').style.display = 'block';
+
+                const all = filteredApts();
+                const idx = all.findIndex(a => a.id === targetId);
+                if (idx >= 0) {
+                    currentPage = Math.floor(idx / ITEMS_PER_PAGE) + 1;
+                }
+                renderListView();
+
+                setTimeout(() => {
+                    const card = document.querySelector(`.apt-lv-card[data-apt-id="${targetId}"]`);
+                    if (card) {
+                        const viewBtn = card.querySelector('.apt-lv-btn.view');
+                        openPopover(targetId, viewBtn || card);
+                    }
+                }, 50);
+            }
+        }
+        window.history.replaceState({}, '', window.location.pathname);
+    }
 });
 
 })();
