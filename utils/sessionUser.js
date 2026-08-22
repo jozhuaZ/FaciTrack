@@ -25,10 +25,29 @@ function buildInstructorUser(session) {
         role: session.role,
         profilePhoto: session?.profilePhoto || null,
         department: session?.department,
+        departmentId: session?.departmentId
+    }
+}
+
+function buildAdminUser(session) {
+    return {
+        id: session?.userId,
+        name: session?.name,
+        firstName: session.firstName,
+        middleName: session.middleName,
+        lastName: session.lastName,
+        status: session.status,
+        email: session?.email,
+        position: session.position,
+        role: session.role,
+        profilePhoto: session?.profilePhoto || null,
+        department: session?.department,
+        departmentId: session?.departmentId
     }
 }
 
 module.exports = {
     buildStudentUser,
     buildInstructorUser,
+    buildAdminUser
 };
