@@ -3,7 +3,7 @@
     <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
     <div class="instructor-layout">
-        <%- include('../../partials/student-sidebar', { activePage: 'dashboard' , appointmentCount: 0 }) %>
+        <%- include('../../partials/student-sidebar', { activePage: 'dashboard' , appointmentCount: appointmentCount }) %>
 
             <main class="instructor-main">
                 <div class="main-container">
@@ -125,7 +125,7 @@
                                         <label class="form-label">Student ID <span
                                                 style="color:#e53e3e;">*</span></label>
                                         <input type="text" class="form-input" id="studentNumber" name="studentNumber"
-                                            placeholder="e.g. 2021-00123" required>
+                                            placeholder="e.g. 23100xxxx" required>
                                     </div>
                                 </div>
 
