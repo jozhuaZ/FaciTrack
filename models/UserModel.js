@@ -66,10 +66,14 @@ const UserModel = {
                 u.position,
                 u.status,
                 u.last_login,
+                u.base_room_id,
+                r.room_number,
+                r.room_type,
                 u.department_id,
                 d.full_name AS department_name
             FROM users u
             LEFT JOIN departments d ON u.department_id = d.id
+            LEFT JOIN rooms r ON u.base_room_id = r.id
             WHERE 1=1
         `;
         const params = [];
@@ -137,8 +141,8 @@ const UserModel = {
 
     async insertUserByAdmin(newUser) {
         const query = `INSERT INTO users
-            (first_name, middle_name, last_name, email, role, department_id, status, employment_type, position, profile_picture, hashed_password)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            (first_name, middle_name, last_name, email, role, base_room_id, department_id, status, employment_type, position, profile_picture, hashed_password)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
         const [result] = await pool.execute(query, [
             newUser.firstName,
@@ -146,6 +150,7 @@ const UserModel = {
             newUser.lastName,
             newUser.email,
             newUser.role,
+            newUser.roomId,
             newUser.departmentId ?? null,
             newUser?.status || 'Active',
             newUser.employmentType ?? null,
@@ -181,6 +186,7 @@ const UserModel = {
                 last_name       = ?,
                 email           = ?,
                 role            = ?,
+                base_room_id    = ?,
                 department_id   = ?,
                 status          = ?,
                 employment_type = ?,
@@ -192,6 +198,7 @@ const UserModel = {
                 data.lastName,
                 data.email,
                 data.role,
+                data.roomId,
                 data.departmentId ?? null,
                 data.status ?? 'Active',
                 data.employmentType,
