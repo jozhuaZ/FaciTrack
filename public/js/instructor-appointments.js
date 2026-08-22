@@ -172,7 +172,10 @@ function positionNear(el, anchor) {
     if (top + eh > vh - 8) top = r.top - eh - 6;
     el.style.left = left+'px'; el.style.top = top+'px'; el.style.visibility = '';
 }
-
+function formatFullDate(dateStr) {
+    const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'));
+    return d.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+}
 /* ── Popover ── */
 function openPopover(aptId, anchor) {
     const apt = appointments.find(a => a.id === aptId);
@@ -182,7 +185,7 @@ function openPopover(aptId, anchor) {
 
     $('popName').textContent      = apt.studentName;
     $('popId').textContent        = apt.studentId;
-    $('popWhen').textContent      = `${apt.date}  ·  ${apt.time}`;
+    $('popWhen').textContent      = `${formatFullDate(apt.date)}  ·  ${apt.time}`;
     $('popDuration').textContent  = apt.duration || '—';
     $('popTopic').textContent     = apt.topic;
     $('popNotes').textContent     = apt.notes ?? '---';
