@@ -1,5 +1,7 @@
 const pool = require('../configs/db');
-const UserModel = require('./UserModel');
+const NotificationModel = require('../models/NotificationModel');
+const AuditLogModel = require('../models/AuditLogModel');
+const { to12Hour, formatFullDate } = require('../utils/timeFormat');
 
 async function assignConsultationRoom(conn, departmentId, consultationDate, timeStart, timeEnd) {
     const [rooms] = await conn.execute(
@@ -45,10 +47,28 @@ const AppointmentModel = {
         return count;
     },
 
-    async getStudentCount (studentId) {
+    async getStudentCount(studentId) {
         const [[{ count }]] = await pool.execute('SELECT COUNT(*) AS count FROM appointments WHERE student_id = ?', [studentId]);
 
         return count;
+    },
+
+    async getConsultationHourId(appointmentId) {
+        try {
+            const [rows] = await pool.execute(
+                'SELECT consultation_hour_id as slot_id FROM appointments WHERE id = ?',
+                [appointmentId]
+            );
+
+            if (rows.length === 0) {
+                return null;
+            }
+
+            return rows[0].slot_id;
+        } catch (error) {
+            console.error('Error fetching consultation hour ID:', error);
+            throw error;
+        }
     },
 
     // userId could be studentId or instructorId
@@ -96,13 +116,13 @@ const AppointmentModel = {
             await conn.beginTransaction();
 
             const [[student]] = await conn.execute(
-                'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+                'SELECT id, first_name, last_name, role FROM users WHERE public_id = ?', [studentPublicId]
             );
             if (!student) throw new Error('Student not found');
 
             // Re-check the slot hasn't already been booked by someone else
             const [[slotCheck]] = await conn.execute(
-                `SELECT a.id AS appointment_id
+                `SELECT a.id AS appointment_id, ch.start_time, ch.end_time
                  FROM consultation_hours ch
                  LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status != 'cancelled'
                  WHERE ch.id = ? FOR UPDATE`,
@@ -140,6 +160,20 @@ const AppointmentModel = {
             );
 
             await conn.commit();
+
+            try {
+                const studentName = `${student.first_name} ${student.last_name ?? ''}`;
+                const timeLabel = `${to12Hour(slotCheck.start_time)} – ${to12Hour(slotCheck.end_time)}`;
+                await NotificationModel.create(
+                    instructorId,
+                    'new-request',
+                    `${studentName ?? 'A student'} requested a consultation on ${formatFullDate(consultationDate)} at ${timeLabel}.`,
+                    result.insertId
+                );
+            } catch (notifErr) {
+                console.error('[Notification] Failed to create (createAppointment):', notifErr);
+            }
+            
             return { success: true, appointmentId: result.insertId, roomId };
         } catch (err) {
             await conn.rollback();
@@ -204,13 +238,15 @@ const AppointmentModel = {
             await conn.beginTransaction();
 
             const [[student]] = await conn.execute(
-                'SELECT id FROM users WHERE public_id = ?', [studentPublicId]
+                'SELECT id, first_name, last_name, role FROM users WHERE public_id = ?', [studentPublicId]
             );
             if (!student) { await conn.rollback(); return { success: false, reason: 'STUDENT_NOT_FOUND' }; }
 
             const [[appointment]] = await conn.execute(
-                `SELECT consultation_hour_id FROM appointments
-             WHERE id = ? AND student_id = ? AND status IN ('pending','confirmed')
+                `SELECT a.consultation_hour_id, a.instructor_id, ch.consultation_date, ch.start_time
+             FROM appointments a
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             WHERE a.id = ? AND a.student_id = ? AND a.status IN ('pending','confirmed')
              FOR UPDATE`,
                 [appointmentId, student.id]
             );
@@ -225,6 +261,21 @@ const AppointmentModel = {
             await freeSlotIfNotClosed(conn, appointment.consultation_hour_id);
 
             await conn.commit();
+
+            try {
+                const dateLabel = formatFullDate(appointment.consultation_date);
+                const timeLabel = to12Hour(appointment.start_time);
+
+                await NotificationModel.create(
+                    appointment.instructor_id,
+                    'cancellation',
+                    `${student.first_name} ${student.last_name} cancelled their upcoming consultation on ${dateLabel} at ${timeLabel}.`,
+                    appointmentId
+                );
+            } catch (notifErr) {
+                console.error('[Notification] Failed to create (cancelAppointment):', notifErr);
+            }
+
             return { success: true };
         } catch (err) {
             await conn.rollback();
@@ -235,19 +286,52 @@ const AppointmentModel = {
     },
 
     async approveAppointment(appointmentId, instructorPublicId) {
-        const [[instructor]] = await pool.execute(
-            'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
-        );
-        if (!instructor) return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' };
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
 
-        const [result] = await pool.execute(
-            `UPDATE appointments SET status = 'confirmed'
-         WHERE id = ? AND instructor_id = ? AND status = 'pending'`,
-            [appointmentId, instructor.id]
-        );
+            const [[instructor]] = await conn.execute(
+                'SELECT id, first_name, last_name, role FROM users WHERE public_id = ?', [instructorPublicId]
+            );
+            if (!instructor) { await conn.rollback(); return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' }; }
 
-        if (result.affectedRows === 0) return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' };
-        return { success: true };
+            const [[appointment]] = await conn.execute(
+                `SELECT a.student_id, ch.consultation_date, ch.start_time
+             FROM appointments a
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             WHERE a.id = ? AND a.instructor_id = ? AND a.status = 'pending'
+             FOR UPDATE`,
+                [appointmentId, instructor.id]
+            );
+            if (!appointment) { await conn.rollback(); return { success: false, reason: 'NOT_FOUND_OR_RESOLVED' }; }
+
+            await conn.execute(
+                `UPDATE appointments SET status = 'confirmed' WHERE id = ?`,
+                [appointmentId]
+            );
+
+            await conn.commit();
+
+            try {
+                const dateLabel = formatFullDate(appointment.consultation_date);
+                const timeLabel = to12Hour(appointment.start_time);
+                await NotificationModel.create(
+                    appointment.student_id,
+                    'approved',
+                    `${instructor.first_name} ${instructor.last_name} confirmed your consultation request on ${dateLabel} at ${timeLabel}.`,
+                    appointmentId
+                );
+            } catch (notifErr) {
+                console.error('[Notification] Failed to create (approveAppointment):', notifErr);
+            }
+
+            return { success: true };
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
     },
 
     async declineAppointment(appointmentId, instructorPublicId, reason) {
@@ -256,13 +340,15 @@ const AppointmentModel = {
             await conn.beginTransaction();
 
             const [[instructor]] = await conn.execute(
-                'SELECT id FROM users WHERE public_id = ?', [instructorPublicId]
+                'SELECT id, first_name, last_name, role FROM users WHERE public_id = ?', [instructorPublicId]
             );
             if (!instructor) { await conn.rollback(); return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' }; }
 
             const [[appointment]] = await conn.execute(
-                `SELECT consultation_hour_id FROM appointments
-             WHERE id = ? AND instructor_id = ? AND status = 'pending'
+                `SELECT a.consultation_hour_id, a.student_id, ch.consultation_date, ch.start_time
+             FROM appointments a
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             WHERE a.id = ? AND a.instructor_id = ? AND a.status = 'pending'
              FOR UPDATE`,
                 [appointmentId, instructor.id]
             );
@@ -277,6 +363,20 @@ const AppointmentModel = {
             await freeSlotIfNotClosed(conn, appointment.consultation_hour_id);
 
             await conn.commit();
+
+            try {
+                const dateLabel = formatFullDate(appointment.consultation_date);
+                const timeLabel = to12Hour(appointment.start_time);
+                await NotificationModel.create(
+                    appointment.student_id,
+                    'declined',
+                    `${instructor.first_name} ${instructor.last_name} declined your consultation request on ${dateLabel} at ${timeLabel}.`,
+                    appointmentId
+                );
+            } catch (notifErr) {
+                console.error('[Notification] Failed to create (declineAppointment):', notifErr);
+            }
+
             return { success: true };
         } catch (err) {
             await conn.rollback();
@@ -292,13 +392,15 @@ const AppointmentModel = {
             await conn.beginTransaction();
 
             const [[instructor]] = await conn.execute(
-                'SELECT id, department_id FROM users WHERE public_id = ?', [instructorPublicId]
+                'SELECT id, first_name, last_name, department_id, role FROM users WHERE public_id = ?', [instructorPublicId]
             );
             if (!instructor) { await conn.rollback(); return { success: false, reason: 'INSTRUCTOR_NOT_FOUND' }; }
 
             const [[oldApt]] = await conn.execute(
-                `SELECT * FROM appointments
-             WHERE id = ? AND instructor_id = ? AND status IN ('pending','confirmed')
+                `SELECT a.*, ch.consultation_date AS old_date, ch.start_time AS old_start_time
+             FROM appointments a
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             WHERE a.id = ? AND a.instructor_id = ? AND a.status IN ('pending','confirmed')
              FOR UPDATE`,
                 [appointmentId, instructor.id]
             );
@@ -355,6 +457,23 @@ const AppointmentModel = {
             );
 
             await conn.commit();
+
+            try {
+                const previousDateLabel = formatFullDate(oldApt.old_date);
+                const previousTimeLabel = to12Hour(oldApt.old_start_time);
+                const newDateLabel = formatFullDate(newSlot.consultation_date);
+                const newTimeLabel = `${to12Hour(newSlot.start_time)} – ${to12Hour(newSlot.end_time)}`;
+
+                await NotificationModel.create(
+                    oldApt.student_id,
+                    'rescheduled',
+                    `${instructor.first_name} ${instructor.last_name} rescheduled your consultation of ${previousDateLabel} at ${previousTimeLabel} to ${newDateLabel}, ${newTimeLabel}.`,
+                    newAppointmentId
+                );
+            } catch (notifErr) {
+                console.error('[Notification] Failed to create (rescheduleAppointment):', notifErr);
+            }
+
             return { success: true, newAppointmentId };
         } catch (err) {
             await conn.rollback();
