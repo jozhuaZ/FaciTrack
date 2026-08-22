@@ -323,27 +323,6 @@ router.get('/settings', (req, res) => {
     res.render('pages/admin/settings', { title: 'FaciTrack - System Settings', ...data });
 });
 
-router.get('/reports', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/reports', { title: 'FaciTrack - Reports', ...data });
-});
-
-router.get('/monitoring', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/monitoring', { title: 'FaciTrack - Monitoring Logs', ...data });
-});
-
-router.get('/appointments', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/appointments', { title: 'FaciTrack - Appointments', ...data });
-});
-
-router.get('/departments', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/departments', {
-        title: 'FaciTrack - Departments',
-        ...data
-    });
-});
+router.get('/reports', AdminController.renderReportsPage);
 
 module.exports = router;
