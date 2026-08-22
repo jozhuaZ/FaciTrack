@@ -165,7 +165,6 @@ const ConsultationModel = {
          WHERE u.public_id = ?
            AND cs.status != 'closed'
            AND cs.consultation_date >= CURDATE()
-           AND a.id IS NULL
            AND NOT EXISTS (
                SELECT 1 FROM instructor_unavailability iu
                WHERE iu.instructor_id = u.id AND iu.unavail_date = cs.consultation_date
