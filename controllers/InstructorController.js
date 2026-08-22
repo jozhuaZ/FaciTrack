@@ -3,6 +3,7 @@ const ConsultationModel = require('../models/ConsultationModel');
 const AppointmentModel = require('../models/AppointmentModel');
 const { to12Hour } = require('../utils/timeFormat');
 const { buildInstructorUser } = require('../utils/sessionUser');
+const UserModel = require('../models/UserModel');
 
 function computeDuration(startTime, endTime) {
     const [sh, sm] = startTime.split(':').map(Number);
@@ -65,6 +66,13 @@ const InstructorController = {
                 repeatWeeks: Math.max(1, Math.min(52, parseInt(repeatWeeks, 10) || 1)),
             });
 
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Saved consultation slot', 'consultation slot');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log consultation slot:', err);
+            }
+
             res.json({ success: true, message: `Saved ${result.count} slot(s) across ${req.body.repeatWeeks || 1} week(s).` });
         } catch (err) {
             console.error('[InstructorController.saveSlotBlock]', err);
@@ -82,6 +90,13 @@ const InstructorController = {
                     ? 'This slot has an active appointment and cannot be deleted.'
                     : 'Slot not found or could not be deleted.';
                 return res.status(409).json({ success: false, error: message });
+            }
+
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Deleted consultation slot', 'consultation slot');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log consultation slot:', err);
             }
 
             res.json({
@@ -129,6 +144,13 @@ const InstructorController = {
 
             // TODO: send email notifications to affected students
 
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Set unavailable date', 'consultation slot');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log unavailability:', err);
+            }
+
             res.json({
                 success: true,
                 dateKey: date,
@@ -156,6 +178,12 @@ const InstructorController = {
         try {
             const { date } = req.params;
             await ConsultationModel.removeUnavailability(req.session.userId, date);
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Removed unavailable date', 'consultation slot');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log unavailability:', err);
+            }
             res.json({ success: true });
         } catch (err) {
             console.error('[InstructorController.removeUnavailability]', err);
@@ -242,6 +270,13 @@ const InstructorController = {
                 return res.status(409).json({ success: false, error: messages[result.reason] || 'Failed to reschedule.' });
             }
 
+            try {
+                const instructor = await UserModel.getUserByPublicId(instructorPublicId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Rescheduled appointment', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log appointment:', err);
+            }
+
             res.json({ success: true, newAppointmentId: result.newAppointmentId });
         } catch (err) {
             console.error('[InstructorController.rescheduleAppointment]', err);
@@ -258,6 +293,14 @@ const InstructorController = {
             if (!result.success) {
                 return res.status(404).json({ success: false, error: 'Appointment not found or already resolved.' });
             }
+
+            try {
+                const instructor = await UserModel.getUserByPublicId(instructorPublicId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Approved appointment', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log appointment:', err);
+            }
+
             res.json({ success: true });
         } catch (err) {
             console.error('[InstructorController.approveAppointment]', err);
@@ -279,6 +322,14 @@ const InstructorController = {
             if (!result.success) {
                 return res.status(404).json({ success: false, error: 'Appointment not found or already resolved.' });
             }
+
+            try {
+                const instructor = await UserModel.getUserByPublicId(instructorPublicId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Declined appointment', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log appointment:', err);
+            }
+
             res.json({ success: true });
         } catch (err) {
             console.error('[InstructorController.declineAppointment]', err);
