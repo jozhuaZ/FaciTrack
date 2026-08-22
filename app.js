@@ -5,6 +5,8 @@ const session = require('express-session');
 const path = require('path');
 const { ensureSeedUsers } = require('./services/auth');
 const { authContext, requireRole } = require('./middleware/auth');
+const attachNotifications = require('./middleware/attachNotifications');
+const auditNavigation = require('./middleware/auditNavigation');
 const passport = require('./configs/passport');
 
 // Initialize Express app
@@ -52,17 +54,21 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Middleware: notifications
+app.use(attachNotifications);
+// Middleware: audit navigations
+app.use(auditNavigation);
+
 // Routes 
 // app.use('/', require('./routes/index'));
 app.use('/', require('./routes/auth'));
+app.use('/notifications', require('./routes/notification'));
 app.use('/student', requireRole('Student'), require('./routes/student'));
 app.use('/instructor', requireRole('Instructor'), require('./routes/instructor'));
 app.use('/export', require('./routes/export'));
 app.use('/dean', require('./routes/dean'));
 app.use('/admin', require('./routes/admin'));
 app.use('/superadmin', require('./routes/superadmin'));
-app.use('/', require('./routes/display'));
-
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(`[Error Log]: ${err.message}`);
