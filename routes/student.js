@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { requireRole, setSessionCookie } = require('../middleware/auth');
-const { createSession, getRoleRedirect, authenticateUser } = require('../services/auth');
 const instructorRouter = require('./instructor');
 const emailService = require('../services/email');
 const StudentController = require('../controllers/StudentController');
@@ -173,21 +171,6 @@ function isSlotReserved(facultyId, day, slotTime) {
     );
 }
 
-// Reserve a slot for 5 minutes (returns token)
-function reserveSlot(facultyId, day, slotTime) {
-    const token = `RSV-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    slotReservations[token] = {
-        facultyId, day, slotTime: slotTime.trim(),
-        expiresAt: Date.now() + RESERVATION_MS
-    };
-    return token;
-}
-
-// Release a reservation by token
-function releaseReservation(token) {
-    delete slotReservations[token];
-}
-
 // Lock a slot permanently (on booking submit)
 function lockSlot(facultyId, day, slotTime, refNumber, studentEmail) {
     slotBookings[slotKey(facultyId, day, slotTime)] = { refNumber, studentEmail, status: 'pending' };
@@ -356,7 +339,7 @@ function getDisplayStatus(faculty) {
     return faculty.bleStatus === 'in' ? 'in' : 'out';
 }
 
-// ── Routes ──
+// Routes
 router.get('/dashboard', StudentController.renderDashboardPage);
 router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
 
