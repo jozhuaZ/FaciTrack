@@ -3,46 +3,151 @@ const DepartmentModel = require('../models/DepartmentModel');
 const UserModel = require('../models/UserModel');
 
 const ConsultationRoomController = {
+    // ──────────────────────────────────────────────────────────
+    // NEW: Multi-Day Calendar View & Settings
+    // ──────────────────────────────────────────────────────────
+
     /**
-     * Render the main Consultation Room page
+     * Render the NEW Consultation Room page (multi-day calendar)
      */
     async renderConsultationRoomPage(req, res) {
         try {
+            // Guard: redirect to login if session is missing
+            if (!req.session?.userId) {
+                return res.redirect('/login');
+            }
+
+            const firstName = req.session.firstName || '';
+            const lastName  = req.session.lastName  || '';
             const admin = {
-                id: req.session?.userId,
-                name: req.session?.name,
-                firstName: req.session.firstName,
-                middleName: req.session.middleName,
-                lastName: req.session.lastName,
-                status: req.session.status,
-                email: req.session?.email,
-                position: req.session.position,
-                role: req.session.role,
-                profilePhoto: req.session?.profilePhoto || 'N/A',
-                department: req.session?.department,
+                id:           req.session.userId,
+                name:         req.session.name || `${firstName} ${lastName}`.trim() || 'Admin',
+                firstName:    firstName,
+                middleName:   req.session.middleName || '',
+                lastName:     lastName,
+                status:       req.session.status || 'Active',
+                email:        req.session.email  || '',
+                position:     req.session.position || '',
+                role:         req.session.role   || 'Admin',
+                profilePhoto: req.session.profilePhoto || 'N/A',
+                department:   req.session.department  || '',
             };
 
-            // Get program tables (BSIT, BLIS, BSCS, BSIS)
-            const programTables = await ConsultationRoomModel.getProgramTables();
+            // Get settings (synchronous daily limit)
+            const settings = await ConsultationRoomModel.getSettings();
 
-            // Get departments for filtering
+            // Get all instructors for filter dropdown
+            const instructors = await UserModel.getUsersByRole('Instructor');
+
+            // Get departments
             const departments = await DepartmentModel.getDepartments();
 
-            // Get today's date
-            const today = new Date().toISOString().split('T')[0];
+            // Default date range: today + next 13 days (2 weeks)
+            const today = new Date();
+            const endDate = new Date(today);
+            endDate.setDate(endDate.getDate() + 13);
+
+            const startDateStr = today.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
 
             res.render('pages/admin/consultation-room', {
                 title: 'FaciTrack - Consultation Room Management',
                 admin: admin,
-                programTables: programTables,
+                settings: settings,
+                instructors: instructors,
                 departments: departments,
-                today: today
+                startDate: startDateStr,
+                endDate: endDateStr
             });
         } catch (err) {
             console.error('[ConsultationRoomController.renderConsultationRoomPage]', err);
             res.status(500).send('Failed to load consultation room page');
         }
     },
+
+    /**
+     * Get multi-day slot data (API)
+     */
+    async getMultiDaySlots(req, res) {
+        try {
+            const { startDate, endDate, instructorId, status, mode, programCode } = req.query;
+
+            if (!startDate || !endDate) {
+                return res.status(400).json({ error: 'startDate and endDate required' });
+            }
+
+            const filters = { instructorId, status, mode, programCode };
+            const slots = await ConsultationRoomModel.getMultiDaySlots(startDate, endDate, filters);
+
+            res.json({ success: true, slots });
+        } catch (err) {
+            console.error('[ConsultationRoomController.getMultiDaySlots]', err);
+            res.status(500).json({ error: 'Failed to fetch slots' });
+        }
+    },
+
+    /**
+     * Get multi-day Synchronous counts (API)
+     */
+    async getMultiDaySyncCounts(req, res) {
+        try {
+            const { startDate, endDate } = req.query;
+
+            if (!startDate || !endDate) {
+                return res.status(400).json({ error: 'startDate and endDate required' });
+            }
+
+            const counts = await ConsultationRoomModel.getMultiDaySynchronousCount(startDate, endDate);
+            const limit = await ConsultationRoomModel.getSetting('daily_sync_limit');
+
+            res.json({ 
+                success: true, 
+                counts,
+                limit: parseInt(limit, 10)
+            });
+        } catch (err) {
+            console.error('[ConsultationRoomController.getMultiDaySyncCounts]', err);
+            res.status(500).json({ error: 'Failed to fetch synchronous counts' });
+        }
+    },
+
+    /**
+     * Get settings (API)
+     */
+    async getSettings(req, res) {
+        try {
+            const settings = await ConsultationRoomModel.getSettings();
+            res.json({ success: true, settings });
+        } catch (err) {
+            console.error('[ConsultationRoomController.getSettings]', err);
+            res.status(500).json({ error: 'Failed to fetch settings' });
+        }
+    },
+
+    /**
+     * Update settings (API)
+     */
+    async updateSettings(req, res) {
+        try {
+            const { daily_sync_limit } = req.body;
+            const adminId = req.session?.userId;
+
+            if (!daily_sync_limit || isNaN(daily_sync_limit) || daily_sync_limit < 0) {
+                return res.status(400).json({ error: 'Invalid daily_sync_limit value' });
+            }
+
+            await ConsultationRoomModel.updateSetting('daily_sync_limit', daily_sync_limit, adminId);
+
+            res.json({ success: true, message: 'Settings updated successfully' });
+        } catch (err) {
+            console.error('[ConsultationRoomController.updateSettings]', err);
+            res.status(500).json({ error: 'Failed to update settings' });
+        }
+    },
+
+    // ──────────────────────────────────────────────────────────
+    // LEGACY: Old program-based view methods (keep for now)
+    // ──────────────────────────────────────────────────────────
 
     /**
      * Get consultation slots by program (API endpoint)

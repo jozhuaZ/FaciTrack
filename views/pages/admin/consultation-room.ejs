@@ -1,102 +1,266 @@
 <%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
 <link rel="stylesheet" href="/css/admin/consultation-room.css?v=<%= Date.now() %>">
 
 <div class="instructor-layout">
     <%- include('../../partials/admin-sidebar', { activePage: 'consultation-room' }) %>
+
     <main class="instructor-main">
         <div class="main-container">
 
+            <!-- ── Page Header ── -->
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Consultation Room Management</h1>
-                    <p class="page-subtitle">Manage program-based consultation schedules and room availability</p>
+                    <h1 class="page-title">Consultation Room</h1>
+                    <p class="page-subtitle">Monitor all consultation slots and manage synchronous class capacity</p>
                 </div>
                 <div class="header-actions">
-                    <a href="/admin/consultation-logs" class="btn-header-action">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        View Logs
-                    </a>
-                    <button class="btn-header-action primary" id="refreshAllBtn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                        Refresh All
+                    <button class="btn-header-action" id="refreshBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        Refresh
+                    </button>
+                    <button class="btn-header-action primary" id="openSettingsBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Sync Settings
                     </button>
                 </div>
             </div>
 
-            <!-- Filter Controls -->
-            <div class="filter-section">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label for="dateFilter">Filter by Date:</label>
-                        <input type="date" id="dateFilter" class="form-input" value="<%= today %>" />
+            <!-- ── Stats Cards ── -->
+            <div class="cr-stats-grid">
+                <div class="cr-stat-card">
+                    <div class="cr-stat-icon primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </div>
-                    <div class="filter-group">
-                        <label for="programFilter">Filter by Program:</label>
-                        <select id="programFilter" class="form-select">
-                            <option value="">All Programs</option>
-                            <% programTables.forEach(program => { %>
-                                <option value="<%= program.program_code %>"><%= program.program_code %> - <%= program.program_name %></option>
-                            <% }); %>
-                        </select>
+                    <div class="cr-stat-content">
+                        <p class="cr-stat-label">Total Slots</p>
+                        <h3 class="cr-stat-value" id="totalSlotsCount">—</h3>
+                        <p class="cr-stat-sub">this week</p>
                     </div>
-                    <button class="btn-filter" id="applyFilterBtn">Apply Filter</button>
-                    <button class="btn-filter secondary" id="clearFilterBtn">Clear</button>
+                </div>
+                <div class="cr-stat-card">
+                    <div class="cr-stat-icon success">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div class="cr-stat-content">
+                        <p class="cr-stat-label">Available</p>
+                        <h3 class="cr-stat-value" id="availableSlotsCount">—</h3>
+                        <p class="cr-stat-sub">open for booking</p>
+                    </div>
+                </div>
+                <div class="cr-stat-card">
+                    <div class="cr-stat-icon warning">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </div>
+                    <div class="cr-stat-content">
+                        <p class="cr-stat-label">Being Booked</p>
+                        <h3 class="cr-stat-value" id="bookingSlotsCount">—</h3>
+                        <p class="cr-stat-sub">2-min hold active</p>
+                    </div>
+                </div>
+                <div class="cr-stat-card">
+                    <div class="cr-stat-icon danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <div class="cr-stat-content">
+                        <p class="cr-stat-label">Booked</p>
+                        <h3 class="cr-stat-value" id="bookedSlotsCount">—</h3>
+                        <p class="cr-stat-sub">confirmed</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Program Tables -->
-            <div class="program-tables-container">
-                <% programTables.forEach(program => { %>
-                <div class="program-table-card" data-program="<%= program.program_code %>">
-                    <div class="program-table-header">
-                        <div class="program-info">
-                            <h3 class="program-title"><%= program.program_code %></h3>
-                            <p class="program-subtitle"><%= program.program_name %></p>
+            <!-- ── Main Calendar Section ── -->
+            <div class="cr-calendar-section">
+
+                <!-- Left Sidebar: mini calendar + filters + legend -->
+                <div class="cr-sidebar">
+
+                    <!-- Mini Month Calendar -->
+                    <div class="content-card cr-mini-cal-card">
+                        <div class="cr-mini-cal-header">
+                            <button class="cr-mini-nav" id="miniPrevMonth" aria-label="Previous month">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                            <span class="cr-mini-month-label" id="miniMonthLabel">—</span>
+                            <button class="cr-mini-nav" id="miniNextMonth" aria-label="Next month">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
                         </div>
-                        <div class="program-stats">
-                            <span class="stat-badge capacity">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                                <span class="table-count">0</span> / <%= program.table_capacity %> Tables
-                            </span>
-                            <span class="stat-badge status-<%= program.status.toLowerCase() %>">
-                                <%= program.status %>
-                            </span>
-                        </div>
+                        <div class="cr-mini-grid" id="miniCalGrid"><!-- JS --></div>
                     </div>
-                    
-                    <div class="consultation-slots-container">
-                        <div class="loading-state">
-                            <div class="spinner"></div>
-                            <p>Loading consultation slots...</p>
+
+                    <!-- Filters -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Filters</h3>
+                            <button class="card-link" id="clearFiltersBtn">Clear</button>
+                        </div>
+                        <div class="card-body cr-filter-body">
+                            <div class="cr-filter-group">
+                                <label class="cr-filter-label" for="filterInstructor">Instructor</label>
+                                <select id="filterInstructor" class="cr-select">
+                                    <option value="">All Instructors</option>
+                                    <% instructors.forEach(inst => { %>
+                                        <option value="<%= inst.public_id %>"><%= inst.first_name %> <%= inst.last_name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="cr-filter-group">
+                                <label class="cr-filter-label" for="filterProgram">Program</label>
+                                <select id="filterProgram" class="cr-select">
+                                    <option value="">All Programs</option>
+                                    <% departments.forEach(dept => { %>
+                                        <option value="<%= dept.program_code %>"><%= dept.program_code %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="cr-filter-group">
+                                <label class="cr-filter-label" for="filterStatus">Status</label>
+                                <select id="filterStatus" class="cr-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="Available">Available</option>
+                                    <option value="Booking">Booking</option>
+                                    <option value="Booked">Booked</option>
+                                </select>
+                            </div>
+                            <div class="cr-filter-group">
+                                <label class="cr-filter-label" for="filterMode">Mode</label>
+                                <select id="filterMode" class="cr-select">
+                                    <option value="">All Modes</option>
+                                    <option value="Synchronous">Synchronous</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                            </div>
+                            <button class="btn-header-action primary cr-apply-btn" id="applyFiltersBtn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                                Apply
+                            </button>
                         </div>
                     </div>
 
-                    <div class="program-table-footer">
-                        <button class="btn-load-more" data-program="<%= program.program_code %>">
-                            Load More Slots
-                        </button>
+                    <!-- Legend -->
+                    <div class="content-card cr-legend-card">
+                        <div class="cr-legend-inner">
+                            <!-- Left: title -->
+                            <div class="cr-legend-title-col">
+                                <span class="cr-legend-heading">Legend</span>
+                            </div>
+                            <!-- Separator -->
+                            <div class="cr-legend-sep"></div>
+                            <!-- Right: items -->
+                            <div class="cr-legend-items-col">
+                                <div class="cr-legend-row">
+                                    <span class="cr-block-dot available"></span>
+                                    <span>Available slot</span>
+                                </div>
+                                <div class="cr-legend-row">
+                                    <span class="cr-block-dot booking"></span>
+                                    <span>Being booked (2 min)</span>
+                                </div>
+                                <div class="cr-legend-row">
+                                    <span class="cr-block-dot booked-sync"></span>
+                                    <span>Booked — Synchronous</span>
+                                </div>
+                                <div class="cr-legend-row">
+                                    <span class="cr-block-dot booked-online"></span>
+                                    <span>Booked — Online</span>
+                                </div>
+                                <div class="cr-legend-row">
+                                    <span class="cr-block-dot booked-pending"></span>
+                                    <span>Pending confirmation</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <% }); %>
-            </div>
 
-        </div>
+                </div><!-- /.cr-sidebar -->
+
+                <!-- Right: Week Calendar -->
+                <div class="cr-week-panel content-card">
+
+                    <!-- Week Nav Header -->
+                    <div class="cr-week-nav">
+                        <div class="cr-week-nav-left">
+                            <button class="cr-week-btn" id="prevWeekBtn" aria-label="Previous week">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                            </button>
+                            <button class="cr-week-btn" id="nextWeekBtn" aria-label="Next week">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                            </button>
+                            <button class="cr-today-btn" id="todayBtn">Today</button>
+                            <h2 class="cr-week-label" id="weekLabel">—</h2>
+                            <span class="cr-week-badge" id="weekBadge">Week —</span>
+                        </div>
+                        <div class="cr-week-nav-right">
+                            <span class="cr-sync-limit-pill">
+                                Daily Sync Limit: <strong id="currentLimitDisplay"><%= settings.daily_sync_limit?.value || 10 %></strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Week Grid -->
+                    <div class="cr-week-grid-wrap">
+                        <!-- Day header row -->
+                        <div class="cr-week-grid" id="weekGrid">
+                            <!-- Time gutter -->
+                            <div class="cr-time-gutter">
+                                <!-- Hours rendered by JS -->
+                            </div>
+                            <!-- Day columns (Mon–Sun) rendered by JS -->
+                        </div>
+                    </div>
+
+                </div><!-- /.cr-week-panel -->
+
+            </div><!-- /.cr-calendar-section -->
+
+        </div><!-- /.main-container -->
     </main>
+</div><!-- /.instructor-layout -->
+
+<!-- ── Slot Detail Popover ── -->
+<div class="cr-popover" id="slotPopover">
+    <div class="cr-popover-inner" id="slotPopoverInner"></div>
 </div>
 
-<!-- Slot Details Modal -->
-<div id="slotDetailsModal" class="modal">
-    <div class="modal-content">
+<!-- ── Settings Modal ── -->
+<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true">
+    <div class="modal-dialog">
         <div class="modal-header">
-            <h3 class="modal-title">Consultation Slot Details</h3>
-            <button class="modal-close" id="closeSlotModal">&times;</button>
+            <h3 class="modal-title">Synchronous Class Daily Limit</h3>
+            <button class="modal-close-btn" id="closeSettingsBtn" aria-label="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
-        <div class="modal-body" id="slotDetailsContent">
-            <!-- Content will be dynamically populated -->
+        <div class="modal-body">
+            <p class="modal-desc">Set the maximum number of synchronous (in-person) consultations allowed per day across all programs. When this limit is reached, students can only book Online consultations for that day.</p>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label class="form-label" for="dailySyncLimit">Daily Synchronous Limit</label>
+                    <input type="number" id="dailySyncLimit" class="form-input" min="0" step="1"
+                        value="<%= settings.daily_sync_limit?.value || 10 %>" required placeholder="e.g. 10">
+                    <p class="form-hint">Set to 0 to disable all synchronous consultations.</p>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-outline" id="cancelSettingsBtn">Cancel</button>
+                    <button type="submit" class="btn-header-action primary">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<script src="/js/admin-consultation-room.js?v=<%= Date.now() %>"></script>
+<div class="toast-container" id="toastContainer"></div>
 
 <%- include('../../partials/footer') %>
+<%- include('../../partials/script') %>
+
+<script>
+    window.CONSULT_DATA = {
+        startDate: '<%= startDate %>',
+        endDate:   '<%= endDate %>',
+        currentLimit: parseInt('<%= settings.daily_sync_limit?.value || 10 %>', 10)
+    };
+</script>
+<script src="/js/admin-consultation-room.js?v=<%= Date.now() %>"></script>

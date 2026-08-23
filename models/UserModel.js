@@ -95,9 +95,9 @@ const UserModel = {
             d.full_name          AS department_name,
             u.profile_picture,
             -- Next available slot fields
-            next_slot.consultation_date AS next_date,
-            next_slot.day_of_the_week   AS next_day,
-            next_slot.start_time        AS next_start_time
+            MIN(next_slot.consultation_date) AS next_date,
+            MIN(next_slot.day_of_the_week)   AS next_day,
+            MIN(next_slot.start_time)        AS next_start_time
         FROM users u
         LEFT JOIN departments d ON u.department_id = d.id
         LEFT JOIN (
@@ -105,15 +105,15 @@ const UserModel = {
                 instructor_id,
                 consultation_date,
                 day_of_the_week,
-                start_time
+                start_time,
+                ROW_NUMBER() OVER (PARTITION BY instructor_id ORDER BY consultation_date ASC, start_time ASC) as rn
             FROM consultation_hours
             WHERE status = 'Available'
-            AND consultation_date > CURDATE() 
-            ORDER BY consultation_date ASC, start_time ASC
-        ) next_slot ON u.id = next_slot.instructor_id
+            AND consultation_date > CURDATE()
+        ) next_slot ON u.id = next_slot.instructor_id AND next_slot.rn = 1
         WHERE u.role = 'Instructor'
           AND u.status = 'Active'
-        GROUP BY u.id
+        GROUP BY u.id, u.public_id, u.last_name, u.first_name, u.middle_name, u.position, u.status, u.department_id, d.full_name, u.profile_picture
     `;
 
         const params = [];

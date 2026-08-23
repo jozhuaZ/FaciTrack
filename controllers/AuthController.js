@@ -78,14 +78,24 @@ const AuthController = {
             // Update last login
             await UserModel.updateLastLogin(user.internal_id);
 
-            // Redirect based on role
-            AuthController.redirectByRole(res, user.role);
+            // Explicitly save session before redirecting so the cookie is
+            // persisted even with resave: false / saveUninitialized: false
+            req.session.save((err) => {
+                if (err) {
+                    console.error('[AuthController.login] session save error', err);
+                    return res.render('pages/login', {
+                        title: 'FaciTrack - Faculty Appointment & Monitoring System',
+                        error: 'Session error. Please try again.',
+                    });
+                }
+                AuthController.redirectByRole(res, user.role);
+            });
 
         } catch (err) {
             console.error('[AuthController.login]', err);
-            res.render('pages/index', {
+            res.render('pages/login', {
                 title: 'FaciTrack - Faculty Appointment & Monitoring System',
-                error: 'Something went wrong. Please try again.',
+                error: `Debug: ${err.message}`,
             });
         }
     },

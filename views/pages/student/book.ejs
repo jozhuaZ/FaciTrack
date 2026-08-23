@@ -176,8 +176,11 @@
                                     <label class="form-label">Consultation Mode <span
                                             style="color:#e53e3e;">*</span></label>
                                     <div class="consult-type-toggle" id="consultTypeToggle">
-                                        <button type="button" class="consult-type-btn active" data-type="Face-to-Face"
-                                            id="btnFaceToFace">
+                                        <button type="button" 
+                                                class="consult-type-btn <%= syncAvailability.available ? 'active' : '' %>" 
+                                                data-type="Synchronous"
+                                                id="btnSynchronous"
+                                                <%= !syncAvailability.available ? 'disabled' : '' %>>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round">
@@ -186,10 +189,15 @@
                                                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                                                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                                             </svg>
-                                            Face-to-Face
+                                            Synchronous
+                                            <% if (!syncAvailability.available) { %>
+                                                <span style="display:block;font-size:0.7rem;opacity:0.8;margin-top:2px;">(Full)</span>
+                                            <% } %>
                                         </button>
-                                        <button type="button" class="consult-type-btn" data-type="Online"
-                                            id="btnOnline">
+                                        <button type="button" 
+                                                class="consult-type-btn <%= !syncAvailability.available ? 'active' : '' %>" 
+                                                data-type="Online"
+                                                id="btnOnline">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round">
@@ -199,7 +207,17 @@
                                             Online
                                         </button>
                                     </div>
-                                    <input type="hidden" name="consultType" id="consultTypeInput" value="Face-to-Face">
+                                    <input type="hidden" name="consultType" id="consultTypeInput" value="<%= syncAvailability.available ? 'Synchronous' : 'Online' %>">
+                                    <% if (!syncAvailability.available) { %>
+                                        <p style="font-size:0.75rem;color:#b45309;margin-top:0.5rem;display:flex;align-items:center;gap:0.25rem;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                            </svg>
+                                            Synchronous class slots are fully booked for <%= slot.dateFormatted %>. <%= syncAvailability.current %> of <%= syncAvailability.limit %> slots used.
+                                        </p>
+                                    <% } %>
                                 </div>
 
                                 <div class="form-group">
@@ -309,5 +327,23 @@
                         this.classList.add('active');
                         typeInput.value = this.dataset.type;
                     });
+                });
+
+                // Release reservation if student closes tab or navigates away
+                // without submitting — server-side 2-min cleanup handles it anyway,
+                // but this makes it instant.
+                function releaseOnLeave() {
+                    navigator.sendBeacon(
+                        `/student/schedule/reserve/${SLOT_ID}/release`,
+                        new Blob(['{}'], { type: 'application/json' })
+                    );
+                }
+                window.addEventListener('beforeunload', releaseOnLeave);
+                window.addEventListener('pagehide', releaseOnLeave);
+
+                // Don't fire the beacon when the booking form itself is submitted
+                document.getElementById('bookingForm').addEventListener('submit', function () {
+                    window.removeEventListener('beforeunload', releaseOnLeave);
+                    window.removeEventListener('pagehide', releaseOnLeave);
                 });
             </script>

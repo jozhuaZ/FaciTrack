@@ -200,6 +200,10 @@ const StudentController = {
                 return res.redirect(`/student/faculty/${slotDetails.faculty.id}?reserveFailed=1`);
             }
 
+            // Check Synchronous availability for this date
+            const ConsultationRoomModel = require('../models/ConsultationRoomModel');
+            const syncAvailability = await ConsultationRoomModel.checkSynchronousAvailability(slotDetails.date);
+
             res.render('pages/student/book', {
                 title: 'FaciTrack - Book Appointment',
                 student,
@@ -213,6 +217,7 @@ const StudentController = {
                     timeEnd: slotDetails.timeEnd
                 },
                 expiresAt: result.expiresAt.toISOString(),
+                syncAvailability: syncAvailability
             });
         } catch (err) {
             console.error('[StudentController.renderFacultyFormConsultationPage]', err);
@@ -395,6 +400,10 @@ const StudentController = {
             const { slotId } = req.params;
             const { facultyId } = req.body;
 
+            // Release the reservation row immediately so other students can book
+            await SlotReservation.releaseSlot(parseInt(slotId, 10), req.session.userId);
+
+            // Also reset the slot status in case it was manually set
             await ConsultationModel.updateStatusById(slotId, 'Available');
 
             res.redirect('/student/faculty/' + facultyId);

@@ -610,10 +610,13 @@
 .slot-select-btn:hover { border-color:#16a34a; background:rgba(34,197,94,.06); }
 .slot-select-btn.selected { border-color:#16a34a; background:rgba(34,197,94,.12); font-weight:700; color:#15803d; }
 .slot-select-btn.full { opacity:.5; cursor:not-allowed; background:var(--gray-50); border-color:var(--gray-200); color:var(--gray-400); }
+.slot-select-btn.booking { opacity:.85; cursor:not-allowed; background:#fffbeb; border-color:#fcd34d; color:#92400e; }
 .slot-num-badge { width:20px; height:20px; border-radius:50%; background:rgba(34,197,94,.2); color:#15803d; font-size:.6875rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .slot-select-btn.selected .slot-num-badge { background:#16a34a; color:#fff; }
+.slot-select-btn.booking .slot-num-badge { background:#fcd34d; color:#92400e; }
 .slot-avail-tag { margin-left:auto; font-size:.6875rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; flex-shrink:0; }
 .slot-avail-tag.full { background:var(--gray-100); color:var(--gray-400); border-color:var(--gray-200); }
+.slot-avail-tag.booking { background:#fffbeb; color:#92400e; border-color:#fcd34d; }
 /* Book button with slot selected */
 .btn-book-slot { display:inline-flex; align-items:center; gap:.5rem; padding:.75rem 1.75rem; background:var(--primary-blue); color:#fff; border:none; border-radius:var(--radius-md); font-size:.9375rem; font-weight:600; cursor:pointer; transition:background .2s; font-family:var(--font-body); text-decoration:none; }
 .btn-book-slot:hover { background:var(--primary-dark); }
@@ -817,6 +820,19 @@
             border-color: var(--primary-blue);
             background: rgba(10, 61, 98, .07);
             color: var(--primary-blue);
+        }
+
+        .consult-type-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--gray-100);
+            color: var(--gray-400);
+            border-color: var(--gray-200);
+        }
+
+        .consult-type-btn:disabled:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-200);
         }
 
         .btn-submit-book {

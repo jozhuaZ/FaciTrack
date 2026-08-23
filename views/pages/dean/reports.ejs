@@ -250,7 +250,10 @@
                             <%- include('../../partials/filter-bar', {
                                 filterId: 'fcw',
                                 searchPlaceholder: 'Search faculty name...',
-                                filterSections: []
+                                filterSections: [
+                                    { label: 'By Status', key: 'status', type: 'buttons',
+                                      items: [{ value:'all', label:'All' }, { value:'confirmed', label:'Has Confirmed' }, { value:'pending', label:'Has Pending' }] }
+                                ]
                             }) %>
                             <div style="padding:0 1.5rem 1.5rem">
                                 <div style="overflow-x:auto;margin-top:1rem">
@@ -434,7 +437,7 @@ document.getElementById('salReportPrev').addEventListener('click', function() { 
 document.getElementById('salReportNext').addEventListener('click', function() { if (salPage < Math.ceil(filterSal().length / PAGE)) { salPage++; renderSalTable(); } });
 
 // ===== Faculty Workload =====
-var fcwPage = 1, fcwSearch = '';
+var fcwPage = 1, fcwSearch = '', fcwStatus = 'all';
 
 function buildFcwRows() {
     // Group appointments by instructor
@@ -461,6 +464,8 @@ function buildFcwRows() {
 
 function filterFcw() {
     var rows = buildFcwRows();
+    if (fcwStatus === 'confirmed') rows = rows.filter(function(r) { return r.confirmed > 0; });
+    if (fcwStatus === 'pending')   rows = rows.filter(function(r) { return r.pending > 0; });
     if (fcwSearch) {
         var q = fcwSearch.toLowerCase();
         rows = rows.filter(function(r) { return r.name.toLowerCase().indexOf(q) >= 0; });
@@ -510,7 +515,7 @@ document.addEventListener('fbChange', function(e) {
         if (key === 'period') { salPeriod = val; salPage = 1; renderSalTable(); }
     }
     if (id === 'fcw') {
-        fcwPage = 1; renderFcwTable();
+        if (key === 'status') { fcwStatus = val; fcwPage = 1; renderFcwTable(); }
     }
 });
 document.addEventListener('fbSearch', function(e) {

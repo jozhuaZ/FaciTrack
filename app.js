@@ -24,6 +24,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Middleware: Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
+
+// Session and passport must be initialized before any middleware or routes
+// that rely on req.session (including authContext and requireRole)
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        maxAge: 1000 * 60 * 60 * 8
+    },
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(authContext);
 
 // Security: Basic headers
@@ -39,18 +53,6 @@ app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
 });
-
-app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: false,
-        maxAge: 1000 * 60 * 60 * 8
-    },
-}));
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Routes 
 // app.use('/', require('./routes/index'));
