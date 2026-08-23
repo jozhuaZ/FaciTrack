@@ -280,16 +280,8 @@ function chopSlotServer(slotObj) {
 function getFaculty(id) {
     const f = facultyList.find(f => f.id === id);
     if (!f) return null;
-    if (id === 1) {
-        const store = instructorRouter.getScheduleStore();
-        const liveSlots = (store[1] || []).map(s => ({
-            day: s.day, time: `${s.timeStart} – ${s.timeEnd}`,
-            timeStart: s.timeStart, timeEnd: s.timeEnd,
-            status: s.status, maxCapacity: s.maxCapacity
-        }));
-        return { ...f, consultationSlots: liveSlots, nextAvailable: computeNextAvailable(liveSlots) };
-    }
-    return { ...f, nextAvailable: computeNextAvailable(f.consultationSlots) };
+    // All faculty should now use ConsultationModel for slots
+    return { ...f, nextAvailable: 'See schedule' };
 }
 
 // Compute the next available slot label from a faculty's consultation slots.
@@ -362,6 +354,7 @@ router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
 
 router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
 router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);
+router.post('/schedule/reserve/:slotId/release', StudentController.deleteSlotReservation);
 router.delete('/schedule/reserve/:slotId', StudentController.deleteSlotReservation);
 
 router.get('/faculty/schedule/:slotId/book', StudentController.renderFacultyFormConsultationPage);

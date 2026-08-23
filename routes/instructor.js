@@ -364,30 +364,20 @@ function getStudentRouter() {
     return require('./student');
 }
 
-// ── In-memory schedule store (persists for the server session) ──
-// Key: instructor id (1 = Dr. Maria Santos for this prototype)
-const scheduleStore = {
-    1: [
-        // Sample consultation slots for demonstration
-        { day: 'Monday',    timeStart: '9:00 AM',  timeEnd: '10:00 AM',  status: 'open',   maxCapacity: 3, bookedCount: 1 },
-        { day: 'Monday',    timeStart: '2:00 PM',  timeEnd: '3:30 PM',   status: 'open',   maxCapacity: 2, bookedCount: 2 },
-        { day: 'Tuesday',   timeStart: '10:00 AM', timeEnd: '11:00 AM',  status: 'open',   maxCapacity: 3, bookedCount: 0 },
-        { day: 'Wednesday', timeStart: '1:00 PM',  timeEnd: '2:30 PM',   status: 'open',   maxCapacity: 2, bookedCount: 1 },
-        { day: 'Wednesday', timeStart: '3:00 PM',  timeEnd: '4:00 PM',   status: 'closed', maxCapacity: 3, bookedCount: 3 },
-        { day: 'Friday',    timeStart: '9:30 AM',  timeEnd: '10:30 AM',  status: 'open',   maxCapacity: 4, bookedCount: 0 }
-    ]
-};
+// ── In-memory schedule store removed - now using ConsultationModel from database ──
 
 function getSchedule(instructorId) {
-    return scheduleStore[instructorId] || [];
+    // This function is deprecated and should not be used
+    // Use ConsultationModel.getSlotsByInstructor() instead
+    return [];
 }
 
 // PROTOTYPE MODE: Disabled role check to allow free navigation
 // router.use(requireRole('instructor'));
 
 // Instructor Dashboard
-router.get('/dashboard', (req, res) => {
-    const data = getSharedData();
+router.get('/dashboard', async (req, res) => {
+    const data = await getSharedData();
     res.render('pages/instructor/dashboard', {
         title: 'FaciTrack - Instructor Dashboard',
         ...data
@@ -395,7 +385,7 @@ router.get('/dashboard', (req, res) => {
 });
 
 // Helper: shared data
-function getSharedData() {
+async function getSharedData() {
     const instructor = {
         id: 1,
         name: 'Dr. Maria Santos',
@@ -410,66 +400,52 @@ function getSharedData() {
         profilePhoto: null
     };
 
-    // Pull real bookings from student refStore for instructor ID 1
-    const sr = getStudentRouter();
+    // Pull real bookings from AppointmentModel for this instructor
+    const AppointmentModel = require('../models/AppointmentModel');
     let appointments = [];
-    if (sr.refStore) {
-        appointments = Object.values(sr.refStore)
-            .filter(r => r.facultyId === 1)
-            .map(r => ({
-                id:          r.refNumber,
-                studentName: r.studentName,
-                studentId:   r.studentId,
-                date:        r.date || r.day || '—',
-                time:        r.slot || '—',
-                duration:    '—',
-                topic:       r.topic,
-                status:      r.status,
-                isToday:     false,
-                requestedAt: r.requestedAt ? new Date(r.requestedAt).toLocaleString() : '—',
-                declineReason: r.declineReason || ''
-            }));
-    }
-
-    // Seed sample appointments if none exist yet (prototype fallback)
-    if (!appointments.length) {
-        function relDate(offset) {
-            const d = new Date();
-            d.setDate(d.getDate() + offset);
-            return d.toISOString().split('T')[0];
-        }
-        appointments = [
-            { id: 'SAMPLE-1', studentName: 'Juan Dela Cruz',  studentId: '2021-00123', date: relDate(0),  time: '2:00 PM',  duration: '30 min', topic: 'Thesis consultation',        status: 'pending',   isToday: true,  requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-2', studentName: 'Ana Reyes',        studentId: '2021-00456', date: relDate(0),  time: '3:30 PM',  duration: '45 min', topic: 'Project proposal review',    status: 'confirmed', isToday: true,  requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-3', studentName: 'Carlos Mendoza',   studentId: '2021-00789', date: relDate(-1), time: '10:00 AM', duration: '30 min', topic: 'Grade inquiry',              status: 'confirmed', isToday: false, requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-4', studentName: 'Maria Garcia',     studentId: '2021-00321', date: relDate(-2), time: '1:00 PM',  duration: '30 min', topic: 'Academic advising',          status: 'declined',  isToday: false, requestedAt: '—', declineReason: 'Schedule conflict' },
-            { id: 'SAMPLE-5', studentName: 'Pedro Lim',        studentId: '2022-00111', date: relDate(1),  time: '9:00 AM',  duration: '30 min', topic: 'Research methodology',       status: 'pending',   isToday: false, requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-6', studentName: 'Rosa Fernandez',   studentId: '2022-00222', date: relDate(-3), time: '11:00 AM', duration: '45 min', topic: 'Capstone project feedback',  status: 'confirmed', isToday: false, requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-7', studentName: 'Luis Torres',      studentId: '2021-00555', date: relDate(-4), time: '2:00 PM',  duration: '30 min', topic: 'Grade reconsideration',      status: 'confirmed', isToday: false, requestedAt: '—', declineReason: '' },
-            { id: 'SAMPLE-8', studentName: 'Kristine Uy',      studentId: '2022-00333', date: relDate(2),  time: '1:00 PM',  duration: '30 min', topic: 'AI project consultation',    status: 'pending',   isToday: false, requestedAt: '—', declineReason: '' }
-        ];
+    try {
+        // Get appointments from database
+        const dbAppointments = await AppointmentModel.getAppointmentsByInstructor(instructor.id);
+        appointments = dbAppointments.map(apt => ({
+            id: apt.id,
+            studentName: `${apt.student_first_name} ${apt.student_last_name}`,
+            studentId: apt.student_id,
+            date: apt.consultation_date,
+            time: apt.consultation_time,
+            duration: apt.duration || '30 min',
+            topic: apt.topic || apt.purpose || '—',
+            status: apt.status,
+            isToday: apt.consultation_date === new Date().toISOString().split('T')[0],
+            requestedAt: apt.created_at ? new Date(apt.created_at).toLocaleString() : '—',
+            declineReason: apt.decline_reason || ''
+        }));
+    } catch (err) {
+        console.error('Error fetching appointments:', err);
+        appointments = [];
     }
 
 
-    // Pull live schedule from store — format for the schedule page
-    const consultationSlots = getSchedule(1).map(s => ({
-        day:         s.day,
-        date:        '',
-        time:        `${s.timeStart} - ${s.timeEnd}`,
-        timeStart:   s.timeStart,
-        timeEnd:     s.timeEnd,
-        status:      s.status,
-        bookedCount: s.bookedCount,
-        maxCapacity: s.maxCapacity
-    }));
+    // Pull live schedule from ConsultationModel database
+    const ConsultationModel = require('../models/ConsultationModel');
+    let consultationSlots = [];
+    try {
+        const slots = await ConsultationModel.getSlotsByInstructor(instructor.id);
+        consultationSlots = slots.map(s => ({
+            day: s.day,
+            date: s.date,
+            time: `${s.timeStart} - ${s.timeEnd}`,
+            timeStart: s.timeStart,
+            timeEnd: s.timeEnd,
+            status: s.status,
+            bookedCount: s.isBooked ? 1 : 0,
+            maxCapacity: 1
+        }));
+    } catch (err) {
+        console.error('Error fetching consultation slots:', err);
+        consultationSlots = [];
+    }
 
-    const presenceLogs = [
-        { timestamp: '2026-03-17 09:15 AM', status: 'entered', location: 'CCS Building, Room 201', duration: null },
-        { timestamp: '2026-03-17 11:30 AM', status: 'exited',  location: 'CCS Building, Room 201', duration: '2h 15m' },
-        { timestamp: '2026-03-17 01:00 PM', status: 'entered', location: 'CCS Building, Room 201', duration: null },
-        { timestamp: '2026-03-16 09:00 AM', status: 'entered', location: 'CCS Building, Room 201', duration: null },
-        { timestamp: '2026-03-16 12:00 PM', status: 'exited',  location: 'CCS Building, Room 201', duration: '3h 0m' }
-    ];
+    const presenceLogs = [];  // Presence logs will come from BLE system in production
 
     const workloadStats = {
         thisWeek:  {
@@ -486,35 +462,22 @@ function getSharedData() {
         },
         trends: (function() {
             const days = ['Mon','Tue','Wed','Thu','Fri'];
-            const today = new Date().getDay(); // 0=Sun,1=Mon,...
-            // Count real appointments per weekday from this week
             const counts = [0,0,0,0,0];
             appointments.forEach(function(a) {
                 const d = new Date(a.date);
                 const dow = d.getDay();
                 if (dow >= 1 && dow <= 5) counts[dow - 1]++;
             });
-            // If all zero (no real data), use sample values
-            const hasData = counts.some(c => c > 0);
-            const sample = [3, 2, 4, 1, 3];
             return days.map((day, i) => ({
                 day,
-                consultations: hasData ? counts[i] : sample[i],
-                hours: hasData ? counts[i] * 0.75 : sample[i] * 0.75
+                consultations: counts[i],
+                hours: counts[i] * 0.75
             }));
         })()
     };
 
     const notifications = notificationsList.slice();
-    const workloadLogs = (workloadStats.trends || []).map(t => ({
-        day: t.day,
-        timeRange: '08:00 AM - 10:00 AM',
-        subjectCode: 'ITEC 321',
-        subjectName: 'Software Engineering',
-        room: 'Room 201',
-        type: 'Regular',
-        duration: 4
-    }));
+    const workloadLogs = [];  // Workload logs from database
 
     return { instructor, appointments, consultationSlots, presenceLogs, workloadStats, notifications, workloadLogs };
 }
@@ -527,12 +490,6 @@ router.post('/appointments/:id/decline', InstructorController.declineAppointment
 // reschedule appointment routes
 router.get('/appointments/reschedule-options', InstructorController.getRescheduleOptions);
 router.post('/appointments/:id/reschedule', InstructorController.rescheduleAppointment);
-
-// API endpoint for calendar data - schedules
-router.get('/schedule/data', (req, res) => {
-    const slots = getSchedule(1);
-    res.json({ slots: slots });
-});
 
 // Schedule page
 router.get('/consultation-schedule', InstructorController.renderConsultationPage);
@@ -1109,7 +1066,6 @@ router.requestStore         = requestStore;
 router.timetableStore       = timetableStore;
 router.notificationsList    = notificationsList;
 router.slotToLabel          = slotToLabel;
-router.getScheduleStore     = () => scheduleStore;
 router.unavailabilityStore  = unavailabilityStore;
 
 module.exports = router;
