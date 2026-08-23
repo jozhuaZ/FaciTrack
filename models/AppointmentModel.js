@@ -51,6 +51,14 @@ const AppointmentModel = {
         return count;
     },
 
+    async getStudentPendingCount(studentId) {
+        const [[{ count }]] = await pool.execute(
+            `SELECT COUNT(*) AS count FROM appointments WHERE student_id = ? AND status IN ('pending','confirmed')`,
+            [studentId]
+        );
+        return count;
+    },
+
     // userId could be studentId or instructorId
     async getAppointmentsByUser(userId) {
         const query = `SELECT

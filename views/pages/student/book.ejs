@@ -3,7 +3,7 @@
     <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
     <div class="instructor-layout">
-        <%- include('../../partials/student-sidebar', { activePage: 'dashboard' , appointmentCount: 0 }) %>
+        <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: typeof appointmentCount !== 'undefined' ? appointmentCount : 0 }) %>
 
             <main class="instructor-main">
                 <div class="main-container">
@@ -35,7 +35,7 @@
                     <div class="book-scroll">
                         <div class="book-form-card">
 
-                            <!-- Faculty Summary -->
+                            <!-- Faculty Summaryy -->
                             <div class="faculty-summary-card">
                                 <div class="faculty-summary-avatar">
                                     <%= faculty.first_name[0] + faculty.last_name[0] %>

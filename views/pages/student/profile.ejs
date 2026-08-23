@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 
 <div class="instructor-layout">
-    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: 0 }) %>
+    <%- include('../../partials/student-sidebar', { activePage: 'dashboard', appointmentCount: typeof appointmentCount !== 'undefined' ? appointmentCount : 0 }) %>
 
     <main class="instructor-main">
         <div class="main-container">

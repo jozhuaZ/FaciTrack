@@ -465,8 +465,14 @@ router.get('/appointments', StudentController.renderAppointmentsPage);
 router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
 
 router.get('/availability', (req, res) => {
+    const { buildStudentUser } = require('../utils/sessionUser');
+    const student = buildStudentUser(req.session);
+    const appointmentCount = req.session.appointmentCount || 0;
     res.render('pages/student/availability', {
-        title: 'FaciTrack - Faculty Availability', facultyList
+        title: 'FaciTrack - Faculty Availability',
+        facultyList,
+        student,
+        appointmentCount
     });
 });
 

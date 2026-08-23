@@ -15,10 +15,16 @@
                     <p class="page-subtitle">Review and respond to student appointment requests</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-header-action" id="genLogsBtn">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        Generate Logs
-                    </button>
+                    <div style="position:relative;display:inline-block">
+                        <button class="btn-header-action primary" id="genLogsBtn" style="display:flex;align-items:center;gap:.4rem;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            Generate Logs
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-left:.3rem"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div id="genLogsDropdown" style="position:absolute;top:100%;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:8px;margin-top:.5rem;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:100;display:none;">
+                            <button class="dropdown-item-wl" data-action="export" style="display:block;width:100%;text-align:left;padding:.75rem 1rem;border:none;background:none;cursor:pointer;font-size:.875rem;color:#374151;transition:background .15s;">Export / Print</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -118,6 +124,7 @@
                         <div class="apt-legend-item"><span class="apt-legend-dot declined"></span>Declined</div>
                         <div class="apt-legend-item"><span class="apt-legend-dot cancelled"></span>Cancelled</div>
                         <div class="apt-legend-item"><span class="apt-legend-dot rescheduled"></span>Rescheduled</div>
+                        <div class="apt-legend-item"><span class="apt-legend-dot" style="background:rgba(220,38,38,.08);border:1.5px solid #fca5a5;border-radius:3px;width:10px;height:10px;"></span>Blocked</div>
                     </div>
                 </div>
             </div>
@@ -255,6 +262,8 @@ window.APT_DATA = <%- JSON.stringify(appointments) %>;
     var logEnd    = document.getElementById('logEnd');
     var preview   = document.getElementById('logPreviewArea');
 
+    var dropdown  = document.getElementById('genLogsDropdown');
+
     function openModal() {
         var today = new Date();
         var first = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -262,10 +271,21 @@ window.APT_DATA = <%- JSON.stringify(appointments) %>;
         logEnd.valueAsDate   = today;
         updatePreview();
         modal.classList.add('show');
+        if (dropdown) dropdown.style.display = 'none';
     }
     function closeModal() { modal.classList.remove('show'); }
 
-    genBtn.addEventListener('click', openModal);
+    // Toggle dropdown on button click
+    genBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var isOpen = dropdown.style.display === 'block';
+        dropdown.style.display = isOpen ? 'none' : 'block';
+    });
+    // Dropdown item opens the modal
+    var dropdownItem = dropdown ? dropdown.querySelector('[data-action="export"]') : null;
+    if (dropdownItem) dropdownItem.addEventListener('click', openModal);
+    // Close dropdown on outside click
+    document.addEventListener('click', function() { if (dropdown) dropdown.style.display = 'none'; });
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
     logStart.addEventListener('change', updatePreview);

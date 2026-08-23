@@ -12,37 +12,40 @@
           <p class="page-subtitle">Manage your consultation availability</p>
         </div>
       </div>
-      <!-- ─── Unavailability Banner ─── -->
-      <div id="unavailBanner" style="display:none;margin-bottom:1rem;padding:.75rem 1rem;background:#fef9ec;border:1px solid #fde68a;border-radius:10px;align-items:center;gap:.6rem;font-size:.84rem;color:#92400e;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <!-- ─── Unavailability Banner (week context, kept for functionality) ─── -->
+      <div id="unavailBanner" style="display:none;margin-bottom:1rem;padding:.65rem 1rem;background:#fef9ec;border:1px solid #fde68a;border-radius:8px;align-items:center;gap:.6rem;font-size:.8rem;color:#92400e;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span id="unavailBannerText"></span>
       </div>
 
-      <!-- ─── Mark Unavailable Card ─── -->
-      <div class="gcal-wrap" style="margin-bottom:1.25rem;border-color:#fee2e2;background:linear-gradient(135deg,#fffdfd 0%,#fff7f7 100%);">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
-          <div>
-            <h3 style="font-size:.95rem;font-weight:700;color:#111827;margin:0 0 .25rem;display:flex;align-items:center;gap:.45rem;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
-              Block a Day
-            </h3>
-            <p style="font-size:.78rem;color:#6b7280;margin:0;line-height:1.5;">Choose a date to pause bookings. Existing appointments will be cancelled and students will be notified to reschedule.</p>
-          </div>
-          <button type="button" onclick="openUnavailModal()" class="btn-modal btn-confirm" style="background:#dc2626;display:inline-flex;align-items:center;gap:.45rem;white-space:nowrap;">
-            Set Unavailable Day
+      <div class="gcal-wrap">
+        <!-- ─── Header row: title left, Block a Day right ─── -->
+        <div class="gcal-top" style="border-bottom:1px solid #f3f4f6;padding-bottom:1rem;margin-bottom:1rem;">
+          <h3 class="gcal-title">Consultation Schedule</h3>
+          <button type="button" onclick="openUnavailModal()" class="sched-block-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+            Block a Day
           </button>
         </div>
-        <div id="unavailList" style="margin-top:1rem;display:none;">
-          <p style="font-size:.72rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin:0 0 .6rem;">Blocked Days</p>
-          <div id="unavailItems" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
-        </div>
-      </div>
 
-      <div class="gcal-wrap">
-        <div class="gcal-top"><h3 class="gcal-title">Select an appointment time</h3></div>
+        <!-- ─── Blocked dates list (shown when at least one block exists) ─── -->
+        <div id="unavailList" style="display:none;margin-bottom:1rem;">
+          <p class="blocked-list-label">Blocked dates</p>
+          <div id="unavailItems"></div>
+        </div>
         <div class="gcal-body">
           <div class="mini-cal">
-            <div class="mini-head"><span class="mini-month" id="miniMonthTitle"></span></div>
+            <div class="mini-head">
+              <span class="mini-month" id="miniMonthTitle"></span>
+              <div class="mini-nav">
+                <button class="mini-btn" id="miniPrev" aria-label="Previous month">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="mini-btn" id="miniNext" aria-label="Next month">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
             <div class="mini-grid" id="miniCalGrid"></div>
           </div>
           <div style="flex:1;min-width:auto;overflow-x:auto;overflow-y:visible;display:flex;flex-direction:column;" class="gcal-content-wrapper">
@@ -77,12 +80,12 @@
         Pick a date to pause bookings for that day. Existing appointments will be cancelled and students will be notified to reschedule.
       </p>
       <div class="slot-form-group">
-        <label class="slot-form-label" for="unavailDateInput">Date <span style="color:#dc2626">*</span></label>
+        <label class="unavail-form-label" for="unavailDateInput">Date <span style="color:#dc2626">*</span></label>
         <input type="date" id="unavailDateInput" class="slot-form-input" style="text-align:left;">
         <p id="unavailDateError" style="display:none;font-size:.75rem;color:#dc2626;margin:.3rem 0 0;"></p>
       </div>
       <div class="slot-form-group">
-        <label class="slot-form-label" for="unavailReasonInput">Reason <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
+        <label class="unavail-form-label" for="unavailReasonInput">Reason <span style="font-weight:400;color:var(--gray-400)">(optional)</span></label>
         <input type="text" id="unavailReasonInput" class="slot-form-input" placeholder="e.g. Leave, meeting" maxlength="300">
       </div>
       <div id="unavailAffected" style="display:none;padding:.65rem .85rem;background:#fef9ec;border:1px solid #fde68a;border-radius:8px;font-size:.8rem;color:#92400e;margin-top:.25rem;">
@@ -593,6 +596,12 @@ function showToast(type,title,message){
 function renderMiniCalendar() {
   const year = viewMonthDate.getFullYear(), month = viewMonthDate.getMonth();
   document.getElementById('miniMonthTitle').textContent = MONTHS[month] + ' ' + year;
+
+  // Disable prev if already on the current month
+  const prevBtn = document.getElementById('miniPrev');
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+  if (prevBtn) prevBtn.disabled = isCurrentMonth;
+
   const grid = document.getElementById('miniCalGrid');
   grid.innerHTML = '';
   DOW_SHORT.forEach(function (d) {
@@ -628,54 +637,69 @@ function renderMiniCalendar() {
 function renderWeekStrip(){
   const strip=document.getElementById('weekStrip'), empty=document.getElementById('weekEmpty');
   strip.innerHTML='';
-  const startDate=normalizeDate(selectedDate);
+
+  // Always start from Sunday of the selected date's week
+  const startDate = normalizeDate(selectedDate);
+  startDate.setDate(startDate.getDate() - startDate.getDay()); // rewind to Sunday
+
   let hasAvailability=false;
 
   for(let i=0;i<7;i++){
     const date=new Date(startDate);
     date.setDate(startDate.getDate()+i);
     const dayName=DAYS[date.getDay()];
-    const daySlots=slots.filter(function(s){ return s.day===dayName; });
+    const isPast = isPastDate(date);
+    const dateKey = toDateKeyJS(date);
+    const isBlocked = !!(unavailDates && unavailDates[dateKey]);
+    const hasSlots = slots.some(s => s.date === dateKey);
+    const slotCount = slots.filter(s => s.date === dateKey).length;
+    const isSelected = normalizeDate(date).getTime() === normalizeDate(selectedDate).getTime();
+
+    if(hasSlots) hasAvailability=true;
+
     const card=document.createElement('div');
     card.className='week-day';
-    if(isPastDate(date)) card.classList.add('past'); else card.classList.add('bookable');
-    if(normalizeDate(date).getTime()===normalizeDate(selectedDate).getTime()) card.classList.add('selected');
+    if(isPast)       card.classList.add('past');
+    else             card.classList.add('bookable');
+    if(isSelected)   card.classList.add('selected');
+    if(normalizeDate(date).getTime() === today.getTime()) card.classList.add('today');
+    if(isBlocked && !isPast) card.classList.add('unavailable');
+    if(hasSlots && !isBlocked) card.classList.add('has-slots');
 
-    // Check if this day is blocked as unavailable
-    var dateKey = toDateKeyJS(date);
-    var isBlocked = !!(unavailDates && unavailDates[dateKey]);
-
-    const hasSlots = slots.some(s => s.date === dateKey); 
-
-    // Track if day has slots for availability check
-    if(daySlots.length){
-      hasAvailability=true;
+    // Build inner HTML — DOW top, date middle, badge/button bottom
+    let bottomContent = '';
+    if(isBlocked){
+      if(isPast){
+        // Past blocked day — just show label, no unblock button
+        bottomContent = '<span class="w-blocked-label" style="opacity:.5;">BLOCKED</span>';
+      } else {
+        bottomContent =
+          '<span class="w-blocked-label">BLOCKED</span>' +
+          '<button class="w-unblock-btn" type="button" onclick="event.stopPropagation();removeUnavailDate(\'' + dateKey + '\')">' +
+            'Unblock' +
+          '</button>';
+      }
+    } else if(hasSlots){
+      bottomContent = '<span class="w-slot-badge">' + slotCount + ' Available slot' + (slotCount > 1 ? 's' : '') + '</span>';
+      if(!isPast){
+        bottomContent += '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
+          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+          ' Add Slot</button>';
+      }
+    } else if(!isPast){
+      bottomContent = '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
+        '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+        ' Add Slot</button>';
+    } else {
+      bottomContent = '<span style="display:block;height:1.4rem;"></span>'; // spacer to keep balance
     }
 
-    if (hasSlots && !isBlocked) card.classList.add('has-slots');
-
-    const slotCount = slots.filter(s => s.date === dateKey).length;
     card.innerHTML =
-    '<div class="w-dow">' + DOW_SHORT[date.getDay()].toUpperCase() + '</div>' +
-    '<div class="w-date' + (normalizeDate(date).getTime() === today.getTime() ? ' today' : '') + '">' + date.getDate() + '</div>' +
-    (isBlocked ?
-        '<span class="unavailable-chip">Blocked</span>'
-    : hasSlots ?
-        '<span class="w-slot-badge">' + slotCount + ' slot' + (slotCount > 1 ? 's' : '') + '</span>' +
-        (!isPastDate(date) ?
-            '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
-                '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-                ' Add Slot' +
-            '</button>'
-        : '')
-    : (!isPastDate(date) ?
-        '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
-            '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-            ' Add Slot' +
-        '</button>'
-    : ''));
+      '<div class="w-dow">' + DOW_SHORT[date.getDay()].toUpperCase() + '</div>' +
+      '<div class="w-date' + (normalizeDate(date).getTime() === today.getTime() ? ' today' : '') + '">' + date.getDate() + '</div>' +
+      bottomContent;
 
-    if(!isPastDate(date)){
+    if(!isPast){
       let scrollStartX = 0;
       let isScrolling = false;
 
@@ -686,17 +710,11 @@ function renderWeekStrip(){
 
       card.addEventListener('pointermove', function(e) {
         const moveDistance = Math.abs(e.clientX - scrollStartX);
-        if (moveDistance > 15) {
-          isScrolling = true;
-        }
+        if (moveDistance > 15) isScrolling = true;
       }, { passive: true });
 
       card.addEventListener('pointerup', function(e) {
-        if (isScrolling) {
-          isScrolling = false;
-          return;
-        }
-        // Clicking the card background (not the add button)? show day panel
+        if (isScrolling) { isScrolling = false; return; }
         if(!e.target.closest('.w-add-btn')){
           selectedDate=new Date(date);
           viewMonthDate=new Date(date.getFullYear(), date.getMonth(), 1);
@@ -708,7 +726,6 @@ function renderWeekStrip(){
     strip.appendChild(card);
   }
   empty.style.display=hasAvailability?'none':'block';
-  // Update unavailability banner for this week
   if (typeof checkWeekUnavailBanner === 'function') checkWeekUnavailBanner();
 }
 
@@ -743,7 +760,12 @@ function refreshDayPanel() {
     body.innerHTML = '';
 
     if (isBlockedDate) {
-        body.innerHTML = '<div class="dsp-blocked-banner"><strong>This day is blocked.</strong> Students cannot book consultations on this date.</div>';
+        const blockedKey = toDateKeyJS(d);
+        body.innerHTML =
+          '<div class="dsp-blocked-banner">' +
+            '<strong>This day is blocked.</strong> Students cannot book consultations on this date.' +
+            '<button class="dsp-unblock-btn" onclick="removeUnavailDate(\'' + blockedKey + '\')">Unblock this day</button>' +
+          '</div>';
         return;
     }
 
@@ -1172,6 +1194,20 @@ document.getElementById('jumpBookable').addEventListener('click',function(e){
 renderMiniCalendar();
 renderWeekStrip();
 
+// Month navigation arrows
+document.getElementById('miniPrev').addEventListener('click', function() {
+  const y = viewMonthDate.getFullYear(), m = viewMonthDate.getMonth();
+  // Block going before current month
+  if (y === today.getFullYear() && m <= today.getMonth()) return;
+  viewMonthDate = new Date(y, m - 1, 1);
+  renderMiniCalendar();
+});
+document.getElementById('miniNext').addEventListener('click', function() {
+  const y = viewMonthDate.getFullYear(), m = viewMonthDate.getMonth();
+  viewMonthDate = new Date(y, m + 1, 1);
+  renderMiniCalendar();
+});
+
 // Trigger validation when max capacity changes
 document.getElementById('slotMaxCapacity').addEventListener('input',function(){
   validateTimeSelection();
@@ -1204,16 +1240,23 @@ function renderUnavailList() {
   items.innerHTML = '';
   keys.forEach(function(key) {
     var rec = unavailDates[key];
-    var label = new Date(key + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
-    var chip = document.createElement('div');
-    chip.style.cssText = 'display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .65rem .35rem .75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:20px;font-size:.75rem;color:#dc2626;font-weight:600;';
-    chip.innerHTML =
-      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
-      '<span>' + esc(label) + (rec.reason ? ' – ' + esc(rec.reason.substring(0,35) + (rec.reason.length > 35 ? '…' : '')) : '') + '</span>' +
-      '<button onclick="removeUnavailDate(\'' + key + '\')" title="Remove block" style="background:none;border:none;cursor:pointer;padding:0;display:flex;color:#dc2626;margin-left:.2rem;">' +
-        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    var label = new Date(key + 'T00:00:00').toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    var row = document.createElement('div');
+    row.className = 'blocked-row';
+    row.innerHTML =
+      '<div class="blocked-row-left">' +
+        '<div class="blocked-row-icon">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="16" x2="15" y2="16"/></svg>' +
+        '</div>' +
+        '<div class="blocked-row-text">' +
+          '<span class="blocked-row-date">' + esc(label) + '</span>' +
+          (rec.reason ? '<span class="blocked-row-reason">' + esc(rec.reason.substring(0, 60) + (rec.reason.length > 60 ? '…' : '')) + '</span>' : '') +
+        '</div>' +
+      '</div>' +
+      '<button onclick="removeUnavailDate(\'' + key + '\')" class="blocked-row-remove" title="Remove block">' +
+        'Remove' +
       '</button>';
-    items.appendChild(chip);
+    items.appendChild(row);
   });
 }
 
@@ -1259,8 +1302,10 @@ function openUnavailModal() {
   document.getElementById('unavailSuccessMsg').style.display = 'none';
   document.getElementById('unavailConfirmBtn').disabled = false;
   document.getElementById('unavailConfirmBtn').textContent = 'Block Date & Cancel Appointments';
-  // Pre-fill with selected date if available
-  if (selectedDate) {
+  // Set min so the native picker grays out past dates
+  document.getElementById('unavailDateInput').min = toDateKeyJS(today);
+  // Pre-fill with selected date only if it is not a past date
+  if (selectedDate && !isPastDate(selectedDate)) {
     document.getElementById('unavailDateInput').value = toDateKeyJS(selectedDate);
     previewAffectedBookings();
   } else {
@@ -1277,32 +1322,19 @@ function closeUnavailModal() {
 // Preview how many appointments will be affected (client-side, using local slots data)
 function previewAffectedBookings() {
   var dateVal = document.getElementById('unavailDateInput').value;
-  var err = document.getElementById('unavailDateError');
   var affected = document.getElementById('unavailAffected');
   var count = document.getElementById('unavailAffectedCount');
-  err.style.display = 'none';
 
   if (!dateVal) { affected.style.display = 'none'; return; }
-
-  var today0 = new Date(); today0.setHours(0,0,0,0);
-  var chosen = new Date(dateVal + 'T00:00:00');
-  if (chosen < today0) {
-    err.textContent = 'Cannot mark a past date as unavailable.';
-    err.style.display = 'block';
-    affected.style.display = 'none';
-    return;
-  }
 
   // Ask backend how many bookings exist for that date
   fetch('/instructor/unavailability/check/' + dateVal)
     .then(r => r.json())
     .then(data => {
-      // We show the affected warning regardless (0 is still valid)
       affected.style.display = 'block';
     })
     .catch(function() { affected.style.display = 'block'; });
 
-  // Show a generic count hint (actual count comes from backend on confirm)
   count.textContent = '?';
   affected.style.display = 'block';
 }
@@ -1324,14 +1356,6 @@ function confirmUnavailability() {
 
   if (!dateVal) {
     err.textContent = 'Please select a date.';
-    err.style.display = 'block';
-    return;
-  }
-
-  var today0 = new Date(); today0.setHours(0,0,0,0);
-  var chosen = new Date(dateVal + 'T00:00:00');
-  if (chosen < today0) {
-    err.textContent = 'Cannot mark a past date as unavailable.';
     err.style.display = 'block';
     return;
   }

@@ -136,16 +136,22 @@
     transition: border-color .15s, background .15s, box-shadow .15s;
     position: relative; box-sizing: border-box; min-height: 0;
 }
-.apt-cal-cell:hover        { background: #f8fafc; border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.apt-cal-cell:hover        { background: #f8fafc; border-color: #cbd5e1; }
 .apt-cal-cell.other-month  { opacity: .38; pointer-events: none; }
-.apt-cal-cell.today        { background: #eff6ff; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.15); }
-.apt-cal-cell.selected     { border-color: #0a3d62 !important; background: #f0f9ff !important; box-shadow: 0 0 0 3px rgba(10,61,98,.12) !important; }
-.apt-cal-cell.selected-instant { border-color: #0a3d62; background: #f0f9ff; box-shadow: 0 0 0 3px rgba(10,61,98,.12); }
+.apt-cal-cell.today        { background: #eff6ff; border-color: #3b82f6; }
+.apt-cal-cell.today .apt-cal-date-num { color: #2563eb; }
+.apt-cal-cell.past         { background: #f9fafb; opacity: .55; cursor: default; pointer-events: none; }
+.apt-cal-cell.past .apt-cal-date-num { color: #9ca3af; }
+.apt-cal-cell.blocked      { background: rgba(220,38,38,.05); border-color: #fca5a5; }
+.apt-cal-cell.blocked .apt-cal-date-num { color: #dc2626; }
+.apt-cal-cell.blocked.past { background: #f9fafb; border-color: #e5e7eb; opacity: .55; pointer-events: none; }
+.apt-cal-cell.blocked.past .apt-cal-date-num { color: #9ca3af; }
+.apt-cal-cell.selected     { border-color: #0a3d62 !important; background: #f0f9ff !important; }
+.apt-cal-cell.selected-instant { border-color: #0a3d62; background: #f0f9ff; }
 .apt-cal-date-num {
     font-size: .72rem; font-weight: 700; color: #475569;
     margin-bottom: .25rem; flex-shrink: 0; line-height: 1;
 }
-.apt-cal-cell.today .apt-cal-date-num { color: #2563eb; }
 .apt-cal-events { display: flex; flex-direction: column; gap: 2px; overflow: hidden; flex: 1; min-height: 0; }
 /* ── Calendar Event Badges ── */
 .apt-badge {
