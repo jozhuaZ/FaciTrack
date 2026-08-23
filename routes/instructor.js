@@ -377,7 +377,7 @@ function getSchedule(instructorId) {
 
 // Instructor Dashboard
 router.get('/dashboard', async (req, res) => {
-    const data = await getSharedData();
+    const data = await safeGetSharedData();
     res.render('pages/instructor/dashboard', {
         title: 'FaciTrack - Instructor Dashboard',
         ...data
@@ -566,8 +566,8 @@ router.get('/reports', InstructorController.renderReportsPage);
 
 
 // Settings
-router.get('/settings', (req, res) => {
-    const data = getSharedData();
+router.get('/settings', async (req, res) => {
+    const data = await safeGetSharedData();
     res.render('pages/instructor/settings', {
         title: 'FaciTrack - Settings',
         ...data,
@@ -797,8 +797,8 @@ router.post('/makeup/generate-schedule', (req, res) => {
 });
 
 // GET: Submission form
-router.get('/makeup/request', (req, res) => {
-    const data = getSharedData();
+router.get('/makeup/request', async (req, res) => {
+    const data = await safeGetSharedData();
     const flash = flashStore.message ? { message: flashStore.message, type: flashStore.type } : null;
     flashStore.message = null; flashStore.type = null;
     res.render('pages/instructor/makeup-request', {
@@ -814,7 +814,7 @@ router.get('/makeup/request', (req, res) => {
 // POST: Submit request (multipart/form-data with PDF)
 router.post('/makeup/request', (req, res, next) => {
     pdfUpload.single('document')(req, res, (uploadErr) => {
-        const data = getSharedData();
+        const data = await safeGetSharedData();
         const pendingCount = data.appointments.filter(a => a.status === 'pending').length;
 
         const subjectCode  = String(req.body.subjectCode  || '').trim();
@@ -957,8 +957,8 @@ router.post('/makeup/request', (req, res, next) => {
 });
 
 // GET: Instructor's own request list
-router.get('/makeup/requests', (req, res) => {
-    const data = getSharedData();
+router.get('/makeup/requests', async (req, res) => {
+    const data = await safeGetSharedData();
     const flash = flashStore.message ? { message: flashStore.message, type: flashStore.type } : null;
     flashStore.message = null; flashStore.type = null;
 
