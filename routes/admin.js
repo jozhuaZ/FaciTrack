@@ -324,9 +324,91 @@ router.get('/settings', (req, res) => {
     res.render('pages/admin/settings', { title: 'FaciTrack - System Settings', ...data });
 });
 
-router.get('/reports', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/admin/reports', { title: 'FaciTrack - Reports', ...data });
+router.get('/reports', async (req, res) => {
+    try {
+        const pool = require('../configs/db');
+        const u = req.currentUser || {};
+        const admin = {
+            name: u.name || 'System Admin',
+            role: u.role || 'Administrator',
+            email: u.email || '',
+            department: 'College of Computer Studies'
+        };
+
+        // Consultation Slots
+        const [slots] = await pool.execute(
+            `SELECT
+                ch.id,
+                ch.consultation_date AS date,
+                ch.day_of_the_week AS day,
+                ch.start_time,
+                ch.end_time,
+                ch.status,
+                CONCAT(u.last_name, ', ', u.first_name) AS instructor,
+                r.room_number AS room,
+                CONCAT(s.last_name, ', ', s.first_name) AS student
+             FROM consultation_hours ch
+             JOIN users u ON ch.instructor_id = u.id
+             LEFT JOIN appointments a ON ch.id = a.consultation_hour_id AND a.status IN ('pending','confirmed')
+             LEFT JOIN users s ON a.student_id = s.id
+             LEFT JOIN rooms r ON a.room_id = r.id
+             ORDER BY ch.consultation_date DESC, ch.start_time ASC`
+        );
+
+        // Appointments
+        const [appointments] = await pool.execute(
+            `SELECT
+                a.id,
+                CONCAT(s.last_name, ', ', s.first_name) AS studentName,
+                CONCAT(i.last_name, ', ', i.first_name) AS instructorName,
+                ch.consultation_date AS date,
+                ch.start_time AS time,
+                a.topic,
+                a.status,
+                a.mode,
+                a.created_at
+             FROM appointments a
+             JOIN users s ON a.student_id = s.id
+             JOIN users i ON a.instructor_id = i.id
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             ORDER BY ch.consultation_date DESC, ch.start_time ASC`
+        );
+
+        // Audit Logs — last login per user
+        const [logs] = await pool.execute(
+            `SELECT
+                CONCAT(u.last_name, ', ', u.first_name) AS user,
+                u.role,
+                u.email,
+                u.last_login AS timestamp
+             FROM users u
+             WHERE u.last_login IS NOT NULL
+             ORDER BY u.last_login DESC`
+        );
+
+        return res.render('pages/admin/reports', {
+            title: 'FaciTrack - Reports',
+            admin,
+            slots: slots || [],
+            allAppointments: appointments || [],
+            logs: logs || []
+        });
+    } catch (err) {
+        console.error('[Admin Reports]', err);
+        const u = req.currentUser || {};
+        return res.render('pages/admin/reports', {
+            title: 'FaciTrack - Reports',
+            admin: {
+                name: u.name || 'System Admin',
+                role: u.role || 'Administrator',
+                email: u.email || '',
+                department: 'College of Computer Studies'
+            },
+            slots: [],
+            allAppointments: [],
+            logs: []
+        });
+    }
 });
 
 router.get('/monitoring', (req, res) => {
@@ -349,6 +431,14 @@ router.get('/departments', (req, res) => {
 
 // Consultation Room Management Routes
 router.get('/consultation-room', ConsultationRoomController.renderConsultationRoomPage);
+
+// NEW: Multi-day calendar endpoints
+router.get('/consultation-room/multi-day-slots', ConsultationRoomController.getMultiDaySlots);
+router.get('/consultation-room/multi-day-sync-counts', ConsultationRoomController.getMultiDaySyncCounts);
+router.get('/consultation-room/settings', ConsultationRoomController.getSettings);
+router.put('/consultation-room/settings', ConsultationRoomController.updateSettings);
+
+// LEGACY: Old program-based endpoints (keep for backward compatibility)
 router.get('/consultation-room/slots', ConsultationRoomController.getSlotsByProgram);
 router.get('/consultation-room/availability', ConsultationRoomController.checkSlotAvailability);
 router.get('/consultation-room/rooms/available', ConsultationRoomController.getAvailableRooms);

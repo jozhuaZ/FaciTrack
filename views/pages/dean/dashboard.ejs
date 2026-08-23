@@ -63,6 +63,92 @@
                 </div>
             </div>
 
+            <!-- Analytics Grid -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+
+                <!-- Appointment Activity -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Appointment Activity</h3>
+                        <span style="font-size:.75rem;color:var(--gray-400)">Mon-Fri this week</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="bar-chart">
+                            <%
+                                var days = ['Mon','Tue','Wed','Thu','Fri'];
+                                var dayCounts = [0,0,0,0,0];
+                                allAppointments.forEach(function(a){
+                                    var d = new Date(a.date);
+                                    var dow = d.getDay();
+                                    if(dow>=1&&dow<=5) dayCounts[dow-1]++;
+                                });
+                                var maxDay = 1;
+                                for(var di=0;di<dayCounts.length;di++){ if(dayCounts[di]>maxDay) maxDay=dayCounts[di]; }
+                            %>
+                            <% for(var di2=0;di2<days.length;di2++){ %>
+                            <%   var pct = Math.round((dayCounts[di2]/maxDay)*100); %>
+                            <div class="bar-chart-item">
+                                <div class="bar-chart-bar-wrap">
+                                    <div class="bar-chart-bar" style="height:<%= pct %>%" title="<%= dayCounts[di2] %> appointments">
+                                        <% if(pct>=30){ %><span class="bar-value"><%= dayCounts[di2] %></span><% } %>
+                                    </div>
+                                </div>
+                                <span class="bar-label"><%= days[di2] %></span>
+                            </div>
+                            <% } %>
+                        </div>
+                        <p class="chart-legend">Appointments per day (all time)</p>
+                    </div>
+                </div>
+
+                <!-- Appointment Breakdown -->
+                <div class="content-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Appointment Breakdown</h3>
+                        <span style="font-size:.75rem;color:var(--gray-400)">All records</span>
+                    </div>
+                    <div class="card-body">
+                        <%
+                            var bdTot  = allAppointments.length || 1;
+                            var bdConf = allAppointments.filter(function(a){return a.status==='confirmed';}).length;
+                            var bdDecl = allAppointments.filter(function(a){return a.status==='declined';}).length;
+                            var bdPend = allAppointments.filter(function(a){return a.status==='pending';}).length;
+                        %>
+                        <div class="workload-breakdown">
+                            <div class="breakdown-row">
+                                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:.4rem;vertical-align:middle"></span>Confirmed</span>
+                                <div class="breakdown-bar-wrap"><div class="breakdown-bar confirmed" style="width:<%= Math.round(bdConf/bdTot*100) %>%"></div></div>
+                                <span class="breakdown-value"><%= bdConf %></span>
+                            </div>
+                            <div class="breakdown-row">
+                                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:.4rem;vertical-align:middle"></span>Declined</span>
+                                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdDecl/bdTot*100) %>%;background:linear-gradient(90deg,#dc2626,#ef4444)"></div></div>
+                                <span class="breakdown-value"><%= bdDecl %></span>
+                            </div>
+                            <div class="breakdown-row">
+                                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ea580c;margin-right:.4rem;vertical-align:middle"></span>Pending</span>
+                                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdPend/bdTot*100) %>%;background:linear-gradient(90deg,#ea580c,#fb923c)"></div></div>
+                                <span class="breakdown-value"><%= bdPend %></span>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:.75rem;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--gray-100)">
+                            <div style="flex:1;text-align:center;padding:.625rem;background:rgba(22,163,74,.06);border-radius:8px">
+                                <p style="font-size:1.125rem;font-weight:800;color:#15803d;margin:0"><%= bdConf %></p>
+                                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Confirmed</p>
+                            </div>
+                            <div style="flex:1;text-align:center;padding:.625rem;background:rgba(10,61,98,.06);border-radius:8px">
+                                <p style="font-size:1.125rem;font-weight:800;color:var(--primary-blue);margin:0"><%= faculty.length %></p>
+                                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Faculty</p>
+                            </div>
+                            <div style="flex:1;text-align:center;padding:.625rem;background:rgba(124,58,237,.06);border-radius:8px">
+                                <p style="font-size:1.125rem;font-weight:800;color:#7c3aed;margin:0"><%= faculty.reduce(function(s,f){return s+(f.hoursThisMonth||0);},0) %>h</p>
+                                <p style="font-size:.65rem;color:var(--gray-500);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 0">Total Hrs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Dashboard Grid -->
             <div class="dashboard-content-grid">
 

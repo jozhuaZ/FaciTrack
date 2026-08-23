@@ -1,0 +1,65 @@
+/* Admin Reports Page Styles */
+
+.report-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--gray-200, #e5e7eb);
+    padding: 0 0 0.5rem 0;
+}
+
+.report-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--gray-600, #6b7280);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    white-space: nowrap;
+}
+
+.report-tab:hover {
+    color: var(--primary-600, #2563eb);
+    background: var(--gray-50, #f9fafb);
+    border-radius: 8px 8px 0 0;
+}
+
+.report-tab.active {
+    color: var(--primary-600, #2563eb);
+    border-bottom-color: var(--primary-600, #2563eb);
+    font-weight: 600;
+}
+
+.report-tab svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+
+.report-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure tabs are clickable */
+.report-tab {
+    pointer-events: all;
+    z-index: 1;
+}

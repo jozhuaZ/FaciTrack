@@ -260,13 +260,69 @@ router.get('/monitoring', (_req, res) => {
 });
 
 // Workload reports per faculty
-router.get('/reports', (req, res) => {
-    const data = getSharedData();
-    res.render('pages/dean/reports', {
-        title: 'FaciTrack - Reports',
-        ...data,
-        pendingMakeupCount: getPendingMakeupCount()
-    });
+router.get('/reports', async (req, res) => {
+    try {
+        const pool = require('../configs/db');
+        const u = req.currentUser || {};
+        const dean = {
+            name: u.name || 'Dean',
+            email: u.email || '',
+            position: u.position || 'Dean',
+            department: 'College of Computer Studies'
+        };
+
+        // Appointments — real data
+        const [appointments] = await pool.execute(
+            `SELECT
+                a.id,
+                CONCAT(s.last_name, ', ', s.first_name) AS studentName,
+                CONCAT(i.last_name, ', ', i.first_name) AS instructorName,
+                i.position AS instructorPosition,
+                d.full_name AS department,
+                ch.consultation_date AS date,
+                ch.start_time AS time,
+                a.topic,
+                a.status,
+                a.mode,
+                a.created_at
+             FROM appointments a
+             JOIN users s ON a.student_id = s.id
+             JOIN users i ON a.instructor_id = i.id
+             JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
+             LEFT JOIN departments d ON i.department_id = d.id
+             ORDER BY ch.consultation_date DESC, ch.start_time ASC`
+        );
+
+        // Faculty — real data for workload tab
+        const [faculty] = await pool.execute(
+            `SELECT
+                CONCAT(u.last_name, ', ', u.first_name) AS instructorName,
+                u.position,
+                d.full_name AS department_name
+             FROM users u
+             LEFT JOIN departments d ON u.department_id = d.id
+             WHERE u.role = 'Instructor' AND u.status = 'Active'
+             ORDER BY u.last_name, u.first_name`
+        );
+
+        return res.render('pages/dean/reports', {
+            title: 'FaciTrack - Reports',
+            dean,
+            allAppointments: appointments || [],
+            faculty: faculty || [],
+            pendingMakeupCount: getPendingMakeupCount()
+        });
+    } catch (err) {
+        console.error('[Dean Reports]', err);
+        const u = req.currentUser || {};
+        return res.render('pages/dean/reports', {
+            title: 'FaciTrack - Reports',
+            dean: { name: u.name || 'Dean', email: u.email || '', position: 'Dean', department: 'College of Computer Studies' },
+            allAppointments: [],
+            faculty: [],
+            pendingMakeupCount: getPendingMakeupCount()
+        });
+    }
 });
 
 // Presence Logs
