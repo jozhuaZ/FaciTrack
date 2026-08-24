@@ -36,15 +36,13 @@
         <div class="gcal-body">
           <div class="mini-cal">
             <div class="mini-head">
+              <button class="mini-btn" id="miniPrev" aria-label="Previous month">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
               <span class="mini-month" id="miniMonthTitle"></span>
-              <div class="mini-nav">
-                <button class="mini-btn" id="miniPrev" aria-label="Previous month">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-                </button>
-                <button class="mini-btn" id="miniNext" aria-label="Next month">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              </div>
+              <button class="mini-btn" id="miniNext" aria-label="Next month">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
             </div>
             <div class="mini-grid" id="miniCalGrid"></div>
           </div>
@@ -602,35 +600,79 @@ function renderMiniCalendar() {
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   if (prevBtn) prevBtn.disabled = isCurrentMonth;
 
+  // Selected week: Sunday → Saturday
+  const selNorm   = normalizeDate(selectedDate);
+  const selWeekStart = new Date(selNorm); selWeekStart.setDate(selNorm.getDate() - selNorm.getDay());   // Sunday
+  const selWeekEnd   = new Date(selWeekStart); selWeekEnd.setDate(selWeekStart.getDate() + 6);          // Saturday
+
   const grid = document.getElementById('miniCalGrid');
   grid.innerHTML = '';
-  DOW_SHORT.forEach(function (d) {
-    const el = document.createElement('div'); el.className = 'mini-dow'; el.textContent = d[0]; grid.appendChild(el);
+
+  // Headers: SUN MON TUE WED THU FRI SAT
+  ['SUN','MON','TUE','WED','THU','FRI','SAT'].forEach(function(d) {
+    const el = document.createElement('div');
+    el.className = 'mini-dow';
+    el.textContent = d;
+    grid.appendChild(el);
   });
-  const firstDay = new Date(year, month, 1), offset = firstDay.getDay(), prevLast = new Date(year, month, 0).getDate();
+
+  // offset: getDay() is already 0=Sun, so use it directly for Sun-start grid
+  const firstDay = new Date(year, month, 1);
+  const offset   = firstDay.getDay();   // 0=Sun … 6=Sat
+  const prevLast = new Date(year, month, 0).getDate();
+
+  // Prev-month filler cells
   for (let i = offset - 1; i >= 0; i--) {
-    const p = document.createElement('div'); p.className = 'mini-day other'; p.textContent = prevLast - i; grid.appendChild(p);
+    const p = document.createElement('div');
+    p.className = 'mini-day other';
+    p.textContent = prevLast - i;
+    grid.appendChild(p);
   }
+
   const lastDate = new Date(year, month + 1, 0).getDate();
   for (let d = 1; d <= lastDate; d++) {
-    const date = new Date(year, month, d), cell = document.createElement('div');
-    cell.className = 'mini-day'; cell.textContent = d;
-    if (isPastDate(date)) cell.classList.add('past'); else cell.classList.add('bookable');
-    if (normalizeDate(date).getTime() === today.getTime()) cell.classList.add('today');
-    if (normalizeDate(date).getTime() === normalizeDate(selectedDate).getTime()) cell.classList.add('selected');
+    const date    = new Date(year, month, d);
+    const datNorm = normalizeDate(date);
+    const t       = datNorm.getTime();
+    const cell    = document.createElement('div');
+    cell.className = 'mini-day';
+    cell.textContent = d;
+
+    if (isPastDate(date)) cell.classList.add('past');
+    else                  cell.classList.add('bookable');
+
+    if (t === today.getTime()) cell.classList.add('today');
+
+    // Week band
+    if (t >= selWeekStart.getTime() && t <= selWeekEnd.getTime()) {
+      cell.classList.add('in-week');
+      if (t === selWeekStart.getTime()) cell.classList.add('week-start');
+      if (t === selWeekEnd.getTime())   cell.classList.add('week-end');
+    }
 
     const dateKey = toDateKeyJS(date);
     if (unavailDates && unavailDates[dateKey]) cell.classList.add('blocked');
     else if (slots.some(s => s.date === dateKey)) cell.classList.add('has-slots');
 
     if (!isPastDate(date)) {
-      cell.addEventListener('click', function () { selectedDate = new Date(date); viewMonthDate = new Date(date.getFullYear(), date.getMonth(), 1); renderMiniCalendar(); renderWeekStrip(); });
+      cell.addEventListener('click', function () {
+        selectedDate = new Date(date);
+        viewMonthDate = new Date(date.getFullYear(), date.getMonth(), 1);
+        renderMiniCalendar();
+        renderWeekStrip();
+      });
     }
     grid.appendChild(cell);
   }
-  const total = offset + lastDate, rest = (Math.ceil(total / 7) * 7) - total;
+
+  // Next-month filler cells
+  const total = offset + lastDate;
+  const rest  = (Math.ceil(total / 7) * 7) - total;
   for (let i = 1; i <= rest; i++) {
-    const n = document.createElement('div'); n.className = 'mini-day other'; n.textContent = i; grid.appendChild(n);
+    const n = document.createElement('div');
+    n.className = 'mini-day other';
+    n.textContent = i;
+    grid.appendChild(n);
   }
 }
 /* -- Week strip -- */
@@ -680,16 +722,19 @@ function renderWeekStrip(){
           '</button>';
       }
     } else if(hasSlots){
-      bottomContent = '<span class="w-slot-badge available">' + slotCount + ' slot' + (slotCount > 1 ? 's' : '') + '</span>';
-      if(!isPast){
-        bottomContent += '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
-          '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-          ' Add Slot</button>';
-      }
+      const addBtn = !isPast
+        ? '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
+            '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+            ' Add Slot</button>'
+        : '';
+      bottomContent = '<div class="w-bottom">' +
+        '<span class="w-slot-badge available">' + slotCount + ' slot' + (slotCount > 1 ? 's' : '') + '</span>' +
+        addBtn +
+        '</div>';
     } else if(!isPast){
-      bottomContent = '<button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
+      bottomContent = '<div class="w-bottom"><button class="w-add-btn" type="button" onclick="event.stopPropagation();openAddModal(\'' + dayName + '\',new Date(' + date.getTime() + '))">' +
         '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-        ' Add Slot</button>';
+        ' Add Slot</button></div>';
     } else {
       bottomContent = '<span style="display:block;height:1.4rem;"></span>'; // spacer to keep balance
     }

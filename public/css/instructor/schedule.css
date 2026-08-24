@@ -3,7 +3,7 @@
 .gcal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0;pointer-events:auto;}
 .gcal-title{font-size:1rem;font-weight:700;color:#111827;pointer-events:auto;}
 .gcal-tz{font-size:.79rem;color:#6b7280;pointer-events:auto;}
-.gcal-body{display:grid;grid-template-columns:230px 1fr;gap:1.25rem;overflow:visible;pointer-events:auto;}
+.gcal-body{display:grid;grid-template-columns:260px 1fr;gap:1.25rem;overflow:visible;pointer-events:auto;}
 
 /* ── Block a Day button ── */
 .sched-block-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .875rem;background:#dc2626;border:1.5px solid #dc2626;border-radius:8px;font-size:.78rem;font-weight:700;color:#fff;cursor:pointer;transition:background .15s,border-color .15s;font-family:var(--font-body);white-space:nowrap;}
@@ -20,24 +20,89 @@
 .blocked-row-reason{font-size:.71rem;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .blocked-row-remove{flex-shrink:0;padding:.3rem .65rem;border:1px solid #fecaca;border-radius:6px;background:#fff;color:#dc2626;font-size:.72rem;font-weight:700;cursor:pointer;transition:background .15s,color .15s;font-family:var(--font-body);}
 .blocked-row-remove:hover{background:#dc2626;color:#fff;border-color:#dc2626;}
-.mini-cal{border-right:1px solid #e5e7eb;padding-right:1.15rem}
-.mini-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.7rem}
-.mini-month{font-size:.84rem;font-weight:700;color:#111827}
-.mini-nav{display:flex;gap:.3rem}
-.mini-btn{width:26px;height:26px;border:1px solid #d1d5db;border-radius:7px;background:#fff;cursor:pointer;transition:all 0.2s ease}
-.mini-btn:hover{border-color:#1a73e8;background:rgba(26,115,232,0.05)}
-.mini-btn:disabled{opacity:.35;cursor:not-allowed}
-.mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.mini-dow{font-size:.62rem;color:#6b7280;text-align:center;font-weight:700}
-.mini-day{height:26px;display:flex;align-items:center;justify-content:center;border-radius:999px;font-size:.72rem;color:#374151;transition:all 0.15s ease;position:relative}
-.mini-day.other{color:#d1d5db}
-.mini-day.past{color:#d1d5db;background:#f9fafb;cursor:not-allowed}
-.mini-day.bookable{cursor:pointer}
-.mini-day.today{outline:2px solid #1a73e8;outline-offset:-2px;font-weight:700}
-.mini-day.selected{background:#1a73e8;color:#fff;font-weight:700}
-.mini-day.bookable:hover{background:rgba(26,115,232,.15);transform:scale(1.1)}
-.mini-day.blocked{background:#fff1f2;color:#b91c1c;border:1px solid #fecaca;font-weight:700}
-.mini-day.blocked::after{content:'';position:absolute;bottom:3px;width:5px;height:5px;border-radius:999px;background:#ef4444}
+/* ── Mini Calendar ── */
+.mini-cal { border-right: 1px solid #e5e7eb; padding-right: 1.25rem; }
+.mini-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.mini-month { font-size: .9rem; font-weight: 700; color: #111827; text-align: center; flex: 1; }
+.mini-btn { width: 30px; height: 30px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6b7280; transition: background .15s, border-color .15s; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.mini-btn:hover { background: #f3f4f6; border-color: #d1d5db; color: #111827; }
+.mini-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* 7 equal columns, no col gap so the week band is seamless */
+.mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 1px; column-gap: 0; }
+
+/* Day-of-week headers: SUN MON TUE WED THU FRI SAT */
+.mini-dow { font-size: .62rem; color: #9ca3af; text-align: center; font-weight: 700; padding: .15rem 0 .65rem; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Base day cell */
+.mini-day {
+  aspect-ratio: 1 / 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 500;
+  color: #374151;
+  position: relative;
+  cursor: default;
+  transition: background .12s, color .12s;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;    /* flat by default — week band is seamless */
+  background: transparent;
+}
+
+/* Adjacent-month dates */
+.mini-day.other { color: #d1d5db; pointer-events: none; }
+
+/* Past dates */
+.mini-day.past { color: #c9cdd4; cursor: not-allowed; }
+
+/* Bookable */
+.mini-day.bookable { cursor: pointer; }
+.mini-day.bookable:not(.today):not(.in-week):hover { background: rgba(74,144,217,.12); color: #2563eb; border-radius: 50%; }
+
+/* ── TODAY — dark navy filled circle, drawn via ::before so it sits under text ── */
+.mini-day.today { color: #fff; font-weight: 700; z-index: 1; }
+.mini-day.today::before {
+  content: '';
+  position: absolute; inset: 8%;
+  background: #1e3a5f;
+  border-radius: 50%;
+  z-index: -1;
+}
+
+/* ── SELECTED WEEK BAND — light blue continuous band ── */
+/* Middle cells: flat rectangle */
+.mini-day.in-week { background: #dbeafe; color: #1e40af; font-weight: 600; border-radius: 0; }
+
+/* First day of week in selection (Sunday column = col 1) gets left rounded cap */
+.mini-day.in-week.week-start { border-radius: 50% 0 0 50%; }
+
+/* Last day of week in selection (Saturday column = col 7) gets right rounded cap */
+.mini-day.in-week.week-end { border-radius: 0 50% 50% 0; }
+
+/* When selection is a single day, full circle */
+.mini-day.in-week.week-start.week-end { border-radius: 50%; }
+
+/* Today inside the week band — keep the dark navy circle on top of the band */
+.mini-day.today.in-week { background: #dbeafe; color: #fff; }
+.mini-day.today.in-week::before { background: #1e3a5f; }
+
+/* ── Dot below date (has consultation slots) ── */
+.mini-day.has-slots::after {
+  content: ''; position: absolute;
+  bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #3b82f6;
+}
+.mini-day.in-week.has-slots::after, .mini-day.today.has-slots::after { background: #1e3a5f; }
+
+/* ── Blocked dates ── */
+.mini-day.blocked { color: #ef4444; font-weight: 600; }
+.mini-day.blocked::after {
+  content: ''; position: absolute;
+  bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #ef4444;
+}
 .unavailable-chip{display:inline-flex;align-items:center;gap:.3rem;padding:.16rem .48rem;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:.58rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
 .week-day.unavailable{border-color:#fca5a5;background:rgba(220,38,38,.05);}
 .week-day.unavailable .w-date{color:#dc2626;}
@@ -52,7 +117,7 @@
 .w-unblock-btn:hover{background:rgba(220,38,38,.08);border-color:#dc2626;border-style:solid;}
 .week-strip-wrapper{width:100%;pointer-events:auto;touch-action:pan-x;}
 .week-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:.3rem;cursor:default;position:relative;width:100%;pointer-events:auto;}
-.week-day{height:auto;aspect-ratio:1/1;min-height:100px;min-width:80px;border:1.5px solid #e5e7eb;border-radius:11px;padding:.6rem .3rem .55rem;display:flex;flex-direction:column;align-items:center;justify-content:space-between;background:#fff;transition:border-color .2s,background .2s;box-sizing:border-box;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
+.week-day{height:auto;min-height:110px;min-width:80px;border:1.5px solid #e5e7eb;border-radius:11px;padding:.6rem .3rem .55rem;display:flex;flex-direction:column;align-items:center;justify-content:space-between;background:#fff;transition:border-color .2s,background .2s;box-sizing:border-box;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;}
 .week-day.past{background:#f9fafb;opacity:.6;cursor:not-allowed}
 .week-day.bookable{cursor:pointer}
 .week-day.bookable:hover{border-color:#1a73e8;background:rgba(26,115,232,.05);}
@@ -107,14 +172,18 @@
   .gcal-tz { font-size: 0.7rem; text-align: left; pointer-events: auto !important; }
   .gcal-body{display:flex !important;flex-direction:column !important;gap:0.9rem;overflow:visible;pointer-events:auto;}
   .gcal-content-wrapper { flex: 1 !important; min-width: 0 !important; overflow-x: hidden !important; overflow-y: visible !important; display: flex !important; flex-direction: column !important; pointer-events: auto !important; }
-  .mini-cal { width: 100%; pointer-events: auto !important; }
+  .mini-cal { width: 100%; pointer-events: auto !important; border-right: none; border-bottom: 1px solid #e5e7eb; padding-right: 0; padding-bottom: .9rem; margin-bottom: .9rem; }
+  .mini-head { margin-bottom: 0.75rem; }
+  .mini-month { font-size: 0.85rem; }
+  .mini-dow { font-size: 0.55rem; }
+  .mini-day { font-size: 0.72rem; }
   .week-strip-wrapper { display: flex !important; flex-wrap: nowrap !important; flex-shrink: 0 !important; width: 100% !important; overflow-x: auto !important; overflow-y: hidden !important; -webkit-overflow-scrolling: touch !important; touch-action: pan-x !important; scrollbar-width: thin !important; scrollbar-color: rgba(148,163,184,0.6) transparent !important; pointer-events: auto !important; user-select: none !important; scroll-behavior: smooth !important; scroll-padding: 1rem; }
   .week-strip-wrapper::-webkit-scrollbar { height: 10px; }
   .week-strip-wrapper::-webkit-scrollbar-track { background: transparent; }
   .week-strip-wrapper::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.6); border-radius: 5px; height: 10px; }
   .week-strip-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.8); }
   .week-strip { display: flex !important; flex-wrap: nowrap !important; grid-template-columns: unset !important; width: fit-content !important; gap: 0.3rem !important; pointer-events: auto !important; padding: 0.5rem 0; }
-  .week-day { aspect-ratio: 1/1 !important; min-width: 84px !important; min-height: 84px !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; padding: 0.6rem 0.4rem !important; border-radius: 12px !important; }
+  .week-day { min-height: 100px !important; min-width: 84px !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; padding: 0.6rem 0.4rem !important; border-radius: 12px !important; }
   .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; margin-top: auto !important; }
   .w-add-btn { touch-action: auto !important; pointer-events: auto !important; padding: .32rem .3rem !important; font-size: 0.58rem !important; gap: 0.2rem !important; border-width: 1.5px !important; border-radius: 6px !important; }
   .w-add-btn:active { background: rgba(26,115,232,.12); transform: scale(0.98); }
@@ -155,10 +224,11 @@
   .mini-cal { border-right: none; padding-right: 0; padding-bottom: 0.7rem; margin-bottom: 0.7rem; border-bottom: 1px solid #e5e7eb; pointer-events: auto !important; }
   .mini-head { margin-bottom: 0.5rem; pointer-events: auto !important; }
   .mini-month { font-size: 0.8rem; pointer-events: auto !important; }
-  .mini-grid { gap: 1.5px; pointer-events: auto !important; }
-  .mini-day { height: 22px; font-size: 0.68rem; pointer-events: auto !important; }
+  .mini-btn { width: 26px; height: 26px; }
+  .mini-grid { row-gap: 1px; pointer-events: auto !important; }
+  .mini-day { font-size: 0.68rem; pointer-events: auto !important; }
   .week-strip { display: flex !important; flex-wrap: nowrap !important; width: fit-content !important; gap: 0.25rem !important; pointer-events: auto !important; padding: 0.4rem 0; }
-  .week-day { aspect-ratio: 1/1 !important; min-width: 78px !important; min-height: 78px !important; padding: 0.5rem 0.35rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 11px !important; }
+  .week-day { min-height: 96px !important; min-width: 78px !important; padding: 0.5rem 0.35rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 11px !important; }
   .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; padding: .28rem .28rem !important; font-size: 0.56rem !important; }
   .w-date { font-size: 0.95rem; margin-top: 0.08rem; }
   .w-slot { font-size: 0.48rem; padding: .1rem .2rem; }
@@ -181,11 +251,11 @@
   .gcal-tz { font-size: 0.65rem; pointer-events: auto !important; }
   .mini-head { margin-bottom: 0.4rem; pointer-events: auto !important; }
   .mini-month { font-size: 0.75rem; pointer-events: auto !important; }
-  .mini-nav button { width: 22px; height: 22px; font-size: 0.7rem; pointer-events: auto !important; }
-  .mini-grid { gap: 1px; pointer-events: auto !important; }
-  .mini-day { height: 20px; font-size: 0.65rem; pointer-events: auto !important; }
+  .mini-btn { width: 24px; height: 24px; pointer-events: auto !important; }
+  .mini-grid { row-gap: 1px; pointer-events: auto !important; }
+  .mini-day { font-size: 0.65rem; pointer-events: auto !important; }
   .week-strip { display: flex !important; flex-wrap: nowrap !important; width: fit-content !important; gap: 0.2rem !important; pointer-events: auto !important; padding: 0.3rem 0; }
-  .week-day { aspect-ratio: 1/1 !important; min-width: 70px !important; min-height: 70px !important; padding: 0.45rem 0.3rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 10px !important; }
+  .week-day { min-height: 90px !important; min-width: 70px !important; padding: 0.45rem 0.3rem !important; flex-shrink: 0 !important; flex-grow: 0 !important; pointer-events: auto !important; touch-action: manipulation !important; user-select: none !important; border-radius: 10px !important; }
   .week-day .w-add-btn { pointer-events: auto !important; touch-action: manipulation !important; padding: .25rem .25rem !important; font-size: 0.54rem !important; }
   .w-date { font-size: 1rem !important; }
   .w-dow { font-size: 0.52rem !important; }
@@ -883,30 +953,31 @@
 
 .w-slot-badge {
     display: inline-block;
-    padding: .2rem .5rem;
-    background: rgba(37,99,235,.1);
-    color: #2563eb;
-    border-radius: 20px;
-    font-size: .65rem;
+    padding: .12rem .4rem;
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+    border-radius: 4px;
+    font-size: .58rem;
     font-weight: 700;
-    margin-top: .25rem;
+    line-height: 1.4;
+    white-space: nowrap;
 }
 
 .w-slot-badge.available {
-    background: rgba(22,163,74,.12);
-    color: #16a34a;
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    color: #065f46;
 }
 
-/* Also tint the card itself */
-.week-day.has-slots {
-    border-color: #e5e7eb;
-    background: #fff;
-}
-
-.mini-day.has-slots {
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-weight: 700;
+/* Bottom section of week-day card — badge + add button stacked */
+.w-bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+    width: 100%;
+    margin-top: auto;
 }
 
 @media (max-width:640px) {
