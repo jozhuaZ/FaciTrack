@@ -165,17 +165,22 @@
 .apt-badge:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
 .apt-badge.pending   { background: #fef3c7; border-color: #fbbf24; color: #78350f; }
 .apt-badge.confirmed { background: #d1fae5; border-color: #34d399; color: #065f46; }
+.apt-badge.completed { background: #ede9fe; border-color: #a78bfa; color: #4c1d95; }
 .apt-badge.declined  { background: #fee2e2; border-color: #f87171; color: #7f1d1d; }
+.apt-badge.cancelled { background: #f3f4f6; border-color: #d1d5db; color: #374151; }
+.apt-badge.rescheduled { background: #e0f2fe; border-color: #38bdf8; color: #0c4a6e; }
 .apt-badge-more {
     font-size: .6rem; color: #64748b; font-weight: 600;
     text-align: center; padding: 1px 0; cursor: pointer;
 }
 .apt-badge-more:hover { color: #0a3d62; }
+/* ── Completed / Rescheduled status indicators ── */
 .apt-badge.completed, .day-panel-status.completed, .day-panel-dot.completed,
 .pop-status-pill.completed, .pop-stripe.completed, .apt-lv-status.completed,
 .apt-legend-dot.completed {
-    background: #1d4ed8; /* adjust to match whatever pattern your existing pending/confirmed/declined rules use — pill vs dot vs stripe may need different property (background vs border) */
+    background: #ede9fe; color: #4c1d95;
 }
+.day-panel-dot.completed, .pop-stripe.completed { background: #7c3aed; }
 
 /* ── Rescheduled ── */
 .apt-badge.rescheduled,
@@ -268,9 +273,12 @@
 }
 .apt-legend-item { display: flex; align-items: center; gap: .4rem; font-size: .75rem; color: #6b7280; }
 .apt-legend-dot { width: 10px; height: 10px; border-radius: 3px; }
-.apt-legend-dot.pending   { background: #f59e0b; }
-.apt-legend-dot.confirmed { background: #10b981; }
-.apt-legend-dot.declined  { background: #ef4444; }
+.apt-legend-dot.pending    { background: #f59e0b; }
+.apt-legend-dot.confirmed  { background: #10b981; }
+.apt-legend-dot.completed  { background: #7c3aed; }
+.apt-legend-dot.declined   { background: #ef4444; }
+.apt-legend-dot.cancelled  { background: #9ca3af; }
+.apt-legend-dot.rescheduled{ background: #0369a1; }
 
 /* ── LIST VIEW — Timeline Card Design ── */
 .apt-list-wrap {

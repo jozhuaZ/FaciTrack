@@ -892,6 +892,11 @@
     margin-top: .25rem;
 }
 
+.w-slot-badge.available {
+    background: rgba(22,163,74,.12);
+    color: #16a34a;
+}
+
 /* Also tint the card itself */
 .week-day.has-slots {
     border-color: #e5e7eb;

@@ -742,77 +742,144 @@ function getAvailableTimeSlotsForDay(instructorId, day, durationSlots) {
 }
 
 // POST: Generate available schedule options
-router.post('/makeup/generate-schedule', (req, res) => {
+router.post('/makeup/generate-schedule', async (req, res) => {
     const { subjectCode, classType, deliveryMode, section } = req.body;
-    const instructorId = 1; // Current instructor
+    const instructorPublicId = req.session.userId || null;
     const durationHours = classType === 'Laboratory' ? 3 : 2;
-    const durationSlots = durationHours * 2; // Each slot = 30 min
+    const durationSlots = durationHours * 2; // each slot = 30 min
 
-    if (!subjectCode || !classType || !deliveryMode) {
-        return res.json({ success: false, error: 'Missing required fields' });
+    if (!subjectCode || !classType) {
+        return res.json({ success: false, error: 'Missing required fields.' });
     }
 
-    // Generate options for next 10 business days
-    const today = new Date();
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const options = [];
-    let currentDate = new Date(today);
-    currentDate.setDate(currentDate.getDate() + 1); // Start from tomorrow
+    try {
+        const pool = require('../configs/db');
 
-    const weekdayNames = { 'Monday': 'Monday', 'Tuesday': 'Tuesday', 'Wednesday': 'Wednesday', 'Thursday': 'Thursday', 'Friday': 'Friday' };
-    const weekdayOrder = { 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5 };
+        // ── 1. Get ALL workload blocks across ALL instructors (to check room conflicts) ──
+        const [allBlocks] = await pool.execute(
+            `SELECT wb.day_of_week, wb.start_slot, wb.end_slot, wb.room_id,
+                    r.room_number, r.room_type,
+                    u.public_id AS instructor_public_id
+             FROM workload_blocks wb
+             JOIN users u ON wb.instructor_id = u.id
+             LEFT JOIN rooms r ON wb.room_id = r.id
+             WHERE r.status = 'Active' OR wb.room_id IS NULL`
+        );
 
-    while (options.length < 5 && currentDate < new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-        const dow = currentDate.getDay();
-        const dayName = dayNames[dow];
+        // ── 2. Get the requesting instructor's own blocks (to check their free time) ──
+        const [myBlocks] = await pool.execute(
+            `SELECT wb.day_of_week, wb.start_slot, wb.end_slot
+             FROM workload_blocks wb
+             JOIN users u ON wb.instructor_id = u.id
+             WHERE u.public_id = ?`,
+            [instructorPublicId || '']
+        );
 
-        // Only consider weekdays
-        if (weekdayNames[dayName]) {
-            const availableSlots = getAvailableTimeSlotsForDay(instructorId, dayName, durationSlots);
+        // ── 3. Get all active face-to-face rooms from DB ──
+        const [rooms] = await pool.execute(
+            `SELECT id, room_number, room_type
+             FROM rooms
+             WHERE status = 'Active'
+               AND room_type NOT IN ('Online', 'Virtual')
+             ORDER BY room_number`
+        );
 
-            // Try to find a good room-time combination
-            for (const slot of availableSlots) {
-                const startSlot = slot;
-                const endSlot = slot + durationSlots;
-                const rooms = getAvailableRooms();
-
-                // Find first available room for this time slot
-                for (const room of rooms) {
-                    if (isRoomAvailableForSlot(room, dayName, startSlot, endSlot)) {
-                        const startTime = slotToLabel(startSlot);
-                        const endTime = slotToLabel(endSlot);
-
-                        options.push({
-                            date: currentDate.toISOString().split('T')[0],
-                            day: dayName,
-                            startTime,
-                            endTime,
-                            room,
-                            startSlot,
-                            endSlot,
-                            duration: durationHours
-                        });
-
-                        break; // Move to next time slot after finding a room
-                    }
-                }
-
-                if (options.length >= 5) break;
+        // Build occupied-slot maps
+        // myOccupied: Set of "day_startSlot" strings for the requesting instructor
+        const myOccupied = new Set();
+        for (const b of myBlocks) {
+            for (let s = b.start_slot; s < b.end_slot; s++) {
+                myOccupied.add(b.day_of_week + '_' + s);
             }
         }
 
-        currentDate.setDate(currentDate.getDate() + 1);
+        // roomOccupied: Map of roomId -> Set of "day_startSlot" strings
+        const roomOccupied = {};
+        for (const b of allBlocks) {
+            if (!b.room_id) continue;
+            if (!roomOccupied[b.room_id]) roomOccupied[b.room_id] = new Set();
+            for (let s = b.start_slot; s < b.end_slot; s++) {
+                roomOccupied[b.room_id].add(b.day_of_week + '_' + s);
+            }
+        }
+
+        // ── 4. Scan next 2 weeks for available slots ──
+        const today = new Date();
+        const twoWeeksLater = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const options = [];
+
+        let cursor = new Date(today);
+        cursor.setDate(cursor.getDate() + 1); // start from tomorrow
+
+        while (cursor <= twoWeeksLater) {
+            const dow = cursor.getDay();
+            if (dow >= 1 && dow <= 5) { // weekdays only
+                const dayName = dayNames[dow];
+
+                // Business hours: 7:00 AM (slot 14) to 6:00 PM (slot 36)
+                for (let startSlot = 14; startSlot <= 36 - durationSlots; startSlot++) {
+                    // Check instructor is free for this entire block
+                    let instructorFree = true;
+                    for (let s = startSlot; s < startSlot + durationSlots; s++) {
+                        if (myOccupied.has(dayName + '_' + s)) {
+                            instructorFree = false;
+                            break;
+                        }
+                    }
+                    if (!instructorFree) continue;
+
+                    // Find a free room for this slot
+                    let foundRoom = null;
+                    for (const room of rooms) {
+                        const occupied = roomOccupied[room.id] || new Set();
+                        let roomFree = true;
+                        for (let s = startSlot; s < startSlot + durationSlots; s++) {
+                            if (occupied.has(dayName + '_' + s)) {
+                                roomFree = false;
+                                break;
+                            }
+                        }
+                        if (roomFree) {
+                            foundRoom = room;
+                            break; // take the first available room
+                        }
+                    }
+
+                    if (foundRoom) {
+                        options.push({
+                            date: cursor.toISOString().split('T')[0],
+                            day: dayName,
+                            startTime: slotToLabel(startSlot),
+                            endTime: slotToLabel(startSlot + durationSlots),
+                            room: foundRoom.room_number,
+                            roomType: foundRoom.room_type,
+                            roomId: foundRoom.id,
+                            startSlot,
+                            endSlot: startSlot + durationSlots,
+                            duration: durationHours
+                        });
+                        break; // one option per day — take the earliest free slot
+                    }
+                }
+            }
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        if (options.length === 0) {
+            return res.json({ success: false, error: 'No available face-to-face slots found within the next 2 weeks. All rooms are occupied during your free times.' });
+        }
+
+        // Store in session for validation on submit
+        req.session = req.session || {};
+        req.session.lastGeneratedOptions = options;
+
+        return res.json({ success: true, options, total: options.length });
+
+    } catch (err) {
+        console.error('[generate-schedule]', err);
+        return res.json({ success: false, error: 'Server error while generating schedule. Please try again.' });
     }
-
-    if (options.length === 0) {
-        return res.json({ success: false, error: 'Unable to generate schedule options. Please try again later.' });
-    }
-
-    // Store for validation later
-    req.session = req.session || {};
-    req.session.lastGeneratedOptions = options;
-
-    res.json({ success: true, options });
 });
 
 // GET: Submission form

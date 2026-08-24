@@ -1,436 +1,498 @@
-<%- include('../../partials/header') %>
+﻿<%- include('../../partials/header') %>
 <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/student/profile.css?v=<%= Date.now() %>">
 <style>
-.request-wrapper{display:flex;justify-content:center;padding:2rem 1rem}
-.request-card{background:#fff;border:none;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);max-width:650px;width:100%;overflow:hidden}
-.request-header{background:linear-gradient(135deg,#1e88e5 0%,#1565c0 100%);padding:2rem;color:#fff}
-.request-header-title{font-weight:700;font-size:1.4rem;color:#fff;margin:0 0 .3rem}
-.request-header-subtitle{font-size:.85rem;color:rgba(255,255,255,.9);margin:0}
-.request-body{padding:2rem}
-.request-section{margin-bottom:1.8rem}
-.request-section:last-of-type{margin-bottom:0}
-.section-label{font-size:.7rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem}
-.section-label-icon{width:18px;height:18px;color:#1e88e5}
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
-.form-field{display:flex;flex-direction:column;position:relative}
-.form-label{display:block;font-size:.75rem;font-weight:700;color:#4a5568;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.3px}
-.required{color:#e53e3e;margin-left:.2rem}
-.form-input,.form-textarea,.form-select{width:100%;padding:.7rem .9rem;border:1px solid #d0d5dd;border-radius:6px;font-size:.85rem;font-family:inherit;color:#1f2937;background:#fff;outline:none;transition:all .15s;box-sizing:border-box}
-.form-input:focus,.form-textarea:focus,.form-select:focus{border-color:#1e88e5;box-shadow:0 0 0 2px rgba(30,136,229,.08)}
-.form-textarea{min-height:100px;resize:vertical}
-.form-select{cursor:pointer}
-.file-upload{padding:1rem 1.2rem;border:2px dashed #d0d5dd;border-radius:6px;text-align:center;cursor:pointer;transition:all .2s;background:#f9fafb;min-height:100px;display:flex;align-items:center;justify-content:center}
-.file-upload:hover{border-color:#1e88e5;background:rgba(30,136,229,.01)}
-.file-upload.has-file{border-style:solid;background:#f0fdf4;border-color:#86efac}
-.file-upload-label{font-weight:500;font-size:.8rem;color:#4a5568;display:flex;align-items:center;gap:.5rem;justify-content:center;flex-direction:column;cursor:pointer}
-.file-upload-label svg{width:24px;height:24px;color:#1e88e5;stroke-width:1.5}
-.file-upload-label span{font-weight:600}
-.file-upload-hint{font-size:.7rem;color:#6b7280;margin-top:.5rem;font-weight:400}
-.file-name{font-size:.75rem;color:#22863a;margin-top:.6rem;font-weight:600}
-.input-hidden{display:none}
-.field-error-tooltip{position:absolute;bottom:100%;left:0;background:#fff3cd;color:#856404;padding:.5rem .75rem;border-radius:4px;border:1px solid #ffc107;font-size:.75rem;font-weight:600;white-space:nowrap;z-index:10;margin-bottom:.3rem;display:none;align-items:center;gap:.4rem;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.field-error-tooltip.show{display:flex}
-.field-error-tooltip svg{width:16px;height:16px;flex-shrink:0}
-.field-error-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#ffc107}
-.generate-btn{padding:.75rem 1.5rem;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.5rem;border:none;font-family:inherit;width:100%;background:#1e88e5;color:#fff}
-.generate-btn:hover{background:#1565c0;box-shadow:0 4px 12px rgba(30,136,229,.25)}
-.generate-btn svg{width:16px;height:16px}
-.generation-status{margin-top:.8rem;padding:.8rem;background:#e3f2fd;border:1px solid #90caf9;border-radius:6px;color:#0d47a1;font-weight:600;font-size:.8rem;display:none}
-.schedule-grid{display:grid;gap:.8rem;margin-top:.8rem}
-.schedule-card{padding:1rem;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;transition:all .2s;background:#fff;position:relative}
-.schedule-card:hover{border-color:#1e88e5;box-shadow:0 2px 8px rgba(30,136,229,.12);transform:translateY(-1px)}
-.schedule-card.selected{border-color:#1e88e5;background:#e3f2fd;box-shadow:0 4px 12px rgba(30,136,229,.18)}
-.schedule-card input[type="checkbox"]{accent-color:#1e88e5}
-.schedule-card input[type="checkbox"]:checked + label{color:#1e88e5}
-.schedule-card.selected .schedule-item-value{color:#1565c0;font-weight:700}
-.schedule-info{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
-.schedule-item{display:flex;flex-direction:column}
-.schedule-item-label{font-size:.65rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.2rem}
-.schedule-item-value{font-size:.9rem;font-weight:600;color:#1f2937}
-.selected-summary{background:#f5f9ff;border:1px solid #bfdbfe;border-radius:8px;padding:1.2rem;margin-top:1rem;display:none}
-.selected-summary-title{font-weight:700;color:#1f2937;margin:0 0 .8rem;font-size:.85rem;display:flex;align-items:center;gap:.4rem}
-.selected-summary-title svg{width:16px;height:16px;color:#16a34a}
-.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
-.summary-item{display:flex;flex-direction:column}
-.summary-label{font-size:.65rem;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.3px;margin-bottom:.3rem}
-.summary-value{font-size:.85rem;font-weight:600;color:#1f2937;padding:.5rem .7rem;background:#f0fdf4;border-radius:4px;border-left:3px solid #16a34a}
-.form-actions{display:flex;gap:.8rem;justify-content:flex-end;padding-top:1.2rem;border-top:1px solid #e5e7eb;margin-top:1.5rem}
-.btn{padding:.65rem 1.4rem;border-radius:6px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.4rem;border:none;font-family:inherit}
-.btn-secondary{background:#e5e7eb;color:#4a5568}
-.btn-secondary:hover{background:#d1d5db}
-.btn-primary{background:#1e88e5;color:#fff}
-.btn-primary:hover{background:#1565c0;box-shadow:0 4px 12px rgba(30,136,229,.25)}
-.btn svg{width:14px;height:14px}
-@media(max-width:640px){
-  .request-header{padding:1.5rem}
-  .request-body{padding:1.5rem}
-  .form-grid{grid-template-columns:1fr;gap:1rem}
-  .form-actions{flex-direction:column}
-  .btn{width:100%;justify-content:center}
-  .schedule-info{grid-template-columns:1fr}
-  .summary-grid{grid-template-columns:1fr}
+/* â”€â”€ Makeup Request Form â€” matches student book.ejs design â”€â”€ */
+.book-scroll { display: flex; justify-content: center; padding: 0 0 3rem; }
+.book-form-card { background: #fff; border-radius: var(--radius-xl, 16px); box-shadow: var(--shadow-md); padding: 2rem; width: 100%; max-width: 720px; }
+
+.instructor-summary-card {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, rgba(10,61,98,.05), rgba(30,136,229,.06));
+    border: 1px solid rgba(10,61,98,.12);
+    border-radius: var(--radius-lg, 12px);
+    margin-bottom: 1.75rem;
+}
+.instructor-summary-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--primary-blue, #0a3d62);
+    color: #fff; font-size: 1rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Section titles â€” same as student form */
+.form-section-title {
+    font-size: 0.8125rem; font-weight: 700; color: var(--gray-700);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; gap: 0.5rem;
+    margin: 1.75rem 0 1rem; padding-bottom: 0.625rem;
+    border-bottom: 1.5px solid var(--gray-100);
+}
+.form-section-title:first-of-type { margin-top: 0; }
+
+/* Form layout */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label { font-size: 0.8125rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.375rem; }
+.form-input, .form-select, .form-textarea {
+    width: 100%; padding: 0.625rem 0.875rem;
+    border: 1.5px solid var(--gray-200); border-radius: var(--radius-md, 8px);
+    font-size: 0.875rem; font-family: var(--font-body); color: var(--gray-800);
+    background: #fff; outline: none; transition: border-color .15s, box-shadow .15s;
+    box-sizing: border-box;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--primary-blue, #0a3d62);
+    box-shadow: 0 0 0 3px rgba(10,61,98,.08);
+}
+.form-textarea { min-height: 100px; resize: vertical; }
+.form-select { cursor: pointer; }
+.form-hint { font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem; }
+
+/* Schedule cards */
+.schedule-grid { display: flex; flex-direction: column; gap: 0.75rem; }
+.schedule-card {
+    padding: 1rem 1.25rem;
+    border: 1.5px solid var(--gray-200); border-radius: var(--radius-lg, 12px);
+    cursor: pointer; transition: all 0.15s; background: #fff;
+}
+.schedule-card:hover { border-color: var(--primary-blue, #0a3d62); box-shadow: 0 2px 8px rgba(10,61,98,.1); }
+.schedule-card.selected { border-color: var(--primary-blue, #0a3d62); background: rgba(10,61,98,.03); }
+.schedule-info { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.75rem; }
+.schedule-item-label { font-size: 0.6875rem; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.125rem; }
+.schedule-item-value { font-size: 0.875rem; font-weight: 600; color: var(--gray-800); }
+
+/* File upload */
+.file-upload {
+    padding: 1.25rem; border: 2px dashed var(--gray-200);
+    border-radius: var(--radius-lg, 12px); text-align: center;
+    cursor: pointer; transition: all 0.2s; background: var(--gray-50);
+    display: flex; align-items: center; justify-content: center;
+}
+.file-upload:hover { border-color: var(--primary-blue, #0a3d62); background: rgba(10,61,98,.02); }
+.file-upload.has-file { border-style: solid; background: rgba(22,163,74,.04); border-color: #86efac; }
+.file-upload-inner { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; pointer-events: none; }
+.file-upload-inner svg { color: var(--primary-blue, #0a3d62); }
+.file-upload-title { font-size: 0.875rem; font-weight: 600; color: var(--gray-700); }
+.file-upload-hint { font-size: 0.75rem; color: var(--gray-400); }
+.file-name-display { font-size: 0.75rem; color: #16a34a; font-weight: 600; margin-top: 0.25rem; }
+.input-hidden { display: none; }
+
+/* Result card */
+.result-card {
+    background: rgba(22,163,74,.04); border: 1.5px solid #86efac;
+    border-radius: var(--radius-lg, 12px); padding: 1.25rem;
+    margin-top: 1rem; display: none;
+}
+.result-card-title { font-weight: 700; color: var(--gray-800); font-size: 0.875rem; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.875rem; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.result-item-label { font-size: 0.6875rem; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
+.result-item-value { font-size: 0.875rem; font-weight: 600; color: var(--gray-800); padding: 0.4rem 0.625rem; background: #fff; border-radius: var(--radius-sm, 6px); border-left: 3px solid #16a34a; }
+
+/* Generate button */
+.btn-generate {
+    width: 100%; padding: 0.75rem; border: none; border-radius: var(--radius-md, 8px);
+    background: var(--primary-blue, #0a3d62); color: #fff;
+    font-size: 0.875rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    font-family: var(--font-body); transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-generate:hover { background: #083352; box-shadow: 0 4px 12px rgba(10,61,98,.25); }
+
+/* Submit / cancel buttons â€” same as student */
+.book-actions-row { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; }
+.btn-submit-book {
+    width: 100%; padding: 0.875rem; border: none; border-radius: var(--radius-md, 8px);
+    background: var(--primary-blue, #0a3d62); color: #fff;
+    font-size: 0.9375rem; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    font-family: var(--font-body); transition: background 0.15s, box-shadow 0.15s;
+}
+.btn-submit-book:hover { background: #083352; box-shadow: 0 4px 16px rgba(10,61,98,.3); }
+.btn-cancel-book {
+    width: 100%; padding: 0.75rem; border: 1.5px solid var(--gray-200); border-radius: var(--radius-md, 8px);
+    background: #fff; color: var(--gray-600); font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; font-family: var(--font-body); transition: background 0.15s;
+    text-decoration: none; display: flex; align-items: center; justify-content: center;
+}
+.btn-cancel-book:hover { background: var(--gray-50); }
+
+/* Generation status */
+.generation-status {
+    margin-top: 0.75rem; padding: 0.75rem 1rem;
+    background: rgba(10,61,98,.05); border: 1.5px solid rgba(10,61,98,.15);
+    border-radius: var(--radius-md, 8px); color: var(--primary-blue, #0a3d62);
+    font-weight: 600; font-size: 0.8125rem; display: none;
+    align-items: center; gap: 0.5rem;
+}
+
+/* Poll quick entry */
+.poll-entry-box {
+    border: 1.5px solid var(--gray-200); border-radius: var(--radius-lg, 12px);
+    padding: 1rem 1.25rem; background: var(--gray-50);
+}
+
+@media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .schedule-info { grid-template-columns: 1fr; }
+    .result-grid { grid-template-columns: 1fr; }
+    .book-form-card { padding: 1.25rem; }
 }
 </style>
 
 <div class="instructor-layout">
-  <%- include('../../partials/instructor-sidebar', { activePage: 'makeup', pendingCount: pendingCount }) %>
-  <main class="instructor-main">
-    <div class="main-container">
+    <%- include('../../partials/instructor-sidebar', { activePage: 'makeup', pendingCount: pendingCount }) %>
+    <main class="instructor-main">
+        <div class="main-container">
 
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Submit Make-Up Class Request</h1>
-          <p class="page-subtitle">Request approval for a make-up class session</p>
-        </div>
-        <div class="header-actions">
-          <a href="/instructor/makeup/requests" class="btn-header-action">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back to Requests
-          </a>
-        </div>
-      </div>
-
-      <div class="request-wrapper">
-        <div class="request-card">
-          <div class="request-header">
-            <h1 class="request-header-title">Submit Make-Up Class Request</h1>
-            <p class="request-header-subtitle">Request approval for a make-up class session</p>
-          </div>
-
-          <form action="/instructor/makeup/request" method="POST" enctype="multipart/form-data" id="makeupForm">
-            <div class="request-body">
-
-              <!-- Subject Information Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-                  Subject Information
-                </div>
-                <div class="form-grid">
-                  <div class="form-field">
-                    <label class="form-label">Subject Code<span class="required">*</span></label>
-                    <div class="field-error-tooltip" id="error-subjectCode">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="18" fill="white" font-weight="bold">!</text></svg>
-                      Please fill this field
+            <div class="page-header" style="margin-bottom:1rem;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;">
+                        <a href="/instructor/makeup/requests" style="font-size:.8125rem;color:var(--gray-500);text-decoration:none;display:flex;align-items:center;gap:.25rem;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                            Back to Requests
+                        </a>
+                        <span style="color:var(--gray-300);font-size:.8125rem;">/</span>
+                        <span style="font-size:.8125rem;color:var(--gray-700);font-weight:600;">New Request</span>
                     </div>
-                    <input type="text" name="subjectCode" id="subjectCode" class="form-input" required>
-                  </div>
-                  <div class="form-field">
-                    <label class="form-label">Subject Name<span class="required">*</span></label>
-                    <div class="field-error-tooltip" id="error-subjectName">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="18" fill="white" font-weight="bold">!</text></svg>
-                      Please fill this field
-                    </div>
-                    <input type="text" name="subjectName" id="subjectName" class="form-input" required>
-                  </div>
-                  <div class="form-field">
-                    <label class="form-label">Section<span class="required">*</span></label>
-                    <div class="field-error-tooltip" id="error-section">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="18" fill="white" font-weight="bold">!</text></svg>
-                      Please fill this field
-                    </div>
-                    <input type="text" name="section" id="section" class="form-input" required>
-                  </div>
-                  <div class="form-field">
-                    <label class="form-label">Class Type<span class="required">*</span></label>
-                    <div class="field-error-tooltip" id="error-classType">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="18" fill="white" font-weight="bold">!</text></svg>
-                      Please select a type
-                    </div>
-                    <select name="classType" id="classType" class="form-select" required>
-                      <option value="">Select type</option>
-                      <option value="Lecture">Lecture</option>
-                      <option value="Laboratory">Laboratory</option>
-                      <option value="Online">Online</option>
-                    </select>
-                  </div>
+                    <h1 class="page-title">Submit Make-Up Class Request</h1>
+                    <p class="page-subtitle">Request approval for a make-up class session from the Dean</p>
                 </div>
-              </div>
-
-              <!-- Multiple Schedules Selection Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  Select Affected Schedules
-                </div>
-                <p style="font-size:.8rem;color:#6b7280;margin:0 0 1rem;line-height:1.4">Select all schedules that will be affected by this makeup class. You can select multiple schedules if they share the same reason.</p>
-                
-                <div id="schedulesList" class="schedule-grid">
-                  <!-- Schedules will be loaded here dynamically -->
-                  <div class="schedule-card" data-schedule-id="1">
-                    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem">
-                      <input type="checkbox" id="schedule-1" name="schedules[]" value="1" style="width:18px;height:18px;cursor:pointer">
-                      <label for="schedule-1" style="font-weight:700;color:#1f2937;font-size:.9rem;cursor:pointer;flex:1">ITEC 321 - Software Engineering</label>
-                    </div>
-                    <div class="schedule-info">
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Section</div>
-                        <div class="schedule-item-value">BSIT 3A</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Day & Time</div>
-                        <div class="schedule-item-value">Monday 1:00-3:00 PM</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Room</div>
-                        <div class="schedule-item-value">LAB 401</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Type</div>
-                        <div class="schedule-item-value">Laboratory</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="schedule-card" data-schedule-id="2">
-                    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem">
-                      <input type="checkbox" id="schedule-2" name="schedules[]" value="2" style="width:18px;height:18px;cursor:pointer">
-                      <label for="schedule-2" style="font-weight:700;color:#1f2937;font-size:.9rem;cursor:pointer;flex:1">ITEC 321 - Software Engineering</label>
-                    </div>
-                    <div class="schedule-info">
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Section</div>
-                        <div class="schedule-item-value">BSIT 3B</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Day & Time</div>
-                        <div class="schedule-item-value">Wednesday 10:00-12:00 PM</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Room</div>
-                        <div class="schedule-item-value">ROOM 305</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Type</div>
-                        <div class="schedule-item-value">Lecture</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="schedule-card" data-schedule-id="3">
-                    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem">
-                      <input type="checkbox" id="schedule-3" name="schedules[]" value="3" style="width:18px;height:18px;cursor:pointer">
-                      <label for="schedule-3" style="font-weight:700;color:#1f2937;font-size:.9rem;cursor:pointer;flex:1">ITEC 322 - Database Systems</label>
-                    </div>
-                    <div class="schedule-info">
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Section</div>
-                        <div class="schedule-item-value">BSIT 3A</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Day & Time</div>
-                        <div class="schedule-item-value">Friday 3:00-5:00 PM</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Room</div>
-                        <div class="schedule-item-value">LAB 402</div>
-                      </div>
-                      <div class="schedule-item">
-                        <div class="schedule-item-label">Type</div>
-                        <div class="schedule-item-value">Laboratory</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="selected-summary" id="selectedSchedulesSummary" style="display:none;margin-top:1rem">
-                  <div class="selected-summary-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span id="selectedCount">0</span> Schedule(s) Selected
-                  </div>
-                  <div id="selectedSchedulesDetails" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.8rem"></div>
-                </div>
-              </div>
-
-              <!-- Schedule Generation Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                  Generate Available Day
-                </div>
-                <p style="font-size:.8rem;color:#6b7280;margin:0 0 1rem;line-height:1.4">System will find available day, room, and time based on your workload for the selected schedule(s)</p>
-                <button type="button" id="generateBtn" class="generate-btn" onclick="generateSchedule()">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                  Generate Available Day
-                </button>
-                <div id="generationStatus" class="generation-status">
-                  <p style="margin:0">Generating available schedule...</p>
-                </div>
-              </div>
-
-              <!-- Auto-Generated Schedule Result (shown after generation) -->
-              <div id="scheduleResultSection" class="selected-summary" style="display:none">
-                <div class="selected-summary-title">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                  Available Schedule Found
-                </div>
-                <div class="summary-grid">
-                  <div class="summary-item">
-                    <div class="summary-label">Date</div>
-                    <div class="summary-value" id="displayDate">—</div>
-                  </div>
-                  <div class="summary-item">
-                    <div class="summary-label">Day</div>
-                    <div class="summary-value" id="displayDay">—</div>
-                  </div>
-                  <div class="summary-item">
-                    <div class="summary-label">Time</div>
-                    <div class="summary-value" id="displayTime">—</div>
-                  </div>
-                  <div class="summary-item">
-                    <div class="summary-label">Room</div>
-                    <div class="summary-value" id="displayRoom">—</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Request Details Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v6h-2z"/></svg>
-                  Request Details
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Reason for Make-Up Class<span class="required">*</span></label>
-                  <textarea name="reason" id="reason" class="form-textarea" placeholder="Explain why this make-up class is necessary (e.g., unexpected circumstances, medical reasons, etc.)" required></textarea>
-                </div>
-              </div>
-
-              <!-- Supporting Document Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  Supporting Document<span class="required">*</span>
-                </div>
-                <input type="file" name="document" id="documentInput" class="input-hidden" accept=".pdf" required>
-                <label for="documentInput" class="file-upload" id="fileUploadLabel">
-                  <div class="file-upload-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                    </svg>
-                    <div>
-                      <div style="font-weight:600">Upload PDF Document</div>
-                      <p class="file-upload-hint" style="margin:0.3rem 0 0">Maximum file size: 10 MB</p>
-                    </div>
-                    <div id="fileNameDisplay" class="file-name" style="display:none"></div>
-                  </div>
-                </label>
-              </div>
-
-              <!-- Student Polling Section -->
-              <div class="request-section">
-                <div class="section-label">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="section-label-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                  Student Polling / Attendance Record
-                </div>
-                <p style="font-size:.8rem;color:#6b7280;margin:0 0 1rem;line-height:1.4">Upload polling results or attendance records showing student agreement for the makeup class schedule. This helps the dean review student availability.</p>
-                
-                <div style="display:grid;gap:.8rem">
-                  <input type="file" name="pollingDocument" id="pollingInput" class="input-hidden" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv">
-                  <label for="pollingInput" class="file-upload" id="pollingUploadLabel">
-                    <div class="file-upload-label">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>
-                      </svg>
-                      <div>
-                        <div style="font-weight:600">Upload Polling/Attendance File</div>
-                        <p class="file-upload-hint" style="margin:0.3rem 0 0">PDF, Image, or Excel file • Max 10 MB</p>
-                      </div>
-                      <div id="pollingFileNameDisplay" class="file-name" style="display:none"></div>
-                    </div>
-                  </label>
-
-                  <div style="display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:#f0fdf4;border:1px solid #86efac;border-radius:8px">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                    <p style="margin:0;font-size:.75rem;color:#166534;line-height:1.5"><strong>Optional but recommended:</strong> Attach polling results to show student consensus for the proposed makeup date and time.</p>
-                  </div>
-
-                  <!-- Manual Polling Entry -->
-                  <div style="border:1px solid #e5e7eb;border-radius:8px;padding:1rem;background:#f9fafb">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-                      <label style="font-weight:700;color:#1f2937;font-size:.85rem;display:flex;align-items:center;gap:.5rem">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                        Quick Poll Entry
-                      </label>
-                      <button type="button" id="togglePollEntry" class="btn-secondary" style="padding:.35rem .75rem;font-size:.75rem;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer">
-                        Show
-                      </button>
-                    </div>
-                    
-                    <div id="pollEntrySection" style="display:none">
-                      <p style="font-size:.75rem;color:#6b7280;margin:0 0 .75rem">Manually enter polling statistics if you conducted a verbal or online poll</p>
-                      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem">
-                        <div class="form-field">
-                          <label class="form-label" style="font-size:.7rem">Total Students</label>
-                          <input type="number" name="pollTotal" id="pollTotal" class="form-input" placeholder="e.g., 40" min="0" style="padding:.55rem .75rem;font-size:.8rem">
-                        </div>
-                        <div class="form-field">
-                          <label class="form-label" style="font-size:.7rem;color:#16a34a">Agreed</label>
-                          <input type="number" name="pollAgreed" id="pollAgreed" class="form-input" placeholder="e.g., 38" min="0" style="padding:.55rem .75rem;font-size:.8rem;border-color:#86efac">
-                        </div>
-                        <div class="form-field">
-                          <label class="form-label" style="font-size:.7rem;color:#dc2626">Disagreed</label>
-                          <input type="number" name="pollDisagreed" id="pollDisagreed" class="form-input" placeholder="e.g., 2" min="0" style="padding:.55rem .75rem;font-size:.8rem;border-color:#fca5a5">
-                        </div>
-                      </div>
-                      
-                      <div id="pollSummary" style="display:none;margin-top:.75rem;padding:.75rem;background:#e3f2fd;border:1px solid#90caf9;border-radius:6px">
-                        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e88e5" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                          <span style="font-weight:700;color:#0d47a1;font-size:.8rem">Poll Result</span>
-                        </div>
-                        <div style="display:flex;gap:1rem;font-size:.75rem;color:#1565c0">
-                          <span><strong id="pollPercentage">0%</strong> Agreement</span>
-                          <span>•</span>
-                          <span><strong id="pollResponseRate">0%</strong> Response Rate</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Hidden inputs for generated schedule -->
-              <input type="hidden" name="day" id="hiddenDay">
-              <input type="hidden" name="date" id="hiddenDate">
-              <input type="hidden" name="classType" id="hiddenClassType">
-              <input type="hidden" name="subjectName" id="subjectName">
-              <input type="hidden" name="deliveryMode" id="deliveryMode" value="in-campus">
-              <input type="hidden" name="room" id="room">
-              <input type="hidden" name="startTime" id="startTime">
-              <input type="hidden" name="endTime" id="endTime">
-
             </div>
 
-            <!-- Form Actions -->
-            <div class="form-actions">
-              <a href="/instructor/makeup/requests" class="btn btn-secondary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="19 12 5 12"/><polyline points="12 19 5 12 12 5"/></svg>
-                Cancel
-              </a>
-              <button type="submit" class="btn btn-primary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                Submit Request
-              </button>
+            <div class="book-scroll">
+                <div class="book-form-card">
+
+                    <!-- Instructor info strip -->
+                    <div class="instructor-summary-card">
+                        <div class="instructor-summary-avatar"><%= instructor.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() %></div>
+                        <div>
+                            <p style="font-weight:700;font-size:.9375rem;color:var(--gray-900);margin:0 0 .125rem;"><%= instructor.name %></p>
+                            <p style="font-size:.8125rem;color:var(--gray-500);margin:0;"><%= instructor.position %> &mdash; <%= instructor.department %></p>
+                        </div>
+                    </div>
+
+                    <% if (typeof flash !== 'undefined' && flash) { %>
+                    <div style="padding:.875rem 1rem;border-radius:var(--radius-md,8px);margin-bottom:1.25rem;font-size:.875rem;font-weight:600;display:flex;align-items:center;gap:.5rem;<%= flash.type === 'success' ? 'background:rgba(22,163,74,.08);border:1.5px solid #86efac;color:#15803d;' : 'background:rgba(220,38,38,.06);border:1.5px solid #fca5a5;color:#dc2626;' %>">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <%= flash.message %>
+                    </div>
+                    <% } %>
+
+                    <% if (typeof formError !== 'undefined' && formError) { %>
+                    <div style="padding:.875rem 1rem;border-radius:var(--radius-md,8px);margin-bottom:1.25rem;font-size:.875rem;font-weight:600;background:rgba(220,38,38,.06);border:1.5px solid #fca5a5;color:#dc2626;display:flex;align-items:center;gap:.5rem;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <%= formError %>
+                    </div>
+                    <% } %>
+
+                    <form action="/instructor/makeup/request" method="POST" enctype="multipart/form-data" id="makeupForm">
+
+                        <!-- Subject Information -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                            Subject Information
+                        </p>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Subject Code <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" name="subjectCode" id="subjectCode" class="form-input" placeholder="e.g. ITEC 321" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Subject Name <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" name="subjectName" id="subjectName" class="form-input" placeholder="e.g. Software Engineering" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Section <span style="color:#e53e3e;">*</span></label>
+                                <input type="text" name="section" id="section" class="form-input" placeholder="e.g. BSIT 3A" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Class Type <span style="color:#e53e3e;">*</span></label>
+                                <select name="classType" id="classType" class="form-select" required>
+                                    <option value="">Select type</option>
+                                    <option value="Lecture">Lecture</option>
+                                    <option value="Laboratory">Laboratory</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Affected Schedules -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Select Affected Schedules
+                        </p>
+                        <p style="font-size:.8125rem;color:var(--gray-500);margin:-.5rem 0 1rem;line-height:1.5;">Select all schedules that will be affected. You can select multiple.</p>
+
+                        <div id="schedulesList" class="schedule-grid">
+                            <div class="schedule-card" data-schedule-id="1">
+                                <div style="display:flex;align-items:center;gap:.625rem;">
+                                    <input type="checkbox" id="schedule-1" name="schedules[]" value="1" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary-blue);">
+                                    <label for="schedule-1" style="font-weight:700;color:var(--gray-900);font-size:.9rem;cursor:pointer;flex:1;">ITEC 321 - Software Engineering</label>
+                                </div>
+                                <div class="schedule-info">
+                                    <div><div class="schedule-item-label">Section</div><div class="schedule-item-value">BSIT 3A</div></div>
+                                    <div><div class="schedule-item-label">Day &amp; Time</div><div class="schedule-item-value">Monday 1:00â€“3:00 PM</div></div>
+                                    <div><div class="schedule-item-label">Room</div><div class="schedule-item-value">LAB 401</div></div>
+                                    <div><div class="schedule-item-label">Type</div><div class="schedule-item-value">Laboratory</div></div>
+                                </div>
+                            </div>
+                            <div class="schedule-card" data-schedule-id="2">
+                                <div style="display:flex;align-items:center;gap:.625rem;">
+                                    <input type="checkbox" id="schedule-2" name="schedules[]" value="2" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary-blue);">
+                                    <label for="schedule-2" style="font-weight:700;color:var(--gray-900);font-size:.9rem;cursor:pointer;flex:1;">ITEC 321 - Software Engineering</label>
+                                </div>
+                                <div class="schedule-info">
+                                    <div><div class="schedule-item-label">Section</div><div class="schedule-item-value">BSIT 3B</div></div>
+                                    <div><div class="schedule-item-label">Day &amp; Time</div><div class="schedule-item-value">Wednesday 10:00 AMâ€“12:00 PM</div></div>
+                                    <div><div class="schedule-item-label">Room</div><div class="schedule-item-value">ROOM 305</div></div>
+                                    <div><div class="schedule-item-label">Type</div><div class="schedule-item-value">Lecture</div></div>
+                                </div>
+                            </div>
+                            <div class="schedule-card" data-schedule-id="3">
+                                <div style="display:flex;align-items:center;gap:.625rem;">
+                                    <input type="checkbox" id="schedule-3" name="schedules[]" value="3" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary-blue);">
+                                    <label for="schedule-3" style="font-weight:700;color:var(--gray-900);font-size:.9rem;cursor:pointer;flex:1;">ITEC 322 - Database Systems</label>
+                                </div>
+                                <div class="schedule-info">
+                                    <div><div class="schedule-item-label">Section</div><div class="schedule-item-value">BSIT 3A</div></div>
+                                    <div><div class="schedule-item-label">Day &amp; Time</div><div class="schedule-item-value">Friday 3:00â€“5:00 PM</div></div>
+                                    <div><div class="schedule-item-label">Room</div><div class="schedule-item-value">LAB 402</div></div>
+                                    <div><div class="schedule-item-label">Type</div><div class="schedule-item-value">Laboratory</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selected summary -->
+                        <div id="selectedSchedulesSummary" style="display:none;margin-top:.875rem;padding:1rem 1.25rem;background:rgba(10,61,98,.04);border:1.5px solid rgba(10,61,98,.15);border-radius:var(--radius-lg,12px);">
+                            <p style="font-weight:700;color:var(--gray-800);font-size:.875rem;margin:0 0 .75rem;display:flex;align-items:center;gap:.4rem;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span id="selectedCount">0</span> Schedule(s) Selected
+                            </p>
+                            <div id="selectedSchedulesDetails" style="display:flex;flex-direction:column;gap:.5rem;"></div>
+                        </div>
+
+                        <!-- Generate Available Day -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            Generate Available Day
+                        </p>
+                        <p style="font-size:.8125rem;color:var(--gray-500);margin:-.5rem 0 1rem;line-height:1.5;">System will find the best available day, room, and time based on your workload. Options are limited to the next 2 weeks.</p>
+
+                        <button type="button" id="generateBtn" class="btn-generate" onclick="generateSchedule()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            Generate Available Day
+                        </button>
+
+                        <div id="generationStatus" class="generation-status" style="display:none;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Generating available schedule&hellip;
+                        </div>
+
+                        <div id="scheduleResultSection" class="result-card" style="display:none;padding:0;overflow:hidden;">
+                            <!-- Card header bar -->
+                            <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.25rem;background:var(--primary-blue,#0a3d62);flex-wrap:wrap;gap:.5rem;">
+                                <div style="display:flex;align-items:center;gap:.625rem;">
+                                    <div style="width:28px;height:28px;background:rgba(255,255,255,.15);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </div>
+                                    <div>
+                                        <p style="margin:0;font-size:.8125rem;font-weight:700;color:#fff;line-height:1.2;">Available Schedule Found</p>
+                                        <p style="margin:0;font-size:.7rem;color:rgba(255,255,255,.65);margin-top:.125rem;">System-generated based on workload &amp; room availability</p>
+                                    </div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:.5rem;">
+                                    <span id="optionCounter" style="font-size:.7rem;font-weight:700;color:rgba(255,255,255,.85);background:rgba(255,255,255,.15);padding:.25rem .625rem;border-radius:999px;letter-spacing:.02em;">Option 1 of 1</span>
+                                    <button type="button" onclick="generateAgain()" style="display:flex;align-items:center;gap:.375rem;padding:.375rem .875rem;font-size:.75rem;font-weight:700;color:var(--primary-blue,#0a3d62);background:#fff;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-body);transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                        Try Another
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Schedule detail rows -->
+                            <div style="padding:1.125rem 1.25rem;display:flex;flex-direction:column;gap:.625rem;background:#fff;">
+
+                                <div style="display:flex;align-items:center;gap:.875rem;padding:.625rem .875rem;border:1.5px solid var(--gray-100);border-radius:8px;">
+                                    <div style="width:34px;height:34px;background:rgba(10,61,98,.06);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue,#0a3d62)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    </div>
+                                    <div style="flex:1;min-width:0;">
+                                        <p style="margin:0;font-size:.6875rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;">Date &amp; Day</p>
+                                        <p style="margin:.125rem 0 0;font-size:.9375rem;font-weight:700;color:var(--gray-900);">
+                                            <span id="displayDate">&mdash;</span>
+                                            <span style="font-size:.8125rem;font-weight:500;color:var(--gray-500);margin-left:.375rem;" id="displayDayBadge"></span>
+                                        </p>
+                                    </div>
+                                    <input type="hidden" id="displayDay">
+                                </div>
+
+                                <div style="display:flex;align-items:center;gap:.875rem;padding:.625rem .875rem;border:1.5px solid var(--gray-100);border-radius:8px;">
+                                    <div style="width:34px;height:34px;background:rgba(10,61,98,.06);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue,#0a3d62)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <p style="margin:0;font-size:.6875rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;">Time</p>
+                                        <p style="margin:.125rem 0 0;font-size:.9375rem;font-weight:700;color:var(--gray-900);" id="displayTime">&mdash;</p>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex;align-items:center;gap:.875rem;padding:.625rem .875rem;border:1.5px solid var(--gray-100);border-radius:8px;">
+                                    <div style="width:34px;height:34px;background:rgba(10,61,98,.06);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue,#0a3d62)" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <p style="margin:0;font-size:.6875rem;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;">Room</p>
+                                        <p style="margin:.125rem 0 0;font-size:.9375rem;font-weight:700;color:var(--gray-900);" id="displayRoom">&mdash;</p>
+                                        <p style="margin:.125rem 0 0;font-size:.75rem;color:var(--gray-500);" id="displayRoomType"></p>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Cycle-back notice -->
+                            <div id="cycleWrapNotice" style="display:none;margin:0 1.25rem 1rem;padding:.625rem .875rem;background:rgba(234,88,12,.05);border:1.5px solid rgba(234,88,12,.18);border-radius:8px;font-size:.8125rem;color:#9a3412;align-items:center;gap:.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                All available options have been shown &mdash; cycling back to the first.
+                            </div>
+                        </div>
+
+                        <!-- Reason -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Request Details
+                        </p>
+
+                        <div class="form-group">
+                            <label class="form-label">Reason for Make-Up Class <span style="color:#e53e3e;">*</span></label>
+                            <textarea name="reason" id="reason" class="form-textarea" placeholder="Explain why this make-up class is necessary (e.g., unexpected circumstances, medical reasons, official travel, etc.)" required></textarea>
+                        </div>
+
+                        <!-- Supporting Document -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            Supporting Document <span style="color:#e53e3e;">*</span>
+                        </p>
+
+                        <div class="form-group">
+                            <input type="file" name="document" id="documentInput" class="input-hidden" accept=".pdf" required>
+                            <label for="documentInput" class="file-upload" id="fileUploadLabel">
+                                <div class="file-upload-inner">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    <span class="file-upload-title">Upload PDF Document</span>
+                                    <span class="file-upload-hint">Maximum file size: 10 MB</span>
+                                    <span id="fileNameDisplay" class="file-name-display" style="display:none;"></span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Student Polling -->
+                        <p class="form-section-title">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            Student Polling / Attendance Record
+                            <span style="font-size:.7rem;color:var(--gray-400);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span>
+                        </p>
+
+                        <p style="font-size:.8125rem;color:var(--gray-500);margin:-.5rem 0 1rem;line-height:1.5;">Upload polling results or attendance records showing student agreement for the makeup class schedule.</p>
+
+                        <div class="form-group">
+                            <input type="file" name="pollingDocument" id="pollingInput" class="input-hidden" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv">
+                            <label for="pollingInput" class="file-upload" id="pollingUploadLabel">
+                                <div class="file-upload-inner">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+                                    <span class="file-upload-title">Upload Polling / Attendance File</span>
+                                    <span class="file-upload-hint">PDF, Image, or Excel &bull; Max 10 MB</span>
+                                    <span id="pollingFileNameDisplay" class="file-name-display" style="display:none;"></span>
+                                </div>
+                            </label>
+                            <div style="display:flex;align-items:flex-start;gap:.625rem;margin-top:.75rem;padding:.75rem 1rem;background:rgba(22,163,74,.04);border:1.5px solid #86efac;border-radius:var(--radius-md,8px);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                <p style="margin:0;font-size:.8125rem;color:#166534;line-height:1.5;"><strong>Recommended:</strong> Attach polling results to show student consensus for the proposed makeup date and time.</p>
+                            </div>
+                        </div>
+
+                        <!-- Quick Poll Entry -->
+                        <div class="poll-entry-box">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;">
+                                <label style="font-weight:700;color:var(--gray-800);font-size:.875rem;display:flex;align-items:center;gap:.4rem;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                    Quick Poll Entry
+                                </label>
+                                <button type="button" id="togglePollEntry" style="padding:.3rem .75rem;font-size:.75rem;font-weight:600;border:1.5px solid var(--gray-200);background:#fff;border-radius:var(--radius-sm,6px);cursor:pointer;color:var(--gray-600);">Show</button>
+                            </div>
+                            <div id="pollEntrySection" style="display:none;">
+                                <p style="font-size:.8125rem;color:var(--gray-500);margin:0 0 .75rem;line-height:1.5;">Manually enter polling statistics if you conducted a verbal or online poll.</p>
+                                <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+                                    <div class="form-group">
+                                        <label class="form-label" style="font-size:.75rem;">Total Students</label>
+                                        <input type="number" name="pollTotal" id="pollTotal" class="form-input" placeholder="e.g. 40" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" style="font-size:.75rem;color:#16a34a;">Agreed</label>
+                                        <input type="number" name="pollAgreed" id="pollAgreed" class="form-input" placeholder="e.g. 38" min="0" style="border-color:#86efac;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" style="font-size:.75rem;color:#dc2626;">Disagreed</label>
+                                        <input type="number" name="pollDisagreed" id="pollDisagreed" class="form-input" placeholder="e.g. 2" min="0" style="border-color:#fca5a5;">
+                                    </div>
+                                </div>
+                                <div id="pollSummary" style="display:none;margin-top:.75rem;padding:.75rem 1rem;background:rgba(10,61,98,.05);border:1.5px solid rgba(10,61,98,.15);border-radius:var(--radius-md,8px);">
+                                    <p style="margin:0;font-size:.8125rem;font-weight:700;color:var(--primary-blue);display:flex;gap:1.25rem;">
+                                        <span><strong id="pollPercentage">0%</strong> Agreement</span>
+                                        <span>&bull;</span>
+                                        <span><strong id="pollResponseRate">0%</strong> Response Rate</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden inputs for generated schedule -->
+                        <input type="hidden" name="day" id="hiddenDay">
+                        <input type="hidden" name="date" id="hiddenDate">
+                        <input type="hidden" name="deliveryMode" id="deliveryMode" value="in-campus">
+                        <input type="hidden" name="room" id="room">
+                        <input type="hidden" name="roomId" id="roomId">
+                        <input type="hidden" name="startTime" id="startTime">
+                        <input type="hidden" name="endTime" id="endTime">
+
+                        <!-- Actions -->
+                        <div class="book-actions-row">
+                            <button type="submit" class="btn-submit-book">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Submit Make-Up Class Request
+                            </button>
+                            <a href="/instructor/makeup/requests" class="btn-cancel-book">Cancel</a>
+                        </div>
+
+                        <p style="font-size:.75rem;color:var(--gray-400);margin-top:.875rem;display:flex;align-items:center;gap:.3rem;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            Your request will be sent to the Dean for approval. You will be notified once the Dean responds.
+                        </p>
+
+                    </form>
+                </div>
             </div>
 
-          </form>
         </div>
-      </div>
-
-    </div>
-  </main>
+    </main>
 </div>
 
+<div class="toast-container" id="toastContainer"></div>
 <%- include('../../partials/script') %>
 <%- include('../../partials/footer') %>
+
 <script>
 (function() {
   const subjectCode = document.getElementById('subjectCode');
   const subjectName = document.getElementById('subjectName');
   const section = document.getElementById('section');
   const classType = document.getElementById('classType');
-  const generateBtn = document.getElementById('generateBtn');
   const documentInput = document.getElementById('documentInput');
   const fileUploadLabel = document.getElementById('fileUploadLabel');
   const fileNameDisplay = document.getElementById('fileNameDisplay');
@@ -440,97 +502,86 @@
 
   let generatedSchedule = null;
   let selectedSchedules = [];
+  let allOptions = [];
+  let currentOptionIndex = 0;
 
-  // File upload handling - Main document
+  // File upload â€” main document
   if (documentInput) {
     documentInput.addEventListener('change', function() {
       if (this.files && this.files[0]) {
-        const fileName = this.files[0].name;
-        fileNameDisplay.textContent = fileName;
+        fileNameDisplay.textContent = this.files[0].name;
         fileNameDisplay.style.display = 'block';
         fileUploadLabel.classList.add('has-file');
       }
     });
   }
 
-  // File upload handling - Polling document
+  // File upload â€” polling document
   if (pollingInput) {
     pollingInput.addEventListener('change', function() {
       if (this.files && this.files[0]) {
-        const fileName = this.files[0].name;
-        pollingFileNameDisplay.textContent = fileName;
+        pollingFileNameDisplay.textContent = this.files[0].name;
         pollingFileNameDisplay.style.display = 'block';
         pollingUploadLabel.classList.add('has-file');
       }
     });
   }
 
-  // Toggle poll entry section
+  // Toggle poll entry
   const togglePollBtn = document.getElementById('togglePollEntry');
   const pollEntrySection = document.getElementById('pollEntrySection');
   if (togglePollBtn && pollEntrySection) {
     togglePollBtn.addEventListener('click', function() {
-      const isHidden = pollEntrySection.style.display === 'none';
-      pollEntrySection.style.display = isHidden ? 'block' : 'none';
-      this.textContent = isHidden ? 'Hide' : 'Show';
+      var hidden = pollEntrySection.style.display === 'none';
+      pollEntrySection.style.display = hidden ? 'block' : 'none';
+      this.textContent = hidden ? 'Hide' : 'Show';
     });
   }
 
   // Poll calculation
-  const pollTotal = document.getElementById('pollTotal');
-  const pollAgreed = document.getElementById('pollAgreed');
-  const pollDisagreed = document.getElementById('pollDisagreed');
-  const pollSummary = document.getElementById('pollSummary');
-  const pollPercentage = document.getElementById('pollPercentage');
-  const pollResponseRate = document.getElementById('pollResponseRate');
-
   function updatePollSummary() {
-    const total = parseInt(pollTotal.value) || 0;
-    const agreed = parseInt(pollAgreed.value) || 0;
-    const disagreed = parseInt(pollDisagreed.value) || 0;
-    const responded = agreed + disagreed;
-
+    var total = parseInt(document.getElementById('pollTotal').value) || 0;
+    var agreed = parseInt(document.getElementById('pollAgreed').value) || 0;
+    var disagreed = parseInt(document.getElementById('pollDisagreed').value) || 0;
+    var responded = agreed + disagreed;
+    var summary = document.getElementById('pollSummary');
     if (total > 0 && responded > 0) {
-      const agreementPercent = Math.round((agreed / responded) * 100);
-      const responsePercent = Math.round((responded / total) * 100);
-      
-      pollPercentage.textContent = agreementPercent + '%';
-      pollResponseRate.textContent = responsePercent + '%';
-      pollSummary.style.display = 'block';
+      document.getElementById('pollPercentage').textContent = Math.round((agreed / responded) * 100) + '%';
+      document.getElementById('pollResponseRate').textContent = Math.round((responded / total) * 100) + '%';
+      summary.style.display = 'block';
     } else {
-      pollSummary.style.display = 'none';
+      summary.style.display = 'none';
     }
   }
+  ['pollTotal','pollAgreed','pollDisagreed'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', updatePollSummary);
+  });
 
-  if (pollTotal) pollTotal.addEventListener('input', updatePollSummary);
-  if (pollAgreed) pollAgreed.addEventListener('input', updatePollSummary);
-  if (pollDisagreed) pollDisagreed.addEventListener('input', updatePollSummary);
-
-  // Handle schedule selection
-  const scheduleCheckboxes = document.querySelectorAll('input[name="schedules[]"]');
-  scheduleCheckboxes.forEach(checkbox => {
+  // Schedule selection
+  var scheduleCheckboxes = document.querySelectorAll('input[name="schedules[]"]');
+  scheduleCheckboxes.forEach(function(checkbox) {
     checkbox.addEventListener('change', function() {
-      const card = this.closest('.schedule-card');
+      var card = this.closest('.schedule-card');
       if (this.checked) {
         card.classList.add('selected');
-        const scheduleData = {
+        var vals = card.querySelectorAll('.schedule-item-value');
+        selectedSchedules.push({
           id: this.value,
-          subject: card.querySelector('label').textContent,
-          section: card.querySelectorAll('.schedule-item-value')[0].textContent,
-          time: card.querySelectorAll('.schedule-item-value')[1].textContent,
-          room: card.querySelectorAll('.schedule-item-value')[2].textContent,
-          type: card.querySelectorAll('.schedule-item-value')[3].textContent
-        };
-        selectedSchedules.push(scheduleData);
+          subject: card.querySelector('label').textContent.trim(),
+          section: vals[0] ? vals[0].textContent : '',
+          time: vals[1] ? vals[1].textContent : '',
+          room: vals[2] ? vals[2].textContent : '',
+          type: vals[3] ? vals[3].textContent : ''
+        });
       } else {
         card.classList.remove('selected');
-        selectedSchedules = selectedSchedules.filter(s => s.id !== this.value);
+        selectedSchedules = selectedSchedules.filter(function(s) { return s.id !== checkbox.value; });
       }
       updateSelectedSummary();
     });
 
-    // Make card clickable
-    const card = checkbox.closest('.schedule-card');
+    var card = checkbox.closest('.schedule-card');
     card.addEventListener('click', function(e) {
       if (e.target !== checkbox && e.target.tagName !== 'LABEL') {
         checkbox.checked = !checkbox.checked;
@@ -540,155 +591,122 @@
   });
 
   function updateSelectedSummary() {
-    const summary = document.getElementById('selectedSchedulesSummary');
-    const count = document.getElementById('selectedCount');
-    const details = document.getElementById('selectedSchedulesDetails');
-
-    if (selectedSchedules.length === 0) {
-      summary.style.display = 'none';
-      return;
-    }
-
+    var summary = document.getElementById('selectedSchedulesSummary');
+    var count = document.getElementById('selectedCount');
+    var details = document.getElementById('selectedSchedulesDetails');
+    if (selectedSchedules.length === 0) { summary.style.display = 'none'; return; }
     count.textContent = selectedSchedules.length;
     details.innerHTML = '';
-    
-    selectedSchedules.forEach((sch, index) => {
-      const item = document.createElement('div');
-      item.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.65rem;background:#fff;border:1px solid #1e88e5;border-radius:6px';
-      item.innerHTML = `
-        <div style="width:24px;height:24px;background:#1e88e5;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0">${index + 1}</div>
-        <div style="flex:1">
-          <div style="font-weight:700;color:#1f2937;font-size:.85rem;margin-bottom:.2rem">${sch.subject}</div>
-          <div style="font-size:.75rem;color:#6b7280">${sch.section} • ${sch.time} • ${sch.room}</div>
-        </div>
-      `;
+    selectedSchedules.forEach(function(sch, i) {
+      var item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:.625rem;padding:.625rem .875rem;background:#fff;border:1.5px solid var(--primary-blue,#0a3d62);border-radius:var(--radius-md,8px);';
+      item.innerHTML = '<div style="width:22px;height:22px;background:var(--primary-blue,#0a3d62);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.7rem;flex-shrink:0">' + (i+1) + '</div>'
+        + '<div style="flex:1"><div style="font-weight:700;color:var(--gray-900);font-size:.875rem;margin-bottom:.125rem">' + sch.subject + '</div>'
+        + '<div style="font-size:.75rem;color:var(--gray-500)">' + sch.section + ' &bull; ' + sch.time + ' &bull; ' + sch.room + '</div></div>';
       details.appendChild(item);
     });
-
     summary.style.display = 'block';
   }
 
-  // Show field errors tooltips
-  function showFieldErrors() {
-    const subjCode = subjectCode.value.trim();
-    const subjName = subjectName.value.trim();
-    const sect = section.value.trim();
-    const clsType = classType.value;
-
-    if (!subjCode) document.getElementById('error-subjectCode').classList.add('show');
-    if (!subjName) document.getElementById('error-subjectName').classList.add('show');
-    if (!sect) document.getElementById('error-section').classList.add('show');
-    if (!clsType) document.getElementById('error-classType').classList.add('show');
-  }
-
-  function hideFieldErrors() {
-    document.getElementById('error-subjectCode').classList.remove('show');
-    document.getElementById('error-subjectName').classList.remove('show');
-    document.getElementById('error-section').classList.remove('show');
-    document.getElementById('error-classType').classList.remove('show');
-  }
-
-  // Generate schedule - System automatically selects the best available slot
+  // Generate schedule -- fetches ALL options for the next 2 weeks
   window.generateSchedule = function() {
-    if (selectedSchedules.length === 0) {
-      alert('Please select at least one schedule before generating');
-      return;
+    if (selectedSchedules.length === 0) { alert('Please select at least one schedule before generating.'); return; }
+    if (!subjectCode.value.trim() || !subjectName.value.trim() || !section.value.trim() || !classType.value) {
+      alert('Please fill in Subject Code, Subject Name, Section, and Class Type first.'); return;
     }
-
-    const subjCode = subjectCode.value.trim();
-    const subjName = subjectName.value.trim();
-    const sect = section.value.trim();
-    const clsType = classType.value;
-
-    if (!subjCode || !subjName || !sect || !clsType) {
-      showFieldErrors();
-      return;
-    }
-
-    hideFieldErrors();
-
-    const statusDiv = document.getElementById('generationStatus');
-    statusDiv.style.display = 'block';
-
-    setTimeout(() => {
+    var statusDiv = document.getElementById('generationStatus');
+    var genBtn = document.getElementById('generateBtn');
+    genBtn.disabled = true;
+    statusDiv.style.display = 'flex';
+    document.getElementById('scheduleResultSection').style.display = 'none';
+    setTimeout(function() {
       fetch('/instructor/makeup/generate-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subjectCode: subjCode,
-          classType: clsType,
+          subjectCode: subjectCode.value.trim(),
+          classType: classType.value,
           deliveryMode: 'in-campus',
-          section: sect,
-          scheduleIds: selectedSchedules.map(s => s.id)
+          section: section.value.trim(),
+          scheduleIds: selectedSchedules.map(function(s) { return s.id; })
         })
       })
-      .then(res => res.json())
-      .then(data => {
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
         statusDiv.style.display = 'none';
-
-        if (!data.success || !data.options || data.options.length === 0) {
-          console.error('Generation error:', data.error);
-          alert('No available slots found. Please try different parameters.');
+        genBtn.disabled = false;
+        if (!data.success || !data.options || !data.options.length) {
+          alert(data.error || 'No available slots found within the next 2 weeks.');
           return;
         }
-
-        // System automatically picks the first available option
-        const option = data.options[0];
-        selectScheduleOption(option, clsType);
+        allOptions = data.options;
+        currentOptionIndex = 0;
+        generatedSchedule = null;
+        showOption(0, false);
+        genBtn.style.display = 'none';
       })
-      .catch(err => {
+      .catch(function(err) {
         statusDiv.style.display = 'none';
+        genBtn.disabled = false;
         console.error('Generation error:', err);
         alert('Error generating schedule. Please try again.');
       });
-    }, 500);
+    }, 400);
   };
 
-  function selectScheduleOption(option, clsType) {
-    generatedSchedule = option;
+  window.generateAgain = function() {
+    if (!allOptions.length) return;
+    var prevIndex = currentOptionIndex;
+    currentOptionIndex = (currentOptionIndex + 1) % allOptions.length;
+    showOption(currentOptionIndex, currentOptionIndex === 0 && prevIndex !== 0);
+  };
 
+  function showOption(index, isWrap) {
+    var option = allOptions[index];
+    var total = allOptions.length;
     document.getElementById('hiddenDay').value = option.day;
     document.getElementById('hiddenDate').value = option.date;
-    document.getElementById('hiddenClassType').value = clsType;
     document.getElementById('deliveryMode').value = 'in-campus';
     document.getElementById('room').value = option.room;
+    document.getElementById('roomId').value = option.roomId || '';
     document.getElementById('startTime').value = timeStringToInput(option.startTime);
     document.getElementById('endTime').value = timeStringToInput(option.endTime);
-
-    const dateStr = new Date(option.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var dateStr = new Date(option.date + 'T00:00:00').toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
     document.getElementById('displayDate').textContent = dateStr;
-    document.getElementById('displayDay').textContent = option.day;
-    document.getElementById('displayTime').textContent = `${option.startTime} - ${option.endTime}`;
+    document.getElementById('displayDay').value = option.day;
+    var dayBadge = document.getElementById('displayDayBadge');
+    if (dayBadge) dayBadge.textContent = option.day;
+    document.getElementById('displayTime').textContent = option.startTime + ' \u2013 ' + option.endTime;
     document.getElementById('displayRoom').textContent = option.room;
-
+    document.getElementById('displayRoomType').textContent = option.roomType || 'Face-to-Face';
+    document.getElementById('optionCounter').textContent = 'Option ' + (index + 1) + ' of ' + total;
+    var notice = document.getElementById('cycleWrapNotice');
+    if (isWrap) {
+      notice.style.display = 'flex';
+      setTimeout(function() { notice.style.display = 'none'; }, 4000);
+    } else {
+      notice.style.display = 'none';
+    }
+    generatedSchedule = option;
     document.getElementById('scheduleResultSection').style.display = 'block';
   }
 
   function timeStringToInput(timeStr) {
-    const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    var match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (!match) return '';
-    let h = parseInt(match[1]);
-    const m = match[2];
-    const period = match[3].toUpperCase();
+    var h = parseInt(match[1]);
+    var period = match[3].toUpperCase();
     if (period === 'PM' && h !== 12) h += 12;
     if (period === 'AM' && h === 12) h = 0;
-    return `${String(h).padStart(2, '0')}:${m}`;
+    return String(h).padStart(2,'0') + ':' + match[2];
   }
 
-  // Form submission validation
-  const form = document.getElementById('makeupForm');
+  // Form validation
+  var form = document.getElementById('makeupForm');
   if (form) {
     form.addEventListener('submit', function(e) {
-      if (selectedSchedules.length === 0) {
-        e.preventDefault();
-        alert('Please select at least one schedule');
-        return;
-      }
-      if (!generatedSchedule) {
-        e.preventDefault();
-        alert('Please generate a schedule before submitting');
-        return;
-      }
+      if (selectedSchedules.length === 0) { e.preventDefault(); alert('Please select at least one schedule.'); return; }
+      if (!generatedSchedule) { e.preventDefault(); alert('Please generate a schedule before submitting.'); return; }
     });
   }
 })();
