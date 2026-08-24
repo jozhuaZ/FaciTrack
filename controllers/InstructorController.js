@@ -317,11 +317,21 @@ const InstructorController = {
 
             const averageDuration = `${averageDurationMinutes} min`;
 
+            // Also fetch consultation slots for the Slots report tab
+            const ConsultationModel = require('../models/ConsultationModel');
+            let consultationSlots = [];
+            try {
+                consultationSlots = await ConsultationModel.getSlotsByInstructor(instructorPublicId);
+            } catch (e) {
+                console.error('[renderReportsPage] slots fetch failed', e);
+            }
+
             res.render('pages/instructor/reports', {
                 title: 'FaciTrack - Reports',
                 instructor,
                 averageDuration,
                 appointments,
+                consultationSlots,
             });
         } catch (err) {
             console.error('[InstructorController.renderReportsPage]', err);

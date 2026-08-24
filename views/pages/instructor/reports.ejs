@@ -1,573 +1,315 @@
 ﻿<%- include('../../partials/header') %>
 <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
 <style>
-.period-filter-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
-.period-pill{padding:.5rem 1.125rem;border:1.5px solid var(--gray-200);border-radius:999px;background:#fff;font-size:.8125rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .2s;font-family:var(--font-body)}
-.period-pill:hover{border-color:var(--primary-blue);color:var(--primary-blue)}
-.period-pill.active{background:var(--primary-blue);border-color:var(--primary-blue);color:#fff}
-#customDateInput{display:none;padding:.45rem .875rem;border:1.5px solid var(--gray-200);border-radius:999px;font-size:.8125rem;font-family:var(--font-body);color:var(--gray-800);background:#fff;outline:none}
-.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
-@media(max-width:900px){.analytics-grid{grid-template-columns:1fr}}
-@media print{
-  @page{size:A4 portrait;margin:1.5cm 1.5cm 1.5cm 1.5cm}
-  *{box-sizing:border-box!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-  html,body{width:100%!important;height:auto!important;margin:0!important;padding:0!important;background:#fff!important;color:#000!important;font-family:'Arial','Helvetica',sans-serif!important;font-size:10pt!important}
-  body.print-mode .report-preview:not(.print-only){display:none!important}
-  .instructor-layout,.instructor-main,.main-container{width:100%!important;margin:0!important;padding:0!important;display:block!important;overflow:visible!important}
-  .instructor-sidebar,.dean-sidebar,.admin-sidebar,.superadmin-sidebar,.sidebar-footer,.header-actions,.stats-overview,.pagination-bar,.toast-container,.page-header,.analytics-grid,.two-col,.filter-bar-container,.fb-bar,.fb-filter-menu,.dropdown-menu,.btn-header-action,.period-filter-bar,.period-pill,.main-header{display:none!important}
-  .content-card{box-shadow:none!important;border:none!important;border-radius:0!important;background:#fff!important;margin:0!important;padding:0!important}
-  .card-header,.card-body{padding:0!important;margin:0!important;background:transparent!important;border:none!important;box-shadow:none!important}
-  .report-preview{display:block!important;margin:0!important;padding:0!important;width:100%!important}
-  .report-preview.print-only{display:block!important}
-  /* ── Official CSPC Letterhead Header ── */
-  .report-header-block{
-    display:block!important;width:100%!important;
-    border-bottom:2.5pt solid #000!important;
-    padding:0 0 0.3cm 0!important;
-    margin:0 0 0.4cm 0!important;
-    position:relative!important;
-    overflow:visible!important;
-  }
-  .report-header-block::before{
-    content:'CSPC-F-STA-01';
-    display:block!important;
-    font-size:7pt!important;font-weight:700!important;
-    text-align:right!important;
-    position:absolute!important;top:0!important;right:0!important;
-    font-family:'Arial',sans-serif!important;
-  }
-  /* Hide the on-screen flex children, use print-specific layout */
-  .report-header-block > *{display:none!important}
-  .report-header-block > .print-header-inner{display:flex!important;align-items:center!important;gap:0.4cm!important;padding-top:0.2cm!important}
-  .report-header-block > .print-header-inner > img{width:1.4cm!important;height:1.4cm!important;object-fit:contain!important;flex-shrink:0!important;display:block!important}
-  .report-header-block > .print-header-inner > .print-header-text{flex:1!important;text-align:center!important;display:block!important}
-  .print-header-inner .ph-republic{display:block!important;font-size:7.5pt!important;font-weight:400!important;font-style:italic!important;text-align:center!important;margin:0!important;line-height:1.4!important}
-  .print-header-inner .ph-institution{display:block!important;font-size:13pt!important;font-weight:900!important;text-transform:uppercase!important;text-align:center!important;letter-spacing:0.03em!important;margin:0.05cm 0 0!important;line-height:1.2!important}
-  .print-header-inner .ph-address{display:block!important;font-size:8pt!important;text-align:center!important;margin:0.02cm 0 0.15cm!important;line-height:1.3!important}
-  .print-header-inner .ph-title{display:block!important;font-size:13pt!important;font-weight:800!important;text-transform:uppercase!important;text-align:center!important;text-decoration:underline!important;letter-spacing:0.04em!important;margin:0.15cm 0 0.05cm!important;line-height:1.2!important}
-  .print-header-inner .ph-subtitle{display:block!important;font-size:9pt!important;font-weight:600!important;text-align:center!important;margin:0 0 0.05cm!important}
-  .print-header-inner .ph-period{display:block!important;font-size:8pt!important;text-align:center!important;margin:0.05cm 0 0!important;color:#333!important}
-  /* ── Table ── */
-  div[style*="padding:0 1.5rem"]{padding:0!important}
-  div[style*="overflow-x:auto"]{overflow:visible!important}
-  .pagination-bar,button{display:none!important}
-  .data-table{margin:0!important;padding:0!important;width:100%!important;border-collapse:collapse!important;font-family:'Arial',sans-serif!important;font-size:8.5pt!important}
-  .data-table th{background:#e8e8e8!important;border:1pt solid #000!important;padding:0.18cm 0.2cm!important;font-weight:700!important;text-align:left!important;vertical-align:middle!important;font-size:8.5pt!important}
-  .data-table td{border:1pt solid #000!important;padding:0.15cm 0.2cm!important;text-align:left!important;vertical-align:top!important;font-size:8.5pt!important}
-  .data-table tr:nth-child(even) td{background:#f7f7f7!important}
-  /* ── Badges → plain text in print ── */
-  .table-badge{background:none!important;border:none!important;padding:0!important;font-weight:700!important;font-size:8pt!important;color:#000!important}
-  .apt-avatar-xs{display:none!important}
-  /* ── Hide colored UI elements ── */
-  .stat-card-large,.content-card:not(:has(.report-preview)){display:none!important}
+.report-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--gray-200);
+    flex-wrap: wrap;
 }
-
+.report-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--gray-500);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: -2px;
+    border-radius: 8px 8px 0 0;
+    font-family: var(--font-body);
+    transition: color 0.15s, background 0.15s;
+}
+.report-tab:hover {
+    background: rgba(10,61,98,.04);
+    color: var(--primary-blue);
+}
+.report-tab.active {
+    color: var(--primary-blue);
+    border-bottom-color: var(--primary-blue);
+    background: rgba(10,61,98,.04);
+}
+.report-section { display: none; }
+.report-section.active { display: block; }
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+.empty-state svg { margin-bottom: 1rem; opacity: 0.35; }
+.empty-state p { font-size: 0.9375rem; font-weight: 500; margin: 0; color: var(--gray-500); }
+@media print {
+    @page { size: A4 portrait; margin: 1.5cm }
+    * { box-sizing: border-box !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important }
+    html, body { width: 100% !important; height: auto !important; margin: 0 !important; padding: 0 !important; background: #fff !important; color: #000 !important; font-family: 'Arial','Helvetica',sans-serif !important }
+    body.print-mode .report-preview:not(.print-only) { display: none !important }
+    .instructor-layout, .instructor-main, .main-container { width: 100% !important; margin: 0 !important; padding: 0 !important; display: block !important; overflow: visible !important }
+    .instructor-sidebar, .sidebar-footer, .header-actions, .toast-container, .page-header, .filter-bar-container, .fb-bar, .report-tabs, .stats-overview { display: none !important }
+    .content-card { box-shadow: none !important; border: none !important; border-radius: 0 !important; background: #fff !important; margin: 0 !important; padding: 0 !important }
+    .card-header, .card-body { padding: 0 !important; margin: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important }
+    .report-preview { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important }
+    .report-section { display: block !important }
+    .pagination-bar, button { display: none !important }
+    .data-table { margin: 0 !important; padding: 0 !important; width: 100% !important; border-collapse: collapse !important; font-family: 'Arial',sans-serif !important; font-size: 8.5pt !important }
+    .data-table th { background: #e8e8e8 !important; border: 1pt solid #000 !important; padding: 0.18cm 0.2cm !important; font-weight: 700 !important; text-align: left !important }
+    .data-table td { border: 1pt solid #000 !important; padding: 0.15cm 0.2cm !important; text-align: left !important; vertical-align: top !important }
+    .data-table tr:nth-child(even) td { background: #f5f5f5 !important }
+    .table-badge { background: none !important; border: none !important; padding: 0 !important; font-weight: 700 !important; font-size: 8pt !important; color: #000 !important }
+    .report-header-block { display: block !important; width: 100% !important; border-bottom: 2.5pt solid #000 !important; padding: 0 0 0.3cm 0 !important; margin: 0 0 0.4cm 0 !important; position: relative !important }
+    .report-header-block > * { display: none !important }
+    .report-header-block > .print-header-inner { display: flex !important; align-items: center !important; gap: 0.4cm !important; padding-top: 0.2cm !important }
+    .report-header-block > .print-header-inner > img { width: 1.4cm !important; height: 1.4cm !important; object-fit: contain !important; flex-shrink: 0 !important; display: block !important }
+    .report-header-block > .print-header-inner > .print-header-text { flex: 1 !important; text-align: center !important; display: block !important }
+    .print-header-inner .ph-republic { display: block !important; font-size: 7.5pt !important; font-style: italic !important; text-align: center !important; margin: 0 !important }
+    .print-header-inner .ph-institution { display: block !important; font-size: 13pt !important; font-weight: 900 !important; text-transform: uppercase !important; text-align: center !important }
+    .print-header-inner .ph-address { display: block !important; font-size: 8pt !important; text-align: center !important }
+    .print-header-inner .ph-title { display: block !important; font-size: 13pt !important; font-weight: 800 !important; text-transform: uppercase !important; text-align: center !important; text-decoration: underline !important }
+    .print-header-inner .ph-subtitle { display: block !important; font-size: 9pt !important; font-weight: 600 !important; text-align: center !important }
+}
 </style>
+
 <div class="instructor-layout">
-  <%- include('../../partials/instructor-sidebar', { activePage: 'reports', pendingCount: 0 }) %>
-  <main class="instructor-main">
-    <div class="main-container">
-      <div class="page-header">
-        <div>
-          <h1 class="page-title">Reports</h1>
-          <p class="page-subtitle">Consultation schedule, appointments, and teaching load records</p>
-        </div>
-      </div>
-      <div class="stats-overview">
-        <div class="stat-card-large presence">
-          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div class="stat-card-content">
-            <p class="stat-card-label">Total Appointments</p>
-            <h2 class="stat-card-value" id="statTotal"><%= appointments.length %></h2>
-            <p class="stat-card-sublabel" id="statTotalSub">All records</p>
-          </div>
-        </div>
-        <div class="stat-card-large confirmed">
-          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-          <div class="stat-card-content">
-            <p class="stat-card-label">Confirmed</p>
-            <h2 class="stat-card-value" id="statConfirmed"><%= appointments.filter(function(a){return a.status==='confirmed';}).length %></h2>
-            <p class="stat-card-sublabel">Completed</p>
-          </div>
-        </div>
-        <div class="stat-card-large pending">
-          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>
-          <div class="stat-card-content">
-            <p class="stat-card-label">Declined</p>
-            <h2 class="stat-card-value" id="statDeclined"><%= appointments.filter(function(a){return a.status==='declined';}).length %></h2>
-            <p class="stat-card-sublabel">Rejected</p>
-          </div>
-        </div>
-        <div class="stat-card-large workload">
-          <div class="stat-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-          <div class="stat-card-content">
-            <p class="stat-card-label">Avg Duration</p>
-            <h2 class="stat-card-value"><%= averageDuration %></h2>
-            <p class="stat-card-sublabel">Per consultation</p>
-          </div>
-        </div>
-      </div>
-        <div class="content-card">
-          <div class="card-header">
-            <h3 class="card-title">Appointment Breakdown</h3>
-            <span id="breakdownPeriodLabel" style="font-size:.75rem;color:var(--gray-400)">This Week</span>
-          </div>
-          <div class="card-body">
-            <%
-              var bdTot   = appointments.length || 1;
-              var bdConf  = appointments.filter(function(a){return a.status==='confirmed';}).length;
-              var bdComp  = appointments.filter(function(a){return a.status==='completed';}).length;
-              var bdPend  = appointments.filter(function(a){return a.status==='pending';}).length;
-              var bdDecl  = appointments.filter(function(a){return a.status==='declined';}).length;
-              var bdCanc  = appointments.filter(function(a){return a.status==='cancelled';}).length;
-            %>
-            <div class="workload-breakdown" id="breakdownList">
-              <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-right:.4rem;vertical-align:middle"></span>Confirmed</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar confirmed" style="width:<%= Math.round(bdConf/bdTot*100) %>%"></div></div>
-                <span class="breakdown-value"><%= bdConf %></span>
-              </div>
-              <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0a3d62;margin-right:.4rem;vertical-align:middle"></span>Completed</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdComp/bdTot*100) %>%;background:linear-gradient(90deg,#0a3d62,#1e6091)"></div></div>
-                <span class="breakdown-value"><%= bdComp %></span>
-              </div>
-              <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ea580c;margin-right:.4rem;vertical-align:middle"></span>Pending</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdPend/bdTot*100) %>%;background:linear-gradient(90deg,#ea580c,#fb923c)"></div></div>
-                <span class="breakdown-value"><%= bdPend %></span>
-              </div>
-              <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:.4rem;vertical-align:middle"></span>Declined</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdDecl/bdTot*100) %>%;background:linear-gradient(90deg,#dc2626,#ef4444)"></div></div>
-                <span class="breakdown-value"><%= bdDecl %></span>
-              </div>
-              <div class="breakdown-row">
-                <span class="breakdown-label"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6b7280;margin-right:.4rem;vertical-align:middle"></span>Cancelled</span>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:<%= Math.round(bdCanc/bdTot*100) %>%;background:linear-gradient(90deg,#6b7280,#9ca3af)"></div></div>
-                <span class="breakdown-value"><%= bdCanc %></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <%- include('../../partials/instructor-sidebar', { activePage: 'reports', pendingCount: typeof pendingCount !== 'undefined' ? pendingCount : 0 }) %>
+    <main class="instructor-main">
+        <div class="main-container">
 
-      <!-- Appointment Logs Report -->
-      <div class="content-card" style="margin-top:1.5rem;overflow:visible">
-        <%- include('../../partials/filter-bar', {
-            filterId: 'log',
-            searchPlaceholder: 'Search student or topic…',
-            filterSections: [
-              { label: 'By Date', key: 'period', type: 'buttons',
-                items: [{ value:'all', label:'All' }, { value:'week', label:'This Week' }, { value:'month', label:'This Month' }] },
-              { label: 'Specific Day', type: 'date' },
-              { label: 'By Status', key: 'status', type: 'buttons',
-                items: [{ value:'all', label:'All Status' }, { value:'confirmed', label:'Confirmed' },
-                        { value:'pending', label:'Pending' }, { value:'declined', label:'Declined' }] }
-            ]
-          }) %>
-        <div class="card-body">
-          <div class="report-preview">
-            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
-              <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
-              <div>
-                <p class="report-republic">Republic of the Philippines</p>
-                <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
-                <p class="report-college">College of Computer Studies</p>
-                <h4 class="report-title-block">Appointment Logs Report</h4>
-                <p class="report-subtitle">Instructor Consultation Records</p>
-                <p class="report-period">Faculty: <strong><%= instructor.name %></strong> &middot; Period: <span id="logReportPeriodText">All Records</span></p>
-              </div>
-              <div style="margin-left:auto">
-                <button class="btn-header-action primary" id="btnExportLog" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                  Export/Print
-                </button>
-              </div>
-            </div>
-
-            <div style="padding:0 1.5rem 1.5rem">
-              <div style="overflow-x:auto;margin-top:1rem">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Topic</th>
-                      <th>Status</th>
-                      <th style="text-align:center">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="logReportBody"></tbody>
-                </table>
-              </div>
-              <div class="pagination-bar" id="logReportPagBar">
-                <span class="page-info" id="logReportPageInfo">-</span>
-                <div class="pagination-controls">
-                  <button class="btn-page" id="logReportPrev" disabled>Prev</button>
-                  <button class="btn-page" id="logReportNext" disabled>Next</button>
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Reports</h1>
+                    <p class="page-subtitle">Consultation appointment logs and schedule records &mdash; <%= instructor.name %></p>
                 </div>
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- View Details Modal -->
-      <div id="logDetailModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
-        <div style="background:#fff;border-radius:14px;width:100%;max-width:480px;margin:1rem;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:1.125rem 1.5rem;border-bottom:1px solid var(--gray-100)">
-            <h3 style="font-size:1rem;font-weight:700;color:var(--gray-900);margin:0">Appointment Details</h3>
-            <button id="logDetailClose" style="background:none;border:none;cursor:pointer;color:var(--gray-400);padding:.25rem;border-radius:6px;display:flex;align-items:center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div style="padding:1.5rem" id="logDetailContent"></div>
+            <!-- Report Tabs -->
+            <div class="report-tabs">
+                <button class="report-tab active" onclick="switchReport('appointment-logs', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Appointment Logs
+                </button>
+            </div>
+
+            <!-- ===== APPOINTMENT LOGS ===== -->
+            <div id="section-appointment-logs" class="report-section active">
+                <div class="content-card" style="overflow:visible">
+                    <div class="card-body">
+                        <div class="report-preview">
+                            <div class="report-header-block" style="display:flex;align-items:flex-start;gap:1rem;padding:1.25rem 1.5rem;border-bottom:3px solid #1a1a1a;position:relative">
+                                <img src="/images/CSPC-logo.png" alt="CSPC" style="width:64px;height:64px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">
+                                <div>
+                                    <p class="report-republic">Republic of the Philippines</p>
+                                    <p class="report-institution">Camarines Sur Polytechnic Colleges</p>
+                                    <p class="report-college">College of Computer Studies</p>
+                                    <h4 class="report-title-block">Appointment Logs Report</h4>
+                                    <p class="report-subtitle" style="margin:0.25rem 0 0;font-size:0.8125rem;color:#555">Instructor Consultation Records &mdash; <%= instructor.name %></p>
+                                </div>
+                                <div style="margin-left:auto">
+                                    <button class="btn-header-action primary" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                        Export/Print
+                                    </button>
+                                </div>
+                            </div>
+                            <%- include('../../partials/filter-bar', {
+                                filterId: 'log',
+                                searchPlaceholder: 'Search student or topic...',
+                                filterSections: [
+                                    { label: 'By Period', key: 'period', type: 'buttons',
+                                      items: [{ value:'all', label:'All Records' }, { value:'week', label:'This Week' }, { value:'month', label:'This Month' }] },
+                                    { label: 'By Status', key: 'status', type: 'buttons',
+                                      items: [{ value:'all', label:'All' }, { value:'pending', label:'Pending' }, { value:'confirmed', label:'Confirmed' }, { value:'declined', label:'Declined' }, { value:'completed', label:'Completed' }, { value:'cancelled', label:'Cancelled' }] }
+                                ]
+                            }) %>
+                            <div style="padding:0 1.5rem 1.5rem">
+                                <div style="overflow-x:auto;margin-top:1rem">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Student</th>
+                                                <th>Date</th>
+                                                <th>Time</th>
+                                                <th>Topic</th>
+                                                <th>Mode</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="logReportBody"></tbody>
+                                    </table>
+                                </div>
+                                <div class="pagination-bar" id="logReportPagBar" style="display:none">
+                                    <span class="page-info" id="logReportPageInfo"></span>
+                                    <div class="pagination-controls">
+                                        <button class="btn-page" id="logReportPrev">Prev</button>
+                                        <button class="btn-page" id="logReportNext">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-      </div>
-    </div>
-  </main>
+    </main>
 </div>
 
-<!-- PDF Preview Modal -->
 <div class="toast-container" id="toastContainer"></div>
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
+
 <script>
-(function(){
-  var APPOINTMENTS = <%- JSON.stringify(appointments || []) %>;
-  var logState = { search:'', period:'all', status:'all', date:'', page:1, pageSize:10 };
-  var wlState  = { search:'', day:'all', type:'all', date:'', page:1, pageSize:10 };
-  var slState  = { search:'', date:'', slstatus:'all', page:1, pageSize:10 };
+// ===== Tab Switching =====
+function switchReport(name, btn) {
+    document.querySelectorAll('.report-section').forEach(function(s) { s.classList.remove('active'); });
+    document.querySelectorAll('.report-tab').forEach(function(t) { t.classList.remove('active'); });
+    var section = document.getElementById('section-' + name);
+    if (section) section.classList.add('active');
+    if (btn) btn.classList.add('active');
+}
 
-  function getWeekRange(referenceDate = new Date()) {
-    const now = new Date(referenceDate);
-    now.setHours(0, 0, 0, 0);
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay()); // Sunday
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    end.setHours(23, 59, 59, 999);
-    return { start, end };
-  }
+// ===== Data =====
+var ALL_APPOINTMENTS = <%- JSON.stringify(typeof appointments !== 'undefined' ? appointments : []) %>;
+var PAGE = 20;
 
-  function buildDailyTrends(appointments) {
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const dayIndexMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
-    const { start, end } = getWeekRange();
+// ===== Helpers =====
+function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
-    return dayLabels.map(day => {
-        const count = appointments.filter(a => {
-            if (a.status !== 'confirmed') return false; // "completed" = confirmed
-            const d = new Date(a.date);
-            return d >= start && d <= end && d.getDay() === dayIndexMap[day];
-        }).length;
-        return { day, consultations: count };
-    });
-  }
-  function getDateForDay(dayName){
-    var now = new Date();
-    var currentDay = now.getDay(); // 0=Sunday, 1=Monday, etc.
-    var targetDay = DAYS.indexOf(dayName);
-    if(targetDay === -1) return null;
-    var diff = targetDay - currentDay;
-    var targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + diff);
-    return targetDate;
-  }
+function emptyRow(cols, msg) {
+    return '<tr><td colspan="' + cols + '">'
+        + '<div class="empty-state">'
+        + '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'
+        + '<p>' + esc(msg) + '</p>'
+        + '</div></td></tr>';
+}
 
-  function esc(v){ return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function parseDate(v){ var d = new Date(v); return isNaN(d.getTime()) ? null : d; }
-  function weekRange(){
-    var now = new Date();
-    var start = new Date(now); start.setHours(0,0,0,0); start.setDate(now.getDate() - now.getDay());
-    var end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
-    return { start:start, end:end };
-  }
-  function monthRange(){
-    var now = new Date();
-    return {
-      start: new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0),
-      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999)
-    };
-  }
-  function formatDate(v, longFormat){
-    var d = parseDate(v);
-    if(!d) return '—';
-    if(longFormat) return d.toLocaleDateString('en-PH', { month:'long', day:'numeric', year:'numeric' });
-    return d.toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' });
-  }
+function badgeHtml(status) {
+    var map = { pending:'pending', confirmed:'confirmed', declined:'declined', completed:'presence', cancelled:'declined', rescheduled:'workload', Available:'confirmed', Booked:'workload' };
+    return '<span class="table-badge ' + (map[status] || 'pending') + '">' + esc(status) + '</span>';
+}
 
-  function applyLogFilters(){
-    var rows = APPOINTMENTS.slice();
-    if(logState.search){
-      var q = logState.search.toLowerCase();
-      rows = rows.filter(function(r){
-        return (r.studentName || '').toLowerCase().includes(q) || (r.topic || '').toLowerCase().includes(q);
-      });
-    }
-    if(logState.status !== 'all'){
-      rows = rows.filter(function(r){ return r.status === logState.status; });
-    }
-    if(logState.period === 'all'){
-      // No filtering by date
-    } else if(logState.period === 'week'){
-      var wr = weekRange();
-      rows = rows.filter(function(r){ var d = parseDate(r.date); return d && d >= wr.start && d <= wr.end; });
-    } else if(logState.period === 'month'){
-      var mr = monthRange();
-      rows = rows.filter(function(r){ var d = parseDate(r.date); return d && d >= mr.start && d <= mr.end; });
-    } else if(logState.period === 'custom' || logState.date){
-      var target = parseDate(logState.date);
-      rows = rows.filter(function(r){
-        var d = parseDate(r.date);
-        return target && d && d.toDateString() === target.toDateString();
-      });
+function renderPagination(idPrev, idNext, idInfo, idBar, page, total) {
+    var pages = Math.max(1, Math.ceil(total / PAGE));
+    var bar  = document.getElementById(idBar);
+    var info = document.getElementById(idInfo);
+    var prev = document.getElementById(idPrev);
+    var next = document.getElementById(idNext);
+    if (!bar) return;
+    if (total === 0) { bar.style.display = 'none'; return; }
+    bar.style.display = 'flex';
+    var start = (page - 1) * PAGE + 1;
+    var end   = Math.min(page * PAGE, total);
+    if (info) info.textContent = 'Showing ' + start + '-' + end + ' of ' + total;
+    if (prev) prev.disabled = (page <= 1);
+    if (next) next.disabled = (page >= pages);
+}
+
+// ===== Appointment Logs =====
+var logPage = 1, logPeriod = 'all', logStatus = 'all', logSearch = '';
+
+function filterLog() {
+    var rows = ALL_APPOINTMENTS.slice();
+    if (logStatus !== 'all') rows = rows.filter(function(a) { return a.status === logStatus; });
+    if (logSearch) {
+        var q = logSearch.toLowerCase();
+        rows = rows.filter(function(a) {
+            return (a.studentName || '').toLowerCase().indexOf(q) >= 0
+                || (a.topic || '').toLowerCase().indexOf(q) >= 0;
+        });
     }
     return rows;
-  }
+}
 
-  function renderLogTable(){
-    var rows = applyLogFilters();
-    var body = document.getElementById('logReportBody');
-    var pageInfo = document.getElementById('logReportPageInfo');
-    var prev = document.getElementById('logReportPrev');
-    var next = document.getElementById('logReportNext');
-    var periodText = document.getElementById('logReportPeriodText');
-    var total = rows.length;
-    var pages = Math.max(1, Math.ceil(total / logState.pageSize));
-    if(logState.page > pages) logState.page = pages;
-    var start = (logState.page - 1) * logState.pageSize;
-    var slice = rows.slice(start, start + logState.pageSize);
-
-    periodText.textContent = logState.period === 'all' ? 'All Records' : logState.period === 'week' ? 'This Week' : logState.period === 'month' ? 'This Month' : (logState.date || 'Custom Date');
-    body.innerHTML = '';
-    if(!slice.length){
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-400)">No appointment logs found.</td></tr>';
-    } else {
-      slice.forEach(function(r){
-        var status = String(r.status || 'pending');
-        var statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-        var tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td><strong>' + esc(r.studentName) + '</strong><div style="font-size:.72rem;color:var(--gray-400)">' + esc(r.studentId || '—') + '</div></td>' +
-          '<td>' + esc(formatDate(r.date)) + '</td>' +
-          '<td>' + esc(r.time || '—') + '</td>' +
-          '<td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(r.topic || '') + '">' + esc(r.topic || '—') + '</td>' +
-          '<td><span class="table-badge ' + esc(status) + '">' + esc(statusLabel) + '</span></td>' +
-          '<td style="text-align:center"><button class="btn-page view-log-detail" data-log-id="' + esc(r.id) + '">View</button></td>';
-        body.appendChild(tr);
-      });
+function renderLogTable() {
+    var tbody = document.getElementById('logReportBody');
+    if (!tbody) return;
+    var rows = filterLog();
+    if (rows.length === 0) {
+        tbody.innerHTML = emptyRow(6, 'No Appointment Log records found');
+        renderPagination('logReportPrev', 'logReportNext', 'logReportPageInfo', 'logReportPagBar', logPage, 0);
+        return;
     }
-    pageInfo.textContent = total ? ('Showing ' + (start + 1) + '-' + Math.min(start + logState.pageSize, total) + ' of ' + total) : 'No entries found';
-    document.getElementById('logReportPagBar').style.display = total > logState.pageSize ? 'flex' : (total > 0 ? 'none' : 'none');
-    // More precise logic: only show pagination if there's more than one page
-    document.getElementById('logReportPagBar').style.display = pages > 1 ? 'flex' : 'none';
-    prev.disabled = logState.page <= 1;
-    next.disabled = logState.page >= pages;
-  }
+    var pages = Math.max(1, Math.ceil(rows.length / PAGE));
+    if (logPage > pages) logPage = pages;
+    var start = (logPage - 1) * PAGE;
+    tbody.innerHTML = rows.slice(start, start + PAGE).map(function(a) {
+        return '<tr>'
+            + '<td><div style="display:flex;align-items:center;gap:.5rem">'
+            + '<div class="apt-avatar-xs" style="width:32px;height:32px;font-size:.625rem;flex-shrink:0">' + esc((a.studentName||'?').split(' ').map(function(n){return n[0]||'';}).join('').slice(0,2).toUpperCase()) + '</div>'
+            + '<span style="font-weight:600;font-size:.875rem">' + esc(a.studentName) + '</span></div></td>'
+            + '<td style="font-size:.875rem;white-space:nowrap">' + esc(a.date) + '</td>'
+            + '<td style="font-size:.875rem;white-space:nowrap">' + esc(a.time) + '</td>'
+            + '<td style="font-size:.875rem;max-width:200px;white-space:normal">' + esc(a.topic) + '</td>'
+            + '<td style="font-size:.875rem">' + esc(a.mode || '—') + '</td>'
+            + '<td>' + badgeHtml(a.status) + '</td>'
+            + '</tr>';
+    }).join('');
+    renderPagination('logReportPrev', 'logReportNext', 'logReportPageInfo', 'logReportPagBar', logPage, rows.length);
+}
 
-  function openDetail(id){
-    var row = APPOINTMENTS.find(function(r){ return String(r.id) === String(id); });
-    if(!row) return;
-    var modal = document.getElementById('logDetailModal');
-    var content = document.getElementById('logDetailContent');
-    content.innerHTML =
-      '<p style="margin:0 0 .75rem"><strong>Student:</strong> ' + esc(row.studentName) + ' (' + esc(row.studentId || '—') + ')</p>' +
-      '<p style="margin:0 0 .75rem"><strong>Date:</strong> ' + esc(formatDate(row.date)) + '</p>' +
-      '<p style="margin:0 0 .75rem"><strong>Time:</strong> ' + esc(row.time || '—') + '</p>' +
-      '<p style="margin:0 0 .75rem"><strong>Topic:</strong> ' + esc(row.topic || '—') + '</p>' +
-      '<p style="margin:0"><strong>Status:</strong> ' + esc((row.status || '').toUpperCase()) + '</p>';
-    modal.style.display = 'flex';
-  }
+document.getElementById('logReportPrev').addEventListener('click', function() { if (logPage > 1) { logPage--; renderLogTable(); } });
+document.getElementById('logReportNext').addEventListener('click', function() { if (logPage < Math.ceil(filterLog().length / PAGE)) { logPage++; renderLogTable(); } });
 
-  document.addEventListener('fbSearch', function(e){
-    if(e.detail.filterId === 'log'){
-      logState.search = e.detail.value || ''; logState.page = 1; renderLogTable();
+// ===== Filter-bar events =====
+document.addEventListener('fbChange', function(e) {
+    if (!e.detail) return;
+    var id = e.detail.filterId, key = e.detail.section, val = e.detail.value;
+    if (id === 'log') {
+        if (key === 'status') { logStatus = val; logPage = 1; renderLogTable(); }
+        if (key === 'period') { logPeriod = val; logPage = 1; renderLogTable(); }
     }
-  });
+});
+document.addEventListener('fbSearch', function(e) {
+    if (!e.detail) return;
+    if (e.detail.filterId === 'log') { logSearch = e.detail.value; logPage = 1; renderLogTable(); }
+});
 
-  document.addEventListener('fbChange', function(e){
-    if(e.detail.filterId === 'log'){
-      if(e.detail.section === 'period') logState.period = e.detail.value;
-      if(e.detail.section === 'status') logState.status = e.detail.value;
-      if(e.detail.section === 'date'){ logState.period = 'custom'; logState.date = e.detail.value; }
-      logState.page = 1;
-      renderLogTable();
-    }
-  });
+// ===== Initial Render =====
+renderLogTable();
 
-  document.getElementById('logReportPrev').addEventListener('click', function(){ if(logState.page > 1){ logState.page--; renderLogTable(); } });
-  document.getElementById('logReportNext').addEventListener('click', function(){
-    var pages = Math.max(1, Math.ceil(applyLogFilters().length / logState.pageSize));
-    if(logState.page < pages){ logState.page++; renderLogTable(); }
-  });
-
-  document.getElementById('logReportBody').addEventListener('click', function(e){
-    var btn = e.target.closest('.view-log-detail');
-    if(btn) openDetail(btn.dataset.logId);
-  });
-
-  var modal = document.getElementById('logDetailModal');
-  var logDetailClose = document.getElementById('logDetailClose');
-  if(modal && logDetailClose){
-    logDetailClose.addEventListener('click', function(){ modal.style.display = 'none'; });
-    modal.addEventListener('click', function(e){ if(e.target === modal) modal.style.display = 'none'; });
-  }
-
-  var lastExport = null;
-
-  function csvEscape(v){
-    var s = String(v ?? '');
-    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
-    return s;
-  }
-
-  function downloadBlob(blob, filename){
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 2500);
-  }
-
-  function downloadCsv(title, columns, rows){
-    var lines = [];
-    lines.push(columns.map(csvEscape).join(','));
-    rows.forEach(function(r){
-      lines.push(r.map(csvEscape).join(','));
+// ===== Print Helper =====
+function preparePrintReport(btn) {
+    var preview = btn.closest('.report-preview');
+    if (!preview) return;
+    preview.querySelectorAll('.report-header-block').forEach(function(hdr) {
+        var existing = hdr.querySelector('.print-header-inner');
+        if (existing) existing.remove();
+        var titleEl    = hdr.querySelector('.report-title-block');
+        var subtitleEl = hdr.querySelector('.report-subtitle');
+        var imgEl      = hdr.querySelector('img');
+        var title    = titleEl    ? titleEl.textContent.trim() : '';
+        var subtitle = subtitleEl ? subtitleEl.textContent.trim() : '';
+        var imgSrc   = imgEl      ? imgEl.src : '/images/CSPC-logo.png';
+        var inner = document.createElement('div');
+        inner.className = 'print-header-inner';
+        inner.innerHTML =
+            '<img src="' + imgSrc + '" alt="CSPC Logo">'
+            + '<div class="print-header-text">'
+            + '<span class="ph-republic">Republic of the Philippines</span>'
+            + '<span class="ph-institution">Camarines Sur Polytechnic Colleges</span>'
+            + '<span class="ph-address">Nabua, Camarines Sur</span>'
+            + '<span class="ph-title">' + title + '</span>'
+            + '<span class="ph-subtitle">' + subtitle + '</span>'
+            + '</div>';
+        hdr.appendChild(inner);
     });
-    var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    var safe = title.replace(/[^\w\-]+/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');
-    downloadBlob(blob, safe + '.csv');
-  }
-
-  function downloadDoc(title, html){
-    // Simple Word-compatible HTML document (opens in Word; user can Save As .docx manually).
-    var doc =
-      '<!DOCTYPE html><html><head><meta charset="utf-8">' +
-      '<title>' + esc(title) + '</title>' +
-      '<style>' +
-      'body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000}' +
-      'table{width:100%;border-collapse:collapse;margin-top:12pt}' +
-      'th,td{border:1px solid #d1d5db;padding:8pt;text-align:left;vertical-align:top}' +
-      'th{background:#f3f4f6;font-weight:700}' +
-      '</style>' +
-      '</head><body>' + html + '</body></html>';
-    var blob = new Blob([doc], { type: 'application/msword;charset=utf-8' });
-    var safe = title.replace(/[^\w\-]+/g,'_').replace(/_+/g,'_').replace(/^_+|_+$/g,'');
-    downloadBlob(blob, safe + '.doc');
-  }
-
-
-  function exportLogReport(action){
-    var filtered = applyLogFilters();
-    var rows = filtered.map(function(r){
-      return [
-        esc(r.studentName) + ' (' + esc(r.studentId || '—') + ')',
-        formatDate(r.date),
-        esc(r.time || '—'),
-        esc(r.topic || '—'),
-        esc(r.status || 'pending').toUpperCase()
-      ];
-    });
-    var period = logState.period === 'all' ? 'All Records' : (logState.period === 'week' ? 'This Week' : (logState.period === 'month' ? 'This Month' : formatDate(logState.date, true)));
-    
-    // Create printable HTML and open print dialog directly
-    var now = new Date();
-    var formattedDate = (now.getMonth() + 1).toString().padStart(2, '0') + '/' + now.getDate().toString().padStart(2, '0') + '/' + now.getFullYear();
-    var tableHtml = '<table style="width:100%;border-collapse:collapse;margin-top:15px;font-family:Arial,sans-serif;font-size:9pt">' +
-      '<thead><tr style="background:#e5e7eb;border:1px solid #000">' +
-      ['Student', 'Date', 'Time', 'Topic', 'Status'].map(function(c){ return '<th style="border:1px solid #000;padding:10px;text-align:left;font-weight:700;color:#000">' + c + '</th>'; }).join('') +
-      '</tr></thead><tbody>';
-    
-    rows.forEach(function(r){
-      tableHtml += '<tr style="border:1px solid #000">' + r.map(function(cell){ return '<td style="border:1px solid #000;padding:8px;text-align:left">' + cell + '</td>'; }).join('') + '</tr>';
-    });
-    tableHtml += '</tbody></table>';
-    
-    var printContent = '<div style="font-family:Arial,sans-serif;color:#000;font-size:11pt;line-height:1.4">' +
-      '<div style="text-align:center;padding-bottom:10px;border-bottom:3px solid #000">' +
-        '<p style="margin:0;font-size:9pt">Republic of the Philippines</p>' +
-        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0">' +
-          '<img src="/images/CSPC-logo.png" style="width:45px;height:45px" onerror="this.style.display:none">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0;font-size:11pt;font-weight:700">CAMARINES SUR POLYTECHNIC COLLEGES</p>' +
-            '<p style="margin:0;font-size:9pt">Nabua, Camarines Sur</p>' +
-          '</div>' +
-        '</div>' +
-        '<p style="margin:5px 0 0;font-size:10pt;font-weight:700;text-decoration:underline">Appointment Logs Report</p>' +
-        '<p style="margin:3px 0;font-size:9pt">Period: ' + period + '</p>' +
-      '</div>' +
-      tableHtml +
-      '<div style="margin-top:20px;font-size:9pt">' +
-        '<div style="display:flex;justify-content:space-between;margin-bottom:10px">' +
-          '<div style="text-align:left">' +
-            '<p style="margin:0">Faculty: <strong><%= instructor.name %></strong></p>' +
-            '<p style="margin:5px 0 0;font-size:8pt">Date Generated: ' + formattedDate + '</p>' +
-          '</div>' +
-          '<div style="text-align:right;width:220px">' +
-            '<div style="border-bottom:1px solid #000;height:40px;margin-bottom:3px"></div>' +
-            '<p style="margin:0;font-weight:700;font-size:9pt"><%= instructor.name %></p>' +
-            '<p style="margin:0;font-size:8pt">Signature over Printed Name</p>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-    
-    var win = window.open('', '_blank', 'width=900,height=600');
-    win.document.open();
-    win.document.write(printContent);
-    win.document.close();
-    win.focus();
-    win.print();
-  }
-
-  renderLogTable();
-}());
-
-function preparePrintReport(item){
-  var preview = item.closest('.report-preview');
-  if(!preview) return;
-  preview.querySelectorAll('.report-header-block').forEach(function(hdr){
-    var existing = hdr.querySelector('.print-header-inner');
-    if(existing) existing.remove();
-    var titleEl    = hdr.querySelector('.report-title-block');
-    var subtitleEl = hdr.querySelector('.report-subtitle');
-    var periodEl   = hdr.querySelector('.report-period');
-    var imgEl      = hdr.querySelector('img');
-    var title    = titleEl    ? titleEl.textContent.trim()    : '';
-    var subtitle = subtitleEl ? subtitleEl.textContent.trim() : '';
-    var period   = periodEl   ? periodEl.innerText.trim()     : '';
-    var imgSrc   = imgEl      ? imgEl.src                     : '/images/CSPC-logo.png';
-    var inner = document.createElement('div');
-    inner.className = 'print-header-inner';
-    inner.innerHTML =
-      '<img src="'+imgSrc+'" alt="CSPC Logo">' +
-      '<div class="print-header-text">' +
-        '<span class="ph-republic">Republic of the Philippines</span>' +
-        '<span class="ph-institution">Camarines Sur Polytechnic Colleges</span>' +
-        '<span class="ph-address">Nabua, Camarines Sur</span>' +
-        '<span class="ph-title">'+title+'</span>' +
-        '<span class="ph-subtitle">'+subtitle+'</span>' +
-        (period ? '<span class="ph-period">'+period+'</span>' : '') +
-      '</div>';
-    hdr.appendChild(inner);
-  });
-  document.querySelectorAll('.report-preview.print-only').forEach(function(c){ c.classList.remove('print-only'); });
-  preview.classList.add('print-only');
-  document.body.classList.add('print-mode');
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      preview.classList.remove('print-only');
-      document.body.classList.remove('print-mode');
-      preview.querySelectorAll('.print-header-inner').forEach(function(el){ el.remove(); });
-    }, 500);
-  }, 50);
+    document.body.classList.add('print-mode');
+    preview.classList.add('print-only');
+    setTimeout(function() {
+        window.print();
+        setTimeout(function() {
+            preview.classList.remove('print-only');
+            document.body.classList.remove('print-mode');
+            preview.querySelectorAll('.print-header-inner').forEach(function(el) { el.remove(); });
+        }, 500);
+    }, 50);
 }
 </script>

@@ -482,6 +482,25 @@ async function getSharedData() {
     return { instructor, appointments, consultationSlots, presenceLogs, workloadStats, notifications, workloadLogs };
 }
 
+// Safe wrapper — never throws, always returns a valid data object
+async function safeGetSharedData() {
+    try {
+        return await getSharedData();
+    } catch (err) {
+        console.error('[safeGetSharedData error]', err);
+        const instructor = { id: 1, name: 'Instructor', email: '', position: '', department: '', specialization: '', officeRoom: '', bleStatus: 'unknown', bleLastDetected: 'N/A' };
+        return {
+            instructor,
+            appointments: [],
+            consultationSlots: [],
+            presenceLogs: [],
+            workloadStats: { thisWeek: { hoursLogged:0, consultationsCompleted:0, averageDuration:'—', pendingRequests:0 }, thisMonth: { hoursLogged:0, consultationsCompleted:0, averageDuration:'—', pendingRequests:0 }, trends:[] },
+            notifications: [],
+            workloadLogs: []
+        };
+    }
+}
+
 // Appointments
 router.get('/appointments', InstructorController.renderAppointmentsPage);
 router.post('/appointments/:id/approve', InstructorController.approveAppointment);
@@ -813,7 +832,7 @@ router.get('/makeup/request', async (req, res) => {
 
 // POST: Submit request (multipart/form-data with PDF)
 router.post('/makeup/request', (req, res, next) => {
-    pdfUpload.single('document')(req, res, (uploadErr) => {
+    pdfUpload.single('document')(req, res, async (uploadErr) => {
         const data = await safeGetSharedData();
         const pendingCount = data.appointments.filter(a => a.status === 'pending').length;
 
