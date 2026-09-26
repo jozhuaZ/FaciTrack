@@ -704,11 +704,13 @@ window.onUnavailabilityChanged = function () {
 }
 
 /* ── Blocking prompt ── */
+/* Styled like the "Block a Day" card on the Consultation Schedule page: a
+   faint tinted wash and a light border all round, in this banner's blue. */
 .cal-pending {
-    margin-bottom: 1.25rem; padding: .9rem 1rem;
-    background: #fff; border: 1px solid var(--gray-200);
-    border-left: 4px solid var(--primary-blue);
-    border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+    margin-bottom: 1.25rem; padding: 1rem 1.15rem;
+    background: linear-gradient(135deg, #fdfeff 0%, #f5f9ff 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .cal-pending-head {
     display: flex; align-items: flex-start; justify-content: space-between;
