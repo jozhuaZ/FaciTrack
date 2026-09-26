@@ -15,8 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=<%= Date.now() %>">
-  <link rel="stylesheet" href="/css/login.css?v=<%= Date.now() %>">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/css/login.css?v=<%= assetVersion %>">
 </head>
 <body>
 
@@ -251,7 +251,7 @@
     bundle onto a screen that needs none of it. %>
 <%# Progress bar + submit-button spinner: login is a server round-trip that is
     slow on a cold start, so it should not look frozen. %>
-<script src="/js/loading.js?v=<%= Date.now() %>"></script>
+<script src="/js/loading.js?v=<%= assetVersion %>"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {

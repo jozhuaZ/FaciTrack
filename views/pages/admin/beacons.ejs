@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/admin/beacons.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/admin/beacons.css?v=<%= assetVersion %>">
 
 <div class="instructor-layout">
     <%- include('../../partials/admin-sidebar', { activePage: 'beacons' }) %>
@@ -322,4 +322,4 @@
   window.__SCANNER_OFFLINE_AFTER__ = <%- JSON.stringify(scannerOfflineAfter) %>;
   window.__TAG_OFFLINE_AFTER__ = <%- JSON.stringify(tagOfflineAfter) %>;
 </script>
-<script src="/js/admin-beacons.js?v=<%= Date.now() %>"></script>
+<script src="/js/admin-beacons.js?v=<%= assetVersion %>"></script>

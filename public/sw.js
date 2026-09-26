@@ -1,5 +1,5 @@
 // Bump these whenever sw.js changes so the activate handler clears stale caches.
-const CACHE_NAME = 'facitrack-v7';
+const CACHE_NAME = 'facitrack-v8';
 
 /**
  * Rendered pages live apart from static assets, because they are the only
@@ -110,6 +110,17 @@ const PRECACHE_ASSETS = [
     '/manifest.json'
 ];
 
+/** Remove cached copies of the same file stamped with another ?v= version. */
+async function dropOtherVersions(cache, url) {
+    const keys = await cache.keys();
+    await Promise.all(keys
+        .filter((key) => {
+            const k = new URL(key.url);
+            return k.pathname === url.pathname && k.search !== url.search;
+        })
+        .map((key) => cache.delete(key)));
+}
+
 // Install: pre-cache static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -139,28 +150,43 @@ self.addEventListener('fetch', (event) => {
     // Only handle same-origin requests
     if (url.origin !== location.origin) return;
 
-    // JS files — network first so scripts always reflect latest version
-    if (request.destination === 'script') {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
+    // Stylesheets and scripts. A tag stamped ?v=<deploy> names one exact
+    // build of the file, so the cached copy is right for as long as that URL
+    // is asked for; when a deploy changes the stamp, the old copy is dropped.
+    // An unstamped file has no such promise and goes to the network first,
+    // falling back to the cache offline.
+    if (request.destination === 'script' || request.destination === 'style') {
+        if (url.searchParams.has('v')) {
+            event.respondWith(
+                caches.match(request).then((cached) => cached || fetch(request).then((response) => {
                     if (response.ok) {
                         const clone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+                        caches.open(CACHE_NAME).then(async (cache) => {
+                            await dropOtherVersions(cache, url);
+                            await cache.put(request, clone);
+                        });
                     }
                     return response;
-                })
-                .catch(() => caches.match(request))
-        );
+                }))
+            );
+        } else {
+            event.respondWith(
+                fetch(request)
+                    .then((response) => {
+                        if (response.ok) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+                        }
+                        return response;
+                    })
+                    .catch(() => caches.match(request))
+            );
+        }
         return;
     }
 
-    // Static assets (CSS, images, fonts) — cache first
-    if (
-        request.destination === 'style' ||
-        request.destination === 'image' ||
-        request.destination === 'font'
-    ) {
+    // Images and fonts — cache first
+    if (request.destination === 'image' || request.destination === 'font') {
         event.respondWith(
             caches.match(request).then((cached) => {
                 if (cached) return cached;

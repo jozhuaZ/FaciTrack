@@ -46,22 +46,20 @@ const NotificationModel = {
 
     // Unread + first batch of read, shaped for the template
     async getForUser(publicId, readBatchSize = 10) {
-        const [[user]] = await pool.execute(
-            'SELECT id FROM users WHERE public_id = ?', [publicId]
-        );
-        if (!user) return [];
-
+        // One round trip: this runs on every page view, and a separate lookup
+        // of the internal id would double its cost against a remote database.
         // query() rather than execute(): MySQL's prepared-statement protocol
         // rejects a bound LIMIT parameter (ER_WRONG_ARGUMENTS), where MariaDB
         // accepts it. query() escapes the same params client-side and sends
         // plain SQL, so the integer LIMIT works on both.
         const [rows] = await pool.query(
-            `SELECT id, type, message, is_read, related_appointment_id, created_at
-         FROM notifications
-         WHERE user_id = ?
-         ORDER BY is_read ASC, created_at DESC
+            `SELECT n.id, n.type, n.message, n.is_read, n.related_appointment_id, n.created_at
+         FROM notifications n
+         JOIN users u ON u.id = n.user_id
+         WHERE u.public_id = ?
+         ORDER BY n.is_read ASC, n.created_at DESC
          LIMIT ?`,
-            [user.id, 200]
+            [publicId, 200]
         );
 
         return rows.map(r => ({

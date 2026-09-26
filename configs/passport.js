@@ -62,13 +62,12 @@ passport.serializeUser((user, done) => {
     done(null, user.id); // stores public_id in session
 });
 
-passport.deserializeUser(async (publicId, done) => {
-    try {
-        const user = await UserModel.getUserByPublicId(publicId);
-        done(null, user);
-    } catch (err) {
-        done(err);
-    }
+// Runs on every request that carries a session. The app identifies the signed-in
+// user by req.session.userId, never by a full req.user, so this deliberately
+// skips the database: looking the user up here cost one query per request —
+// polls included — for a record nothing read.
+passport.deserializeUser((publicId, done) => {
+    done(null, { id: publicId });
 });
 
 module.exports = passport;

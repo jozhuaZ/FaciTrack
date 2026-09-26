@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
-const { createWorker } = require('tesseract.js');
 const WorkloadController = require('../controllers/WorkloadController');
 const WorkloadImportController = require('../controllers/WorkloadImportController');
 const InstructorController = require('../controllers/InstructorController');
@@ -503,6 +502,8 @@ router.post('/workload/ocr-import', upload.single('schedule'), async (req, res) 
         // in the project root. That directory is read-only on a serverless
         // host, so the download fails and OCR reports a processing error. The
         // system temp directory is writable on both.
+        // Loaded here, not at startup: only this OCR path uses it.
+        const { createWorker } = require('tesseract.js');
         const worker = await createWorker('eng', 1, { cachePath: os.tmpdir() });
         const { data: { text } } = await worker.recognize(req.file.buffer);
         await worker.terminate();

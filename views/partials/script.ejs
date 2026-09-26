@@ -1,21 +1,21 @@
 <%# Loads first so it wraps fetch before anything makes a request: a top
     progress bar and per-button spinners for anything that takes a moment. %>
-<script src="/js/loading.js?v=<%= Date.now() %>"></script>
-<script src="/js/main.js?v=<%= Date.now() %>"></script>
-<script src="/js/connection-status.js?v=<%= Date.now() %>"></script>
+<script src="/js/loading.js?v=<%= assetVersion %>"></script>
+<script src="/js/main.js?v=<%= assetVersion %>"></script>
+<script src="/js/connection-status.js?v=<%= assetVersion %>"></script>
 <%# One live connection for the whole page, and the one place that knows
     whether this host can hold a stream open or has to poll instead. Loaded
     here so the notification panel and the sidebars share it rather than each
     opening a connection of their own. %>
-<script src="/js/realtime.js?v=<%= Date.now() %>"></script>
-<script src="/js/export-system.js?v=<%= Date.now() %>"></script>
+<script src="/js/realtime.js?v=<%= assetVersion %>"></script>
+<script src="/js/export-system.js?v=<%= assetVersion %>"></script>
 <%# Asking to enable notifications. Included here rather than per page so every
     signed-in view can offer it — the landing and login pages do not include
     this partial, so it never runs for somebody who is not signed in. The modal
     stays hidden until push-prompt.js decides it is worth showing. %>
 <%- include('./push-prompt') %>
-<script src="/js/push-subscribe.js?v=<%= Date.now() %>"></script>
-<script src="/js/push-prompt.js?v=<%= Date.now() %>"></script>
+<script src="/js/push-subscribe.js?v=<%= assetVersion %>"></script>
+<script src="/js/push-prompt.js?v=<%= assetVersion %>"></script>
 <script>
     function confirmDelete(name) {
         return confirm(`Are you sure you want to delete ${name}?`);

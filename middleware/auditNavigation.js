@@ -1,6 +1,5 @@
 // middlewares/auditNavigation.js
 const pool = require('../configs/db');
-const AuditLogModel = require('../models/AuditLogModel');
 
 function auditNavigation(req, res, next) {
     const originalRender = res.render.bind(res);
@@ -13,12 +12,15 @@ function auditNavigation(req, res, next) {
     next();
 }
 
+// A single INSERT ... SELECT: this runs beside every page render and shares a
+// small connection pool with it, so a separate id lookup was a second query
+// competing with the page for a connection.
 async function logNavigation(req) {
-    const [[user]] = await pool.execute(
-        'SELECT id FROM users WHERE public_id = ?', [req.session.userId]
+    await pool.execute(
+        `INSERT INTO audit_logs (user_id, role, action, type)
+         SELECT id, ?, ?, 'navigation' FROM users WHERE public_id = ?`,
+        [req.session.role, `Viewed ${req.path}`, req.session.userId]
     );
-    if (!user) return;
-    await AuditLogModel.log(user.id, req.session.role, `Viewed ${req.path}`, 'navigation');
 }
 
 module.exports = auditNavigation;

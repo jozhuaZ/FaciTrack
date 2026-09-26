@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/report-table.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/report-table.css?v=<%= assetVersion %>">
 <style>
 .analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
 @media(max-width:900px){.analytics-grid{grid-template-columns:1fr}}
@@ -277,5 +277,5 @@
 <script>
   window.INSTRUCTOR_REPORTS = { appointments: <%- JSON.stringify(appointments || []) %> };
 </script>
-<script src="/js/report-table.js?v=<%= Date.now() %>"></script>
-<script src="/js/instructor-reports.js?v=<%= Date.now() %>"></script>
+<script src="/js/report-table.js?v=<%= assetVersion %>"></script>
+<script src="/js/instructor-reports.js?v=<%= assetVersion %>"></script>

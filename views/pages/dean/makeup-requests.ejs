@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/instructor/makeup.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/instructor/makeup.css?v=<%= assetVersion %>">
 
 <%
   function fmtDate(value) {
@@ -197,7 +197,7 @@
 <div class="toast-container" id="toastContainer"></div>
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/makeup-list.js?v=<%= Date.now() %>"></script>
+<script src="/js/makeup-list.js?v=<%= assetVersion %>"></script>
 <script>
 (function () {
   // ── Single decision ──

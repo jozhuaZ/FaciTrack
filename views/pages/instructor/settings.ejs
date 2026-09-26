@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= assetVersion %>">
 <style>
 .settings-grid { display: grid; grid-template-columns: 380px 1fr; gap: 1.5rem; align-items: start; }
 @media(max-width:1100px){ .settings-grid { grid-template-columns: 1fr; } }
@@ -701,7 +701,7 @@
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 <%- include('../../partials/unavailability-modal') %>
-<script src="/js/instructor-unavailability.js?v=<%= Date.now() %>"></script>
-<script src="/js/settings-tracker.js?v=<%= Date.now() %>"></script>
-<script src="/js/instructor-settings.js?v=<%= Date.now() %>"></script>
-<script src="/js/calendar-feed-link.js?v=<%= Date.now() %>"></script>
+<script src="/js/instructor-unavailability.js?v=<%= assetVersion %>"></script>
+<script src="/js/settings-tracker.js?v=<%= assetVersion %>"></script>
+<script src="/js/instructor-settings.js?v=<%= assetVersion %>"></script>
+<script src="/js/calendar-feed-link.js?v=<%= assetVersion %>"></script>

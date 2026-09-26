@@ -69,6 +69,26 @@ function overlaps(aStart, aEnd, bStart, bEnd) {
     return aStart < bEnd && aEnd > bStart;
 }
 
+/**
+ * Retry a transaction that InnoDB aborted for a deadlock.
+ *
+ * create() and update() each insert several rows that share foreign keys
+ * (room_id, instructor_id) with whatever else is committing at the same
+ * moment — two instructors submitting sessions in opposite room order is
+ * enough to deadlock. That is what MySQL's own error text is telling the
+ * caller to do ("try restarting transaction"): the loser rolled back cleanly
+ * and holds no locks, so simply running the whole transaction again is safe.
+ */
+async function withDeadlockRetry(fn, retries = 2) {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            if (err.code !== 'ER_LOCK_DEADLOCK' || attempt >= retries) throw err;
+        }
+    }
+}
+
 const MakeupRequestModel = {
     timeToSlot,
     slotToTime,
@@ -347,7 +367,11 @@ const MakeupRequestModel = {
      * Conflicts are re-checked inside it, so two submissions racing for the
      * same room cannot both win.
      */
-    async create(instructorPublicId, { reason, documents = [], sessions }) {
+    async create(instructorPublicId, payload) {
+        return withDeadlockRetry(() => this._create(instructorPublicId, payload));
+    },
+
+    async _create(instructorPublicId, { reason, documents = [], sessions }) {
         const conn = await pool.getConnection();
         try {
             await conn.beginTransaction();
@@ -390,7 +414,11 @@ const MakeupRequestModel = {
      * Documents are additive: new uploads append, and only the ids listed in
      * `removeDocumentIds` go away.
      */
-    async update(requestId, instructorPublicId, { reason, sessions, documents = [], removeDocumentIds = [] }) {
+    async update(requestId, instructorPublicId, payload) {
+        return withDeadlockRetry(() => this._update(requestId, instructorPublicId, payload));
+    },
+
+    async _update(requestId, instructorPublicId, { reason, sessions, documents = [], removeDocumentIds = [] }) {
         const conn = await pool.getConnection();
         try {
             await conn.beginTransaction();

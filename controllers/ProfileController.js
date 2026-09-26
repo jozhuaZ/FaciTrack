@@ -1,6 +1,6 @@
 const path = require('path');
 const crypto = require('crypto');
-const sharp = require('sharp');
+// sharp is loaded on first upload rather than at startup (see uploadAvatar).
 const UserModel = require('../models/UserModel');
 const fileStore = require('../services/file-store');
 
@@ -51,6 +51,7 @@ const ProfileController = {
             // Decoding IS the validation — a renamed .exe never gets this far, so
             // the check does not rest on a client-supplied MIME type. Re-encoding
             // also drops EXIF, which on phone photos carries GPS coordinates.
+            const sharp = require('sharp');
             const processed = await sharp(req.file.buffer)
                 .rotate()   // apply the EXIF orientation before that tag is discarded
                 .resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover', position: 'centre' })

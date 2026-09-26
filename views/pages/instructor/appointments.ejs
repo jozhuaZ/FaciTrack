@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/instructor/appointments.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/instructor/appointments.css?v=<%= assetVersion %>">
 
 <div class="instructor-layout">
     <%- include('../../partials/instructor-sidebar', { activePage: 'appointments', pendingCount: appointments.filter(a => a.status === 'pending').length }) %>
@@ -435,13 +435,13 @@
 
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/instructor-dashboard.js?v=<%= Date.now() %>"></script>
+<script src="/js/instructor-dashboard.js?v=<%= assetVersion %>"></script>
 
 <!-- Inject appointment data for JS -->
 <script>
 window.APT_DATA = <%- JSON.stringify(appointments) %>;
 </script>
-<script src="/js/instructor-appointments.js?v=<%= Date.now() %>"></script>
+<script src="/js/instructor-appointments.js?v=<%= assetVersion %>"></script>
 
 <script>
 /* ── Generate Logs modal ── */

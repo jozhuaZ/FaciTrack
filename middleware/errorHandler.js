@@ -76,7 +76,11 @@ function wantsHtml(req) {
     return true;
 }
 
-function buildErrorHandler({ isProduction = process.env.NODE_ENV === 'production' } = {}) {
+// Vercel does not reliably set NODE_ENV=production for a custom Express app
+// unless it is configured to — process.env.VERCEL is set on every request it
+// serves regardless, so it is the more trustworthy signal that this is a
+// hosted deployment rather than a developer's own machine.
+function buildErrorHandler({ isProduction = process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL) } = {}) {
     return function errorHandler(err, req, res, next) {
         // A reference the reader can quote and the log can be grepped for,
         // so support does not depend on them describing what they saw.

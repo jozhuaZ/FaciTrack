@@ -1,5 +1,5 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
 <style>
 /* ── View toggle ── */
 .view-toggle{display:flex;gap:.375rem;background:var(--gray-100);border-radius:var(--radius-md);padding:3px}
@@ -709,7 +709,7 @@
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
 
-<script src="/js/presence-live.js?v=<%= Date.now() %>"></script>
+<script src="/js/presence-live.js?v=<%= assetVersion %>"></script>
 <script>
 (function(){
   'use strict';

@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= assetVersion %>">
 <style>
   .settings-stack { display:flex; flex-direction:column; gap:1.5rem; max-width:720px; }
 
@@ -155,5 +155,5 @@
 
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/settings-tracker.js?v=<%= Date.now() %>"></script>
-<script src="/js/student-settings.js?v=<%= Date.now() %>"></script>
+<script src="/js/settings-tracker.js?v=<%= assetVersion %>"></script>
+<script src="/js/student-settings.js?v=<%= assetVersion %>"></script>

@@ -1,6 +1,6 @@
-const PDFDocument = require('pdfkit');
-const ExcelJS = require('exceljs');
-const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = require('docx');
+// pdfkit, exceljs and docx are loaded on first export, not at startup. Together
+// they took about half a second to load, and a serverless cold start paid that
+// on every page, though only an export ever uses them.
 
 function sanitizeString(v) {
   return String(v ?? '').replace(/\s+/g, ' ').trim();
@@ -26,6 +26,7 @@ function normalizeExportPayload(body) {
 }
 
 async function buildDocxBuffer(payload) {
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType } = require('docx');
   const { title, subtitle, meta, columns, rows } = payload;
 
   const children = [];
@@ -99,6 +100,7 @@ async function buildDocxBuffer(payload) {
 }
 
 async function buildXlsxBuffer(payload) {
+  const ExcelJS = require('exceljs');
   const { title, columns, rows } = payload;
 
   const wb = new ExcelJS.Workbook();
@@ -137,6 +139,7 @@ async function buildXlsxBuffer(payload) {
 }
 
 function buildPdfBuffer(payload) {
+  const PDFDocument = require('pdfkit');
   const { title, subtitle, meta, columns, rows } = payload;
 
   return new Promise((resolve, reject) => {

@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/admin/consultation-room.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/admin/consultation-room.css?v=<%= assetVersion %>">
 
 <div class="instructor-layout">
     <%- include('../../partials/admin-sidebar', { activePage: 'consultation-room' }) %>
@@ -193,4 +193,4 @@
         endDate: '<%= endDate %>'
     };
 </script>
-<script src="/js/admin/consultation-room.js?v=<%= Date.now() %>"></script>
+<script src="/js/admin/consultation-room.js?v=<%= assetVersion %>"></script>

@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/report-table.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/student/appointments.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/report-table.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/student/appointments.css?v=<%= assetVersion %>">
 
 <div class="instructor-layout">
     <%- include('../../partials/student-sidebar', { activePage: 'appointments', appointmentCount: appointments.length }) %>
@@ -171,5 +171,5 @@
 <script>
   window.STUDENT_APPOINTMENTS = <%- JSON.stringify(appointments) %>;
 </script>
-<script src="/js/card-filter.js?v=<%= Date.now() %>"></script>
-<script src="/js/student-appointments.js?v=<%= Date.now() %>"></script>
+<script src="/js/card-filter.js?v=<%= assetVersion %>"></script>
+<script src="/js/student-appointments.js?v=<%= assetVersion %>"></script>

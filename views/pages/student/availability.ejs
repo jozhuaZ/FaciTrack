@@ -1,5 +1,5 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
 <style>
     .avail-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:1rem; }
     .avail-card { background:#fff; border:1px solid var(--gray-200); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); overflow:hidden; display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s,border-color .2s; }
@@ -226,8 +226,8 @@
 
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/presence-live.js?v=<%= Date.now() %>"></script>
-<script src="/js/card-filter.js?v=<%= Date.now() %>"></script>
+<script src="/js/presence-live.js?v=<%= assetVersion %>"></script>
+<script src="/js/card-filter.js?v=<%= assetVersion %>"></script>
 <script>
 (function () {
     'use strict';

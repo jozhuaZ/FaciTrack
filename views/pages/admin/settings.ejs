@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/settings-chrome.css?v=<%= assetVersion %>">
 <style>
     .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; align-items: start; }
     .settings-section-desc { font-size: .8125rem; color: var(--gray-500); margin: 0 0 1rem; line-height: 1.5; }
@@ -249,5 +249,5 @@
 <div class="toast-container" id="toastContainer"></div>
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/settings-tracker.js?v=<%= Date.now() %>"></script>
-<script src="/js/admin-settings.js?v=<%= Date.now() %>"></script>
+<script src="/js/settings-tracker.js?v=<%= assetVersion %>"></script>
+<script src="/js/admin-settings.js?v=<%= assetVersion %>"></script>

@@ -35,6 +35,22 @@ app.set('views', path.join(__dirname, 'views'));
 // from it — the OAuth callback especially — comes out wrong.
 app.set('trust proxy', 1);
 
+/**
+ * The ?v= stamp on every stylesheet and script tag.
+ *
+ * It used to be Date.now() on every render, which gave each asset a new URL
+ * on every page view: the browser and the service worker could never reuse a
+ * copy, so every page downloaded all of its CSS and JS again (and the service
+ * worker kept storing another copy each time). In production the stamp is now
+ * fixed per deployment, so a copy is reused until the next deploy changes it.
+ * Locally it still changes per render, so edited CSS shows on a plain reload.
+ */
+app.locals.assetVersion = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 8)
+    || String(Date.now());
+if (!IS_PRODUCTION && !IS_SERVERLESS) {
+    app.use((req, res, next) => { res.locals.assetVersion = Date.now(); next(); });
+}
+
 // Middleware: Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -90,6 +106,10 @@ const sessionStore = new MySQLStore({
     clearExpired: true,
     checkExpirationInterval: 1000 * 60 * 15,
     expiration: SESSION_TTL_MS,
+    // A touch is an UPDATE on every request, and express-session holds the
+    // response open until it finishes. It buys nothing here: the cookie is not
+    // rolling, so it expires SESSION_TTL_MS after sign-in whatever the row says.
+    disableTouch: true,
     schema: {
         tableName: 'sessions',
         columnNames: { session_id: 'session_id', expires: 'expires', data: 'data' },

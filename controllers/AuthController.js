@@ -63,7 +63,7 @@ const AuthController = {
         if (home) return res.redirect(home);
 
         res.render('pages/index', {
-            title: 'FaciTrack - Login',
+            title: 'FaciTrack',
             error: null,
         });
     },

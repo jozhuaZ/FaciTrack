@@ -1,5 +1,5 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
 <style>
 /* Shown wherever a card has nothing to list yet */
 .dean-empty { display:flex; flex-direction:column; align-items:center; gap:.5rem; padding:2rem 1rem; text-align:center; }
@@ -254,7 +254,7 @@
 <div class="toast-container" id="toastContainer"></div>
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
-<script src="/js/presence-live.js?v=<%= Date.now() %>"></script>
+<script src="/js/presence-live.js?v=<%= assetVersion %>"></script>
 <script>
 /* Presence on this page is two tiles and a badge per person. Both have to move
    together — a tile saying three are in while four badges read In Room is

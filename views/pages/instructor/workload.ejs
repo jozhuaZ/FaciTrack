@@ -1,5 +1,5 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
 <style>
 *{box-sizing:border-box}
 
@@ -564,5 +564,5 @@
   window.__INSTRUCTOR_ID__ = '<%= instructor.id %>';
   window.__WORKLOAD_DATA__ = <%- workloadData %>;
 </script>
-<script src="/js/workload.js?v=<%= Date.now() %>"></script>
+<script src="/js/workload.js?v=<%= assetVersion %>"></script>
 <%- include('../../partials/footer') %>

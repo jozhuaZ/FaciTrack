@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/instructor/makeup.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/instructor/makeup.css?v=<%= assetVersion %>">
 
 <%
   function fileSize(bytes) {
@@ -192,4 +192,4 @@
   window.MK_WINDOW    = <%- JSON.stringify(window) %>;
   window.MK_EDITING   = <%- editing ? JSON.stringify({ id: editing.id, sessions: editing.sessions, hasDocuments: editing.documents.length }) : 'null' %>;
 </script>
-<script src="/js/instructor-makeup.js?v=<%= Date.now() %>"></script>
+<script src="/js/instructor-makeup.js?v=<%= assetVersion %>"></script>

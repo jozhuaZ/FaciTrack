@@ -1,6 +1,6 @@
 <%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= Date.now() %>">
-<link rel="stylesheet" href="/css/report-table.css?v=<%= Date.now() %>">
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/report-table.css?v=<%= assetVersion %>">
 <style>
 /* Only the per-table minimum widths are page-specific; the toolbar, table
    shell, pills and notice all come from /css/report-table.css */
@@ -371,6 +371,6 @@
     unansweredRequests: <%- JSON.stringify(unansweredRequests) %>,
   };
 </script>
-<script src="/js/report-table.js?v=<%= Date.now() %>"></script>
-<script src="/js/presence-live.js?v=<%= Date.now() %>"></script>
-<script src="/js/dean-reports.js?v=<%= Date.now() %>"></script>
+<script src="/js/report-table.js?v=<%= assetVersion %>"></script>
+<script src="/js/presence-live.js?v=<%= assetVersion %>"></script>
+<script src="/js/dean-reports.js?v=<%= assetVersion %>"></script>
