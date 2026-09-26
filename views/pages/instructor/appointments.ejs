@@ -47,20 +47,27 @@
                  nobody here when one lands. Until answered, nothing is blocked. -->
             <div class="cal-pending" id="calPendingBanner" hidden>
                 <div class="cal-pending-head">
-                    <div>
-                        <p class="cal-pending-title">
-                            <span id="calPendingCount">0</span> imported <span id="calPendingWord">events need</span> a decision
-                        </p>
-                        <p class="cal-pending-sub">
-                            Should students be able to book over these? Until you choose, they stay bookable.
-                        </p>
-                    </div>
+                    <%# A dropdown: the count and the bulk choices stay in view,
+                        the per-event list opens on demand. A long import no
+                        longer pushes the calendar below the fold. %>
+                    <button type="button" class="cal-pending-toggle" id="calPendingToggle"
+                            aria-expanded="false" aria-controls="calPendingList">
+                        <svg class="cal-pending-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        <span>
+                            <span class="cal-pending-title">
+                                <span id="calPendingCount">0</span> imported <span id="calPendingWord">events need</span> a decision
+                            </span>
+                            <span class="cal-pending-sub">
+                                Should students be able to book over these? Until you choose, they stay bookable.
+                            </span>
+                        </span>
+                    </button>
                     <div class="cal-pending-bulk">
                         <button type="button" id="calPendingBlockAll">Block all</button>
                         <button type="button" id="calPendingAllowAll">Allow all</button>
                     </div>
                 </div>
-                <ul class="cal-pending-list" id="calPendingList"></ul>
+                <ul class="cal-pending-list" id="calPendingList" hidden></ul>
             </div>
 
             <!-- Stats Bar -->
@@ -234,6 +241,13 @@
         <button class="pop-btn pop-btn-decline" id="popDeclineBtn">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             Decline
+        </button>
+    </div>
+    <!-- Complete (confirmed + already ended), same rule as the list and day panel -->
+    <div class="pop-actions" id="popCompleteActions" style="display:none">
+        <button class="pop-btn pop-btn-complete" id="popComplete">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Complete
         </button>
     </div>
     <!-- Inline decline reason panel -->
@@ -700,8 +714,21 @@ window.onUnavailabilityChanged = function () {
     display: flex; align-items: flex-start; justify-content: space-between;
     gap: 1rem; flex-wrap: wrap;
 }
-.cal-pending-title { margin: 0; font-size: .875rem; font-weight: 700; color: var(--gray-900); }
-.cal-pending-sub { margin: .2rem 0 0; font-size: .76rem; color: var(--gray-500); line-height: 1.5; }
+.cal-pending-toggle {
+    display: flex; align-items: flex-start; gap: .55rem;
+    flex: 1; min-width: 0; padding: 0; margin: 0;
+    background: none; border: none; text-align: left;
+    font-family: var(--font-body); cursor: pointer; color: inherit;
+}
+.cal-pending-toggle:focus-visible { outline: 2px solid var(--primary-blue); outline-offset: 3px; border-radius: 4px; }
+.cal-pending-chevron {
+    flex-shrink: 0; margin-top: .15rem; color: var(--gray-500);
+    transform: rotate(-90deg); transition: transform .2s ease;
+}
+.cal-pending-toggle[aria-expanded="true"] .cal-pending-chevron { transform: rotate(0deg); color: var(--primary-blue); }
+.cal-pending-toggle:hover .cal-pending-title { color: var(--primary-blue); }
+.cal-pending-title { display: block; margin: 0; font-size: .875rem; font-weight: 700; color: var(--gray-900); transition: color .15s; }
+.cal-pending-sub { display: block; margin: .2rem 0 0; font-size: .76rem; color: var(--gray-500); line-height: 1.5; }
 .cal-pending-bulk { display: flex; gap: .4rem; flex-shrink: 0; }
 .cal-pending-bulk button,
 .cal-decide {
@@ -719,6 +746,8 @@ window.onUnavailabilityChanged = function () {
     max-height: 240px; overflow-y: auto;
     display: flex; flex-direction: column; gap: .4rem;
 }
+/* display:flex above would otherwise override the hidden attribute */
+.cal-pending-list[hidden] { display: none; }
 .cal-pending-list li {
     display: flex; align-items: center; justify-content: space-between;
     gap: .75rem; flex-wrap: wrap;

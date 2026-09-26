@@ -326,6 +326,12 @@ function openPopover(aptId, anchor) {
     $('popStatusPill').textContent = apt.status.charAt(0).toUpperCase() + apt.status.slice(1);
 
     $('popActions').style.display = apt.status === 'pending' ? 'flex' : 'none';
+    // Same rule as the list view and day panel: only once it has actually ended.
+    const completeRow = $('popCompleteActions');
+    if (completeRow) {
+        completeRow.style.display = apt.status === 'confirmed' && hasEnded(apt) ? 'flex' : 'none';
+        $('popComplete').disabled = false;
+    }
     $('popDeclinePanel').classList.remove('open');
     $('popDeclineReason').value = '';
     $('popResolved').classList.remove('open','approved','declined');
@@ -455,6 +461,15 @@ function initPopover() {
     }
 
     $('popClose').addEventListener('click', () => closePopover());
+
+    const popComplete = $('popComplete');
+    if (popComplete) popComplete.addEventListener('click', () => {
+        if (!activePopAptId) return;
+        popComplete.disabled = true;
+        // doComplete updates every view and shows the success toast itself;
+        // the popover just gets out of the way once it is done.
+        doComplete(activePopAptId, () => closePopover(), () => { popComplete.disabled = false; });
+    });
 
     document.addEventListener('click', e => {
         if (!popoverOpen && !dayPanelEl) return;
@@ -1439,10 +1454,33 @@ function renderPendingBanner() {
         </li>`).join('');
 }
 
+/**
+ * The imported-events list opens and closes like a dropdown. Collapsed by
+ * default so a large import does not push the calendar down; the choice is
+ * remembered per browser, so an instructor who keeps it open finds it open.
+ */
+const PENDING_OPEN_KEY = 'facitrack.calPendingOpen';
+function setPendingOpen(open) {
+    const toggle = $('calPendingToggle');
+    const list = $('calPendingList');
+    if (!toggle || !list) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    list.hidden = !open;
+    try { localStorage.setItem(PENDING_OPEN_KEY, open ? '1' : '0'); } catch (e) { /* private mode */ }
+}
+
 function initCalendarSync() {
     const banner = $('calPendingBanner');
     if (banner) {
+        let startOpen = false;
+        try { startOpen = localStorage.getItem(PENDING_OPEN_KEY) === '1'; } catch (e) { /* private mode */ }
+        setPendingOpen(startOpen);
+
         banner.addEventListener('click', e => {
+            if (e.target.closest('#calPendingToggle')) {
+                setPendingOpen($('calPendingToggle').getAttribute('aria-expanded') !== 'true');
+                return;
+            }
             const button = e.target.closest('.cal-decide');
             if (button) {
                 const row = button.closest('li');

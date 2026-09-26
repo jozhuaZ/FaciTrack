@@ -604,6 +604,10 @@
 .pop-btn-approve:hover { background: #d1fae5; border-color: #059669; }
 .pop-btn-decline { background: #fef2f2; color: #991b1b; border: 1.5px solid #fca5a5; }
 .pop-btn-decline:hover { background: #fee2e2; border-color: #ef4444; }
+/* Teal, matching the Complete buttons in the list and day panel */
+.pop-btn-complete { background: #f0fdfa; color: #115e59; border: 1.5px solid #5eead4; }
+.pop-btn-complete:hover { background: #ccfbf1; border-color: #0d9488; }
+.pop-btn:disabled { opacity: .6; cursor: not-allowed; }
 
 /* ── Inline decline panel (inside popover) ── */
 .pop-decline-panel {
