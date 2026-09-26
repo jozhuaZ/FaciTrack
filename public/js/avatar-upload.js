@@ -109,10 +109,12 @@ window.AvatarUpload = (function () {
             var preview = URL.createObjectURL(file);
             paint(targets, preview);
 
-            var body = new FormData();
-            body.append('avatar', file);
-
-            fetch('/profile/avatar', { method: 'POST', body: body, credentials: 'same-origin' })
+            shrink(file)
+                .then(function (upload) {
+                    var body = new FormData();
+                    body.append('avatar', upload, 'avatar.jpg');
+                    return fetch('/profile/avatar', { method: 'POST', body: body, credentials: 'same-origin' });
+                })
                 .then(readJson)
                 .then(function (result) {
                     if (!result.ok) throw new Error(result.data.message || 'Upload failed.');
@@ -156,9 +158,47 @@ window.AvatarUpload = (function () {
     }
 
     /** Response body alongside the status, tolerating an empty or non-JSON body. */
+    /**
+     * Shrink a photo in the browser before it is sent.
+     *
+     * A phone camera photo is routinely 5–12 MB, and a serverless host rejects
+     * any request body over about 4.5 MB before the app even sees it. The
+     * server reduces every avatar to a 256px square anyway, so sending the full
+     * original is pure cost: resized here to at most 800px as a JPEG, the
+     * upload is on the order of 100 KB. The server still decodes and
+     * re-encodes it, so this is a size step, not a trust step.
+     *
+     * Falls back to the original file whenever the browser cannot draw it —
+     * a HEIC image on a desktop browser, say — and lets the server decide.
+     */
+    var MAX_EDGE = 800;
+    function shrink(file) {
+        var decode = window.createImageBitmap
+            // from-image applies the EXIF rotation, so portrait photos stay upright
+            ? createImageBitmap(file, { imageOrientation: 'from-image' })
+            : Promise.reject(new Error('no createImageBitmap'));
+
+        return decode.then(function (bitmap) {
+            var scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.round(bitmap.width * scale);
+            canvas.height = Math.round(bitmap.height * scale);
+            canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            if (bitmap.close) bitmap.close();
+            return new Promise(function (resolve) {
+                canvas.toBlob(function (blob) { resolve(blob || file); }, 'image/jpeg', 0.9);
+            });
+        }).catch(function () { return file; });
+    }
+
     function readJson(res) {
         return res.json()
-            .catch(function () { return {}; })
+            .catch(function () {
+                // A body the host rejected never reaches the app, so there is
+                // no JSON — only a status. Name the common one.
+                if (res.status === 413) return { message: 'That photo is too large to upload. Please choose a smaller one.' };
+                return { message: 'The request failed (' + res.status + ').' };
+            })
             .then(function (data) { return { ok: res.ok, data: data }; });
     }
 

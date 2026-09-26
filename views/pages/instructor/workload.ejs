@@ -484,6 +484,17 @@
         <div class="imp-summary" id="impSummary"></div>
 
         <!-- Only shown when a room on the form is not recognised -->
+        <section class="imp-section">
+          <h4>Apply to my schedule</h4>
+          <label class="imp-radio">
+            <input type="radio" name="impMode" value="replace" checked>
+            <span><strong>Replace</strong><small id="impReplaceHint">Clear my current blocks first</small></span>
+          </label>
+          <label class="imp-radio">
+            <input type="radio" name="impMode" value="merge">
+            <span><strong>Merge</strong><small>Keep what I have and add these on top</small></span>
+          </label>
+        </section>
         <section class="imp-section" id="impRoomsSection" hidden>
           <h4>Match rooms</h4>
           <p class="imp-hint">These room names are not in the system yet. Pick the matching room, or leave a block without one.</p>
@@ -504,18 +515,6 @@
         <section class="imp-section" id="impWarnSection" hidden>
           <h4>Warnings</h4>
           <ul class="imp-warn" id="impWarnings"></ul>
-        </section>
-
-        <section class="imp-section">
-          <h4>Apply to my schedule</h4>
-          <label class="imp-radio">
-            <input type="radio" name="impMode" value="replace" checked>
-            <span><strong>Replace</strong><small id="impReplaceHint">Clear my current blocks first</small></span>
-          </label>
-          <label class="imp-radio">
-            <input type="radio" name="impMode" value="merge">
-            <span><strong>Merge</strong><small>Keep what I have and add these on top</small></span>
-          </label>
         </section>
       </div>
 

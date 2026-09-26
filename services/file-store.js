@@ -77,9 +77,49 @@ const diskDriver = {
  */
 const CHUNK_BYTES = Number(process.env.FILE_STORE_CHUNK_BYTES) || 256 * 1024;
 
+/**
+ * Create the tables this driver needs, once per process.
+ *
+ * They live in their own migrations, which are easy to miss on a fresh
+ * database — and then every upload fails with "table doesn't exist" and
+ * nothing more. The session store creates its own table for the same reason.
+ * IF NOT EXISTS makes this a no-op wherever the migrations already ran, and the
+ * SQL avoids MariaDB-only syntax so it works on MySQL (Aiven) too.
+ */
+let tablesReady = null;
+function ensureTables() {
+    if (!tablesReady) {
+        tablesReady = (async () => {
+            await pool.query(`CREATE TABLE IF NOT EXISTS stored_files (
+                file_key      VARCHAR(255) NOT NULL,
+                kind          VARCHAR(32)  NOT NULL,
+                mime_type     VARCHAR(120) NOT NULL DEFAULT 'application/octet-stream',
+                original_name VARCHAR(255) NULL,
+                byte_size     INT UNSIGNED NOT NULL DEFAULT 0,
+                created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (file_key),
+                INDEX idx_stored_files_kind (kind, created_at)
+            )`);
+            await pool.query(`CREATE TABLE IF NOT EXISTS stored_file_chunks (
+                file_key    VARCHAR(255) NOT NULL,
+                chunk_index INT UNSIGNED NOT NULL,
+                data        MEDIUMBLOB   NOT NULL,
+                PRIMARY KEY (file_key, chunk_index),
+                CONSTRAINT fk_chunk_file FOREIGN KEY (file_key)
+                    REFERENCES stored_files (file_key) ON DELETE CASCADE
+            )`);
+        })().catch((err) => {
+            tablesReady = null;   // let the next request try again
+            throw err;
+        });
+    }
+    return tablesReady;
+}
+
 const dbDriver = {
     async put({ key, buffer, mimeType, originalName, kind }) {
         assertKey(key);
+        await ensureTables();
 
         const conn = await pool.getConnection();
         try {
@@ -123,6 +163,7 @@ const dbDriver = {
 
     async get(key) {
         assertKey(key);
+        await ensureTables();
         const [rows] = await pool.execute(
             'SELECT mime_type, original_name, byte_size FROM stored_files WHERE file_key = ?',
             [key]
@@ -145,6 +186,7 @@ const dbDriver = {
 
     async remove(key) {
         assertKey(key);
+        await ensureTables();
         // The chunks go with it: the foreign key cascades.
         await pool.execute('DELETE FROM stored_files WHERE file_key = ?', [key]);
     },

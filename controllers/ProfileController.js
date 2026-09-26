@@ -93,7 +93,13 @@ const ProfileController = {
                 });
             }
             console.error('[ProfileController.uploadAvatar]', err);
-            res.status(500).json({ status: 'error', message: 'Could not save the photo.' });
+            // The code (ER_NO_SUCH_TABLE, ECONNREFUSED…) names the failure
+            // without exposing anything sensitive, so a failure on a host whose
+            // logs are a step away can still be diagnosed from the toast.
+            res.status(500).json({
+                status: 'error',
+                message: 'Could not save the photo' + (err.code ? ` (${err.code}).` : '.'),
+            });
         }
     },
 

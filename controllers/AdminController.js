@@ -37,6 +37,45 @@ function validateFloor(raw) {
     return {};
 }
 
+// Who a room can be assigned to. Deans teach and keep offices too.
+const ASSIGNABLE_ROLES = ['Instructor', 'Dean'];
+
+/**
+ * Faculty for the room form's dropdown, by last name.
+ *
+ * Inactive faculty stay in the list, marked, so a room still assigned to one
+ * shows who it is when edited instead of silently reading "Unassigned".
+ */
+async function listAssignableFaculty() {
+    const users = await UserModel.getUsersWithDepartment();
+    return users
+        .filter(u => ASSIGNABLE_ROLES.includes(u.role))
+        .map(u => ({
+            id: u.id,   // public_id — the internal id never reaches the page
+            name: [u.last_name, u.first_name].filter(Boolean).join(', '),
+            inactive: String(u.status || '').toLowerCase() !== 'active',
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Turn the dropdown's public id into the users.id the foreign key stores.
+ *
+ * Empty means unassigned. Anything that is not a faculty member is refused
+ * rather than stored: the column would accept any user, and a student or an
+ * admin "assigned" to a room is a data error nothing downstream expects.
+ *
+ * @returns {{ id: number|null, error?: string }}
+ */
+async function resolveAssignedFaculty(publicId) {
+    if (!publicId) return { id: null };
+    const user = await UserModel.getUserByPublicId(publicId);
+    if (!user || !ASSIGNABLE_ROLES.includes(user.role)) {
+        return { id: null, error: 'Choose a faculty member from the list.' };
+    }
+    return { id: user.internal_id };
+}
+
 const DisplayDeviceModel = require('../models/DisplayDeviceModel');
 const tagDiscovery = require('../services/tag-discovery');
 const { describeAddress } = require('../utils/bleAddress');
@@ -778,6 +817,7 @@ const AdminController = {
                         d.full_name AS department_name,
                         d.building AS building_name,
                         CONCAT(u.last_name, ', ', u.first_name) AS assigned_faculty_name,
+                        u.public_id AS assigned_faculty_id,
                         r.is_ble_scanner_installed,
                         r.status`
             })
@@ -787,7 +827,8 @@ const AdminController = {
             title: 'FaciTrack - Rooms Management',
             admin: admin,
             departments: departments,
-            roomData: rooms
+            roomData: rooms,
+            faculty: await listAssignableFaculty(),
         });
     },
 
@@ -806,6 +847,9 @@ const AdminController = {
             if (bleStatus == null || bleStatus === '') errors.bleStatus = 'BLE Scanner status is required.';
             if (!status) errors.status = 'Status is required.';
 
+            const faculty = await resolveAssignedFaculty(assignedFaculty);
+            if (faculty.error) errors.assignedFaculty = faculty.error;
+
             // return early if at least one error is present
             if (Object.keys(errors).length > 0) {
                 return res.status(422).json({ success: false, errors })
@@ -818,7 +862,7 @@ const AdminController = {
                 department,
                 roomType,
                 bleStatus,
-                assignedFaculty,
+                assignedFaculty: faculty.id,
                 status,
                 capacity
             });
@@ -856,6 +900,9 @@ const AdminController = {
             if (!roomType) errors.roomType = 'Room Type is required.';
             if (!status) errors.status = 'Status is required.';
 
+            const faculty = await resolveAssignedFaculty(assignedFaculty);
+            if (faculty.error) errors.assignedFaculty = faculty.error;
+
             // return early if at least one error is present
             if (Object.keys(errors).length > 0) {
                 return res.status(422).json({ success: false, errors })
@@ -868,7 +915,7 @@ const AdminController = {
                 department,
                 roomType,
                 bleStatus,
-                assignedFaculty: assignedFaculty || null,
+                assignedFaculty: faculty.id,
                 status,
                 capacity
             });
