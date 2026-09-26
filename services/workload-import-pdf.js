@@ -189,7 +189,39 @@ function readFills(operatorList, OPS) {
  * @param {Buffer} buffer the uploaded .pdf
  * @returns {Promise<{semester, blocks, skipped, roomLabels, warnings}>}
  */
+/**
+ * Give pdf.js the browser classes it expects, before it loads.
+ *
+ * pdf.js v5 needs DOMMatrix, ImageData and Path2D, which Node does not have.
+ * It fills them itself from @napi-rs/canvas — but loads that package through a
+ * require it builds at runtime (createRequire(import.meta.url)), which a
+ * serverless bundler cannot see. On Vercel the package, and its native Linux
+ * binary, were therefore left out of the function: pdf.js only logged a
+ * warning, then failed with "DOMMatrix is not defined". Locally the package
+ * is simply sitting in node_modules, which is why it worked there.
+ *
+ * Requiring it here, statically, is what lets the bundler trace it (and the
+ * platform binary it requires in turn) into the deployment. With the globals
+ * already set, pdf.js skips its own attempt.
+ */
+function installCanvasGlobals() {
+    if (globalThis.DOMMatrix && globalThis.ImageData && globalThis.Path2D) return;
+
+    let canvas;
+    try {
+        canvas = require('@napi-rs/canvas');
+    } catch (err) {
+        // Said plainly, rather than surfacing later as an unexplained DOMMatrix error.
+        throw new Error('PDF import is unavailable on this server: its PDF engine could not load '
+            + `(@napi-rs/canvas: ${err.message}). A .docx workload file will still import.`);
+    }
+    if (!globalThis.DOMMatrix) globalThis.DOMMatrix = canvas.DOMMatrix;
+    if (!globalThis.ImageData) globalThis.ImageData = canvas.ImageData;
+    if (!globalThis.Path2D) globalThis.Path2D = canvas.Path2D;
+}
+
 async function parseWorkloadPdf(buffer) {
+    installCanvasGlobals();
     // pdf.js ships as ESM; the legacy build is the one that runs under Node.
     const { getDocument, OPS } = await import('pdfjs-dist/legacy/build/pdf.mjs');
 

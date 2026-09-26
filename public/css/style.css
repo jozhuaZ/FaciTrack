@@ -215,6 +215,17 @@ img {
     line-height: 1.3 !important;
 }
 
+/* The student sidebar shows the email in full. It is a single unbroken word,
+   so it wraps at any character rather than spilling past the sidebar. */
+.student-sidebar .profile-role-mini {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    max-width: none;
+    line-height: 1.3;
+}
+
 /* ── Remove profile photo ──
    A badge on the avatar's corner rather than a control in the page flow — as a
    block button underneath, it pushed into the name below. It anchors to

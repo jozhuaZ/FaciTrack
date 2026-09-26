@@ -472,8 +472,16 @@ const _tabs = [
     // host that cannot hold one open. This used to open its own EventSource,
     // which meant a second connection per tab and no fallback when the stream
     // could not be held.
-    window.Realtime
-        .on('notification:new', received)
-        .on('connection:error', function () { console.warn('[Notifications] Live updates interrupted.'); });
+    function subscribeLive() {
+        window.Realtime
+            .on('notification:new', received)
+            .on('connection:error', function () { console.warn('[Notifications] Live updates interrupted.'); });
+    }
+    // realtime.js is loaded by partials/script.ejs at the end of the page, after
+    // this partial. Calling it immediately threw "Realtime is undefined" and
+    // stopped the rest of this script, so live updates never arrived. By
+    // DOMContentLoaded every script at the end of <body> has run.
+    if (window.Realtime) subscribeLive();
+    else document.addEventListener('DOMContentLoaded', subscribeLive);
 })();
 </script>

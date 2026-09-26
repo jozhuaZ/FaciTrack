@@ -242,7 +242,7 @@ const DeanController = {
     async renderDashboard(req, res) {
         try {
             res.render('pages/dean/dashboard', {
-                title: 'FaciTrack - Dean Dashboard',
+                title: 'FaciTrack - Dashboard',
                 ...(await loadDepartment(req.session.userId)),
             });
         } catch (err) {

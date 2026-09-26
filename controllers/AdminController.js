@@ -212,7 +212,7 @@ const AdminController = {
             const dean = everyone.find(u => u.role === 'Dean');
 
             res.render('pages/admin/dashboard', {
-                title: 'FaciTrack - Admin Dashboard',
+                title: 'FaciTrack - Dashboard',
                 admin,
                 users: staff,
                 roomData,

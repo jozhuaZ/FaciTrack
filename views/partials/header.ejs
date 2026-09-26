@@ -7,9 +7,13 @@
     <meta name="keywords" content="faculty, appointment, monitoring, BLE, IoT, CSPC">
     <meta name="author" content="CSPC - College of Computer Studies">
     <meta name="theme-color" content="#0A3D62">
-    <title>FaciTrack - Smart Campus Innovation</title>
+    <%# Tab title reads "Page | FaciTrack". Controllers still pass the older
+        "FaciTrack - Page" form, so the brand prefix is stripped here rather
+        than in every render call. %>
+    <% const pageName = String(locals.title || '').replace(/^\s*FaciTrack\s*(?:[-|–]\s*|$)/i, '').trim(); %>
+    <title><%= pageName ? pageName + ' | FaciTrack' : 'FaciTrack' %></title>
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/images/FaciTrack-logo.png" type="image/png">
+    <link rel="icon" href="/images/icon-192.png" type="image/png" sizes="192x192">
     <%# iOS ignores the manifest's icons and reads this instead. It also has no
         maskable concept, so it gets the opaque one — a transparent icon would
         come out black on the home screen. %>

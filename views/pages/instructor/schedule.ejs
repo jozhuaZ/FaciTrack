@@ -1024,15 +1024,16 @@ function openAddModal(day, date){
 }
 
 /* -- Save -- */
-async function saveSlotBlock(date, day, timeStart, timeEnd, maxCapacity, repeat) {
+async function saveSlotBlock(date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId) {
   const res = await fetch('/instructor/schedule/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, day, timeStart, timeEnd, maxCapacity, repeat }),
+      body: JSON.stringify({ date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId }),
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!data.success) {
-      showToast('error', 'Error', data.error.message || 'Failed to save slot.');
+      const title = res.status === 409 ? 'Time not available' : 'Error';
+      showToast('error', title, (data.error && data.error.message) || 'Failed to save slot.');
       return false;
   }
   showToast('success', 'Saved', data.message);
@@ -1073,13 +1074,12 @@ document.getElementById('confirmSlot').addEventListener('click', async function(
         return;
     }
 
-    // If editing, delete the old slot first
-    if (editIdx >= 0 && slots[editIdx]?.id) {
-        await fetch(`/instructor/schedule/${slots[editIdx].id}`, { method: 'DELETE' });
-        slots.splice(editIdx, 1);
-    }
+    // Editing: the server swaps the old slot for the new one in one step. It
+    // used to be deleted here first, so an edit the server then refused (an
+    // overlap, say) left the slot gone.
+    const replaceSlotId = (editIdx >= 0 && slots[editIdx]?.id) ? slots[editIdx].id : null;
 
-    const ok = await saveSlotBlock(slotDate, day, timeStart, timeEnd, maxCapacity, repeat);
+    const ok = await saveSlotBlock(slotDate, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId);
     if (!ok) return;
 
     document.getElementById('slotModal').classList.remove('show');

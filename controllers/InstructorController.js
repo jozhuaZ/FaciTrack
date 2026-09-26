@@ -8,7 +8,7 @@ const InstructorSettingsModel = require('../models/InstructorSettingsModel');
 const GoogleAccountModel = require('../models/GoogleAccountModel');
 const CalendarModel = require('../models/CalendarModel');
 const bcrypt = require('bcryptjs');
-const { to12Hour } = require('../utils/timeFormat');
+const { to12Hour, formatFullDate } = require('../utils/timeFormat');
 const { buildInstructorUser } = require('../utils/sessionUser');
 
 // Must mirror the users.availability_status enum
@@ -150,18 +150,38 @@ const InstructorController = {
 
     async saveSlotBlock(req, res) {
         try {
-            const { date, day, timeStart, timeEnd, maxCapacity, repeat } = req.body;
+            const { date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId } = req.body;
 
             // The Add Slot modal no longer asks how many weeks — the instructor's
             // saved default decides. Editing an existing slot never repeats.
             const settings = await InstructorSettingsModel.getByPublicId(req.session.userId);
-            const repeatWeeks = (repeat && settings.repeatWeekly) ? settings.repeatWeeks : 1;
+            const editing = Boolean(replaceSlotId);
+            const repeatWeeks = (!editing && repeat && settings.repeatWeekly) ? settings.repeatWeeks : 1;
 
             const result = await ConsultationModel.saveSlotBlock(req.session.userId, {
                 date, day, timeStart, timeEnd,
                 maxCapacity: parseInt(maxCapacity, 10) || 1,
                 repeatWeeks,
+                replaceSlotId: editing ? parseInt(replaceSlotId, 10) : null,
             });
+
+            // Refusals keep the { error: { message } } shape the page already reads.
+            if (result.conflict) {
+                const { date: on, start, end } = result.conflict;
+                return res.status(409).json({ success: false, error: {
+                    message: `That time overlaps your existing ${to12Hour(start)}–${to12Hour(end)} slot on ${formatFullDate(on)}. `
+                        + 'Pick a time that starts when that one ends, or edit that slot instead.',
+                } });
+            }
+            if (result.error === 'ACTIVE_APPOINTMENT') {
+                return res.status(409).json({ success: false, error: {
+                    message: 'This slot has an active appointment, so it can\'t be changed. '
+                        + 'Complete or cancel the appointment first.',
+                } });
+            }
+            if (result.error === 'NOT_FOUND') {
+                return res.status(404).json({ success: false, error: { message: 'That slot no longer exists. Reload and try again.' } });
+            }
 
             try {
                 const instructor = await UserModel.getUserByPublicId(req.session.userId);
@@ -170,7 +190,12 @@ const InstructorController = {
                 console.error('[AuditLog] Failed to log consultation slot:', err);
             }
 
-            res.json({ success: true, message: `Saved ${result.count} slot(s) across ${repeatWeeks} week(s).` });
+            let message = `Saved ${result.count} slot(s) across ${repeatWeeks - result.skipped.length} week(s).`;
+            if (result.skipped.length) {
+                message += ` Skipped ${result.skipped.length} week(s) that overlapped an existing slot: `
+                    + result.skipped.map(formatFullDate).join(', ') + '.';
+            }
+            res.json({ success: true, message, skipped: result.skipped });
         } catch (err) {
             console.error('[InstructorController.saveSlotBlock]', err);
             res.status(500).json({ success: false, error: { message: err.message } });
@@ -773,7 +798,7 @@ const InstructorController = {
                 );
 
             res.render('pages/instructor/dashboard', {
-                title: 'FaciTrack - Instructor Dashboard',
+                title: 'FaciTrack - Dashboard',
                 instructor,
                 appointments,
                 consultationSlots,

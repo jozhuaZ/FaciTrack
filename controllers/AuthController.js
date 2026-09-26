@@ -4,7 +4,7 @@ const AuditLogModel = require('../models/AuditLogModel');
 const OtpModel = require('../models/OtpModel');
 const emailService = require('../services/email');
 
-const LOGIN_TITLE = 'FaciTrack - Faculty Appointment & Monitoring System';
+const LOGIN_TITLE = 'FaciTrack - Login';
 
 // Roles that must clear a second factor before a session is created
 const OTP_REQUIRED_ROLES = ['Admin'];

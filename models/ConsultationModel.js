@@ -326,8 +326,31 @@ const ConsultationModel = {
         return row ? row.consultation_date : null;
     },
 
-    async saveSlotBlock(publicId, { date, day, timeStart, timeEnd, maxCapacity, repeatWeeks = 1 }) {
+    /**
+     * Save a block of slots, optionally repeating weekly.
+     *
+     * No two of an instructor's slots may overlap. The old version had no check
+     * at all — it only cleared available slots lying entirely inside the new
+     * range, so a 4:30–5:00 added next to an existing 4:00–5:00 went straight
+     * in on top of it (and a booked slot inside the range was kept and
+     * overlapped too). Any overlap with an open or booked slot is now refused.
+     *
+     * Repeating: if the date the instructor picked overlaps, nothing is saved —
+     * that is the slot they are looking at. A later week that overlaps is
+     * skipped and reported rather than sinking the whole series.
+     *
+     * Editing (replaceSlotId): the old slot comes out inside the same
+     * transaction. The page used to delete it first and then save, so an edit
+     * that failed lost the slot; now a refused edit rolls back and the original
+     * is still there.
+     *
+     * @returns {{count, recurrenceId, skipped}} on success, or
+     *          {{conflict: {date, start, end}}} / {{error: 'NOT_FOUND'|'ACTIVE_APPOINTMENT'}}
+     */
+    async saveSlotBlock(publicId, { date, day, timeStart, timeEnd, maxCapacity, repeatWeeks = 1, replaceSlotId = null }) {
         const conn = await pool.getConnection();
+        // Undo everything this call did and hand back why.
+        const refuse = async (result) => { await conn.rollback(); return result; };
         try {
             await conn.beginTransaction();
 
@@ -336,23 +359,62 @@ const ConsultationModel = {
             );
             if (!user) throw new Error('Instructor not found');
 
+            if (replaceSlotId) {
+                const [[old]] = await conn.execute(
+                    'SELECT id FROM consultation_hours WHERE id = ? AND instructor_id = ? FOR UPDATE',
+                    [replaceSlotId, user.id]
+                );
+                if (!old) return refuse({ error: 'NOT_FOUND' });
+
+                const [[history]] = await conn.execute(
+                    `SELECT SUM(status IN ('pending','confirmed')) AS active, COUNT(*) AS total
+                       FROM appointments WHERE consultation_hour_id = ?`,
+                    [replaceSlotId]
+                );
+                // Moving a slot out from under a student's live booking would
+                // leave them booked for a time that no longer exists.
+                if (Number(history.active) > 0) return refuse({ error: 'ACTIVE_APPOINTMENT' });
+
+                // Same rule as deleteSlot: keep it (closed) if it has history.
+                if (Number(history.total) > 0) {
+                    await conn.execute("UPDATE consultation_hours SET status = 'closed' WHERE id = ?", [replaceSlotId]);
+                } else {
+                    await conn.execute('DELETE FROM consultation_hours WHERE id = ?', [replaceSlotId]);
+                }
+            }
+
+            const start24 = to24Hour(timeStart);
+            const end24 = to24Hour(timeEnd);
             const recurrenceId = repeatWeeks > 1 ? crypto.randomUUID() : null;
             const subSlots = generateSubSlots(timeStart, timeEnd, maxCapacity);
             let totalInserted = 0;
+            const skipped = [];
 
             for (let week = 0; week < repeatWeeks; week++) {
                 const occurrenceDate = addDays(date, week * 7);
 
-                // Delete existing available slots in this range on this occurrence's date
-                await conn.execute(
-                    `DELETE FROM consultation_hours
-                 WHERE instructor_id = ?
-                   AND consultation_date = ?
-                   AND start_time >= ?
-                   AND end_time <= ?
-                   AND status = 'Available'`,
-                    [user.id, occurrenceDate, to24Hour(timeStart), to24Hour(timeEnd)]
+                // Two ranges overlap when each starts before the other ends.
+                // Touching ends (4:00–5:00 then 5:00–5:30) is not an overlap.
+                const [clash] = await conn.execute(
+                    `SELECT start_time, end_time FROM consultation_hours
+                      WHERE instructor_id = ?
+                        AND consultation_date = ?
+                        AND LOWER(status) <> 'closed'
+                        AND start_time < ?
+                        AND end_time > ?
+                      ORDER BY start_time
+                      LIMIT 1`,
+                    [user.id, occurrenceDate, end24, start24]
                 );
+                if (clash.length) {
+                    if (week === 0) {
+                        return refuse({
+                            conflict: { date: occurrenceDate, start: clash[0].start_time, end: clash[0].end_time },
+                        });
+                    }
+                    skipped.push(occurrenceDate);
+                    continue;
+                }
 
                 for (const sub of subSlots) {
                     await conn.execute(
@@ -366,7 +428,7 @@ const ConsultationModel = {
             }
 
             await conn.commit();
-            return { count: totalInserted, recurrenceId };
+            return { count: totalInserted, recurrenceId, skipped };
         } catch (err) {
             await conn.rollback();
             throw err;
