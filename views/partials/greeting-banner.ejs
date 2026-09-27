@@ -16,6 +16,8 @@
               empty  shown when there are no items
               pendingNote  false to drop the "(Pending)" suffix, for a list
                            that is all pending anyway
+    building — optional, true to set a miniature of the CCS building over the
+               seal (the dean dashboard).
 %>
 <link rel="stylesheet" href="/css/greeting-banner.css?v=<%= assetVersion %>">
 <%# Only for the script greeting line. %>
@@ -31,13 +33,22 @@
   // Morning until noon, afternoon until 6 PM, evening after.
   const _greeting = _hour < 12 ? 'Good Morning,' : _hour < 18 ? 'Good Afternoon,' : 'Good Evening,';
   const _today = (typeof today !== 'undefined' && today) ? today : null;
+  const _building = typeof building !== 'undefined' && !!building;
 %>
-<div class="greeting-banner<%= _today ? ' has-today' : '' %>">
+<%# With the building, a wrapper holds the banner and the building side by
+    side: the banner clips its own contents (the seal), so the building sits
+    outside it to be able to break past its top and bottom edges. %>
+<% if (_building) { %><div class="greeting-banner-wrap"><% } %>
+<div class="greeting-banner<%= _today ? ' has-today' : '' %><%= _building ? ' has-building' : '' %>">
     <%# The CSPC seal as a white silhouette. cspc-silhouette.png is
         CSPC-logo.png with every opaque pixel turned white (its light areas
         are already transparent), shrunk to 360px: 35 KB instead of 250 KB
         for a decoration. %>
     <img class="greeting-banner-art" src="/images/cspc-silhouette.png" alt="" aria-hidden="true">
+    <% if (_building) { %>
+    <%# The building's fading far half; its near half is the link after the banner %>
+    <img class="greeting-banner-building-back" src="/images/ccs-building-mini.webp" alt="" aria-hidden="true" decoding="async">
+    <% } %>
 
     <div class="greeting-banner-hello">
         <p class="greeting-banner-greeting"><%= _greeting %></p>
@@ -70,4 +81,17 @@
     </div>
     <% } %>
 </div>
-
+<% if (_building) { %>
+    <%# A still of the 3D model (public/models/ccs-building.glb) from the front
+        right, wide lens, near corner toward the viewer: rendered once to a
+        29 KB image rather than loading the 12 MB model on the dashboard.
+        Opens the 3D Building page. %>
+    <a class="greeting-banner-building" href="/dean/building" aria-label="Open the 3D building view">
+        <img src="/images/ccs-building-mini.webp" alt="" decoding="async">
+        <span class="greeting-banner-building-tag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            View in 3D
+        </span>
+    </a>
+</div>
+<% } %>

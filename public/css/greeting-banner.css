@@ -41,6 +41,104 @@
     z-index: -1;
 }
 
+/* ── Miniature CCS building (dean dashboard) ──
+   Over the seal, with its near (right) half breaking past the banner's top
+   and bottom edges, and its far half fading into the blue toward the text.
+   Drawn as two exactly aligned copies of one image:
+     .greeting-banner-building-back — inside the banner: the fading far half.
+       The banner clips its contents, so the fade never leaves the banner.
+     .greeting-banner-building      — outside it, in .greeting-banner-wrap:
+       the solid near half, free to overhang. It is the link to 3D Building.
+   (A clip-path on one copy did the same, but Chrome then painted a grey
+   band over the page where it overhung.) */
+.greeting-banner-wrap {
+    --bld-overhang: 26px;
+    --bld-right: 1.5rem;
+    --bld-split: 54%;           /* where the far half's fade has finished */
+    position: relative;
+    margin-bottom: 1.25rem;     /* room for the part hanging below the banner */
+}
+.greeting-banner-wrap > .greeting-banner { margin-bottom: 0; }
+
+.greeting-banner-building,
+.greeting-banner-building-back {
+    position: absolute;
+    right: var(--bld-right);
+    top: calc(var(--bld-overhang) * -1);
+    height: calc(100% + var(--bld-overhang) * 2);
+}
+.greeting-banner-building {
+    z-index: 2;
+    display: block;
+    -webkit-tap-highlight-color: transparent;
+}
+.greeting-banner-building img,
+.greeting-banner-building-back {
+    display: block;
+    width: auto;
+    transform-origin: 80% 70%;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+}
+.greeting-banner-building img {
+    height: 100%;
+    -webkit-mask-image: linear-gradient(to right, transparent var(--bld-split), #000 var(--bld-split));
+            mask-image: linear-gradient(to right, transparent var(--bld-split), #000 var(--bld-split));
+}
+.greeting-banner-building-back {
+    z-index: -1;                /* over the seal (earlier in the DOM), under the text */
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
+            mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
+}
+/* The (shadow-baked) image carries its own drop shadow; see ccs-building-mini.webp */
+
+/* Hover lifts both halves together so the seam never shows */
+.greeting-banner-building:hover img,
+.greeting-banner-building:focus-visible img,
+.greeting-banner-wrap:has(> .greeting-banner-building:hover) .greeting-banner-building-back,
+.greeting-banner-wrap:has(> .greeting-banner-building:focus-visible) .greeting-banner-building-back {
+    transform: translateY(-5px) scale(1.035);
+}
+.greeting-banner-building:focus-visible { outline: none; }
+.greeting-banner-building:focus-visible .greeting-banner-building-tag {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
+/* "View in 3D", inside the banner's lower-right corner */
+.greeting-banner-building-tag {
+    position: absolute;
+    right: 0.25rem;
+    bottom: calc(var(--bld-overhang) + 0.7rem);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+.greeting-banner-building:hover .greeting-banner-building-tag {
+    background: rgba(255, 255, 255, 0.28);
+    transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .greeting-banner-building img,
+    .greeting-banner-building-back,
+    .greeting-banner-building-tag { transition: none; }
+}
+
 .greeting-banner-greeting {
     margin: 0;
     font-family: 'Playfair Display', Georgia, serif;
@@ -99,6 +197,8 @@
         min-width: 0;
         margin-right: 9rem;
     }
+    /* Keep the pills clear of the building's solid (unfaded) part */
+    .greeting-banner.has-building .greeting-banner-today { margin-right: 15rem; }
 }
 
 .greeting-banner-today-label {
@@ -153,7 +253,8 @@
    container's side padding differs between breakpoints and stylesheets; this
    cancels whatever it is. Content below keeps its normal padding. */
 @media (max-width: 768px) {
-    .main-container:has(> .greeting-banner) { padding-top: 0; }
+    .main-container:has(> .greeting-banner),
+    .main-container:has(> .greeting-banner-wrap) { padding-top: 0; }
     .greeting-banner {
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
@@ -164,4 +265,17 @@
     .greeting-banner-greeting { font-size: 2.1rem; }
     .greeting-banner-name { font-size: 1.1rem; }
     .greeting-banner-art { right: -70px; height: 175%; }
+    /* Smaller, in the lower right under the date line so the greeting and
+       name stay clear, and only hanging off the bottom: the banner is flush
+       with the header above. */
+    .greeting-banner-wrap {
+        --bld-overhang: 18px;
+        --bld-right: 0.75rem;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+    }
+    .greeting-banner-wrap > .greeting-banner { margin-left: 0; margin-right: 0; }
+    .greeting-banner-building,
+    .greeting-banner-building-back { top: auto; bottom: calc(var(--bld-overhang) * -1); height: 132px; }
+    .greeting-banner-building-tag { font-size: 0.65rem; padding: 0.25rem 0.55rem; }
 }
