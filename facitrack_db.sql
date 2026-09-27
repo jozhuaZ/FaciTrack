@@ -448,7 +448,7 @@ CREATE TABLE makeup_requests (
     instructor_id          BIGINT NOT NULL,
     department_id          TINYINT UNSIGNED NULL,      -- snapshot: routes the dean's queue
     reason                 VARCHAR(500) NULL,
-    status                 ENUM('pending', 'approved', 'declined', 'withdrawn') NOT NULL DEFAULT 'pending',
+    status                 ENUM('pending', 'approved', 'declined', 'withdrawn', 'expired') NOT NULL DEFAULT 'pending',  -- expired: see migrations/2026-09-27-makeup-expired.sql
     decided_by             BIGINT NULL,
     dean_statement         VARCHAR(500) NULL,
     decline_reason         VARCHAR(500) NULL,
