@@ -88,7 +88,7 @@ const ConsultationModel = {
             u.id AS instructor_id, u.public_id AS faculty_id,
             u.first_name, u.last_name, u.middle_name,
             u.position, u.email, u.department_id, u.availability_status,
-            u.default_meeting_link,
+            u.default_meeting_link, u.profile_picture,
             (ga.user_id IS NOT NULL) AS google_connected,
             EXISTS (
                 SELECT 1 FROM rooms r
@@ -139,6 +139,7 @@ const ConsultationModel = {
                 middle_name: row.middle_name,
                 position: row.position,
                 department_name: row.department_name,
+                profile_picture: row.profile_picture || null,
                 availability_status: row.availability_status,
                 default_meeting_link: row.default_meeting_link,
                 // Either venue works for an online consultation: a scheduled

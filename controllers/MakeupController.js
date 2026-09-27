@@ -6,6 +6,7 @@ const pool = require('../configs/db');
 const fileStore = require('../services/file-store');
 
 const MakeupRequestModel = require('../models/MakeupRequestModel');
+const { expireUndecidedMakeups } = require('../jobs/reminder');
 const WorkloadModel = require('../models/WorkloadModel');
 const RoomModel = require('../models/RoomModel');
 const UserModel = require('../models/UserModel');
@@ -179,6 +180,10 @@ const MakeupController = {
     /** Instructor's own requests. */
     async renderRequestList(req, res) {
         try {
+            // Close off anything the dean never decided in time before showing the
+            // list, so it is right even where no timer runs (serverless, no pinger).
+            await expireUndecidedMakeups().catch(err =>
+                console.error('[Makeup] Expiry sweep failed:', err.message));
             const instructor = buildInstructorUser(req.session);
             const requests = await MakeupRequestModel.getByInstructor(req.session.userId);
             const appts = await AppointmentModel.getAppointmentsByInstructor(req.session.userId);
@@ -198,6 +203,7 @@ const MakeupController = {
                     approved: requests.filter(r => r.status === 'approved').length,
                     declined: requests.filter(r => r.status === 'declined').length,
                     withdrawn: requests.filter(r => r.status === 'withdrawn').length,
+                    expired: requests.filter(r => r.status === 'expired').length,
                 },
                 flash,
             });
@@ -530,6 +536,10 @@ const MakeupController = {
 
     async renderDeanQueue(req, res) {
         try {
+            // Close off anything the dean never decided in time before showing the
+            // list, so it is right even where no timer runs (serverless, no pinger).
+            await expireUndecidedMakeups().catch(err =>
+                console.error('[Makeup] Expiry sweep failed:', err.message));
             const dean = buildInstructorUser(req.session);
             const requests = await MakeupRequestModel.getByDepartment(req.session.userId);
             const pending = requests.filter(r => r.status === 'pending');
@@ -544,6 +554,7 @@ const MakeupController = {
                 pending,
                 approved: requests.filter(r => r.status === 'approved'),
                 declined: requests.filter(r => r.status === 'declined'),
+                expired: requests.filter(r => r.status === 'expired'),
                 pendingMakeupCount: pending.length,
                 flash,
             });

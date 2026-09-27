@@ -44,7 +44,18 @@
         var pageSize = config.pageSize || PAGE_SIZE;
         var page = 1;
 
-        var pick = function (role) { return root.querySelector('[data-role="' + role + '"]'); };
+        // A toolbar may sit outside its card (above it) and name the card with
+        // data-toolbar-for; its controls are looked up there as well.
+        var name = root.getAttribute('data-table');
+        var toolbar = name ? document.querySelector('[data-toolbar-for="' + name + '"]') : null;
+        var scopes = toolbar ? [root, toolbar] : [root];
+        var pick = function (role) {
+            for (var i = 0; i < scopes.length; i++) {
+                var el = scopes[i].querySelector('[data-role="' + role + '"]');
+                if (el) return el;
+            }
+            return null;
+        };
         var body = pick('body');
         var empty = pick('empty');
         var count = pick('count');
@@ -52,7 +63,9 @@
         var prev = pick('prev');
         var next = pick('next');
         var search = pick('search');
-        var filters = Array.prototype.slice.call(root.querySelectorAll('[data-role="filter"]'));
+        var filters = scopes.reduce(function (all, scope) {
+            return all.concat(Array.prototype.slice.call(scope.querySelectorAll('[data-role="filter"]')));
+        }, []);
         var pagination = root.querySelector('.pagination-bar');
 
         function visibleRows() {

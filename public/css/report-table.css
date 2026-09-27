@@ -13,6 +13,8 @@
   padding: 0 1.25rem 1rem;
   border-bottom: 1px solid var(--gray-100);
 }
+/* display:flex above would otherwise override the hidden attribute */
+.table-toolbar[hidden] { display: none; }
 .toolbar-group { display: flex; flex-direction: column; gap: .25rem; }
 .toolbar-label {
   font-size: .65rem; font-weight: 700; text-transform: uppercase;
@@ -33,6 +35,12 @@
 }
 .table-select { cursor: pointer; }
 .table-select:focus, .table-date:focus { border-color: var(--primary-blue); }
+/* One height for the search box, dropdowns and date so the row lines up;
+   each browser draws those three at slightly different heights otherwise. */
+.table-search, .table-select, .table-date { height: 2.4rem; box-sizing: border-box; }
+.table-select { padding-top: 0; padding-bottom: 0; }
+/* An empty date reads MM/DD/YYYY; the typed digits are unaffected. */
+.table-date::-webkit-datetime-edit { text-transform: uppercase; }
 .toolbar-spacer { flex: 1; }
 
 /* ── Table shell ── */
@@ -44,6 +52,10 @@
 .no-results p {
   font-size: .875rem; margin: 0 auto; max-width: 40ch; line-height: 1.55;
 }
+
+/* Badges stay on one line; "Out of Room" wrapped inside the narrow
+   Presence column and its pill broke apart */
+.report-table .table-badge { display: inline-flex; align-items: center; white-space: nowrap; }
 
 /* Self-reported availability pill, shared with the Faculty page */
 .avail-pill {

@@ -168,61 +168,35 @@
     // ── Export / Print ──
     var card = document.querySelector('[data-table="log"]');
     var preview = card.querySelector('.report-preview');
-    var tbody = card.querySelector('[data-role="body"]');
 
-    /** Builds the CSPC letterhead the print stylesheet reveals. */
-    function buildLetterhead(header) {
-        var existing = header.querySelector('.print-header-inner');
-        if (existing) existing.remove();
+    // Opens the shared export preview (Print / Save as PDF, DOCX, XLSX) with
+    // every row the filters match — not just the page on screen.
+    document.getElementById('btnPrintLog').addEventListener('click', function () {
+        var all = table.visibleRows();
+        if (!window.ExportSystem) return;
 
+        var header = preview.querySelector('.report-header-block');
         var textOf = function (selector) {
-            var el = header.querySelector(selector);
+            var el = header && header.querySelector(selector);
             return el ? el.innerText.trim() : '';
         };
-        var img = header.querySelector('img');
 
-        var inner = document.createElement('div');
-        inner.className = 'print-header-inner';
-        inner.innerHTML =
-            '<img src="' + (img ? img.src : '/images/CSPC-logo.png') + '" alt="CSPC Logo">' +
-            '<div class="print-header-text">' +
-                '<span class="ph-republic">Republic of the Philippines</span>' +
-                '<span class="ph-institution">Camarines Sur Polytechnic Colleges</span>' +
-                '<span class="ph-address">Nabua, Camarines Sur</span>' +
-                '<span class="ph-title">' + textOf('.report-title-block') + '</span>' +
-                '<span class="ph-subtitle">' + textOf('.report-subtitle') + '</span>' +
-                '<span class="ph-period">' + textOf('.report-period') + '</span>' +
-            '</div>';
-        header.appendChild(inner);
-    }
-
-    document.getElementById('btnPrintLog').addEventListener('click', function () {
-        // A report that stopped at row 10 would be wrong on paper, so every row
-        // the filters match is written out for the print, then paging restored.
-        var all = table.visibleRows();
-        if (!all.length) return;
-
-        tbody.innerHTML = all.map(function (row) {
-            return '<tr>' + table.renderRow(row) + '</tr>';
-        }).join('');
-
-        preview.querySelectorAll('.report-header-block').forEach(buildLetterhead);
-
-        document.querySelectorAll('.report-preview.print-only').forEach(function (el) {
-            el.classList.remove('print-only');
+        window.ExportSystem.openPreview({
+            title: textOf('.report-title-block') || 'Consultation Logs Report',
+            subtitle: textOf('.report-period'),
+            columns: ['Student', 'Student ID', 'Date', 'Time', 'Topic', 'Status'],
+            rows: all.map(function (r) {
+                var status = String(r.status || 'pending');
+                return [
+                    r.studentName || '—',
+                    r.studentId || '—',
+                    formatDate(r.date),
+                    r.time || '—',
+                    r.topic || '—',
+                    status.charAt(0).toUpperCase() + status.slice(1),
+                ];
+            }),
         });
-        preview.classList.add('print-only');
-        document.body.classList.add('print-mode');
-
-        setTimeout(function () {
-            window.print();
-            setTimeout(function () {
-                preview.classList.remove('print-only');
-                document.body.classList.remove('print-mode');
-                preview.querySelectorAll('.print-header-inner').forEach(function (el) { el.remove(); });
-                table.draw();   // back to the paged view
-            }, 500);
-        }, 50);
     });
 
     syncPeriodLabel();

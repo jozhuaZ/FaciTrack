@@ -529,6 +529,14 @@ router.patch('/password',             InstructorController.changePassword);
 router.patch('/settings/notifications', InstructorController.updateNotificationPrefs);
 router.patch('/settings/schedule',      InstructorController.updateScheduleSettings);
 
+// The instructor's own room status, for the sidebar to refresh itself when a
+// scanner reports a change (presence:changed), without reloading the page.
+router.get('/presence/me', async (req, res) => {
+    const { loadOwnPresence } = require('../middleware/attachPresence');
+    res.set('Cache-Control', 'no-store');
+    res.json({ success: true, ...(await loadOwnPresence(req.session.userId)) });
+});
+
 // Presence Logs (redirects to dashboard for now — presence data is shown in the Activity Feed)
 router.get('/presence', (req, res) => {
     res.redirect('/instructor/dashboard');

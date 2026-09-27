@@ -164,7 +164,7 @@
                 <p class="report-period">All Departments &middot; Period: <span id="dsrReportPeriodText">All Records</span></p>
               </div>
               <div style="margin-left:auto">
-                <button class="btn-header-action primary" id="btnExportDsr" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                <button class="btn-header-action export-btn" id="btnExportDsr" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   Export/Print
                 </button>
@@ -223,7 +223,7 @@
                 <p class="report-period">All Users &middot; Status: <span id="furReportPeriodText">All Records</span></p>
               </div>
               <div style="margin-left:auto">
-                <button class="btn-header-action primary" id="btnExportFur" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem" onclick="preparePrintReport(this)">
+                <button class="btn-header-action export-btn" id="btnExportFur" style="height:36px;padding:0 1rem;font-size:.75rem;display:flex;align-items:center;gap:.4rem">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
                   Export/Print
                 </button>
@@ -407,49 +407,45 @@
     if(furPage<pages){ furPage++; renderFurTable(r); }
   });
 
+  // ── Export: the shared preview (Print / Save as PDF, DOCX, XLSX) with every
+  // row the filters match, titled from the report's letterhead block ──
+  function headerText(btn, selector){
+    var hdr = btn.closest('.report-header-block');
+    var el = hdr && hdr.querySelector(selector);
+    return el ? el.innerText.trim() : '';
+  }
+
+  document.getElementById('btnExportDsr').addEventListener('click', function(){
+    if(!window.ExportSystem) return;
+    window.ExportSystem.openPreview({
+      title: headerText(this, '.report-title-block'),
+      subtitle: headerText(this, '.report-period'),
+      columns: ['Department', 'Sub-Admins', 'Deans', 'Instructors', 'Total Staff', 'BLE Status'],
+      rows: filterDsrRows().map(function(d){
+        var staff = USERS.filter(function(u){ return u.department === d.name; });
+        var count = function(role){ return staff.filter(function(u){ return u.role === role; }).length; };
+        return [d.name, count('Admin'), count('Dean'), count('Instructor'), staff.length,
+                d.bleStatusLabel || (d.bleDeployed ? 'Active' : 'Not Deployed')];
+      })
+    });
+  });
+
+  document.getElementById('btnExportFur').addEventListener('click', function(){
+    if(!window.ExportSystem) return;
+    window.ExportSystem.openPreview({
+      title: headerText(this, '.report-title-block'),
+      subtitle: headerText(this, '.report-period'),
+      columns: ['#', 'Name', 'Email', 'Role', 'Employment', 'Department', 'Status'],
+      rows: filterFurRows().map(function(u, i){
+        return [i + 1, u.name, u.email, u.role === 'Admin' ? 'Sub-Admin' : u.role,
+                u.employmentType || '-', u.department || '', u.status === 'active' ? 'Active' : 'Inactive'];
+      })
+    });
+  });
+
   // Initial render
   renderDsrTable(filterDsrRows());
   renderFurTable(filterFurRows());
 }());
 
-function preparePrintReport(item){
-  var preview = item.closest('.report-preview');
-  if(!preview) return;
-  preview.querySelectorAll('.report-header-block').forEach(function(hdr){
-    var existing = hdr.querySelector('.print-header-inner');
-    if(existing) existing.remove();
-    var titleEl    = hdr.querySelector('.report-title-block');
-    var subtitleEl = hdr.querySelector('.report-subtitle');
-    var periodEl   = hdr.querySelector('.report-period');
-    var imgEl      = hdr.querySelector('img');
-    var title    = titleEl    ? titleEl.textContent.trim()    : '';
-    var subtitle = subtitleEl ? subtitleEl.textContent.trim() : '';
-    var period   = periodEl   ? periodEl.innerText.trim()     : '';
-    var imgSrc   = imgEl      ? imgEl.src                     : '/images/CSPC-logo.png';
-    var inner = document.createElement('div');
-    inner.className = 'print-header-inner';
-    inner.innerHTML =
-      '<img src="'+imgSrc+'" alt="CSPC Logo">' +
-      '<div class="print-header-text">' +
-        '<span class="ph-republic">Republic of the Philippines</span>' +
-        '<span class="ph-institution">Camarines Sur Polytechnic Colleges</span>' +
-        '<span class="ph-address">Nabua, Camarines Sur</span>' +
-        '<span class="ph-title">'+title+'</span>' +
-        '<span class="ph-subtitle">'+subtitle+'</span>' +
-        (period ? '<span class="ph-period">'+period+'</span>' : '') +
-      '</div>';
-    hdr.appendChild(inner);
-  });
-  document.querySelectorAll('.report-preview.print-only').forEach(function(c){ c.classList.remove('print-only'); });
-  preview.classList.add('print-only');
-  document.body.classList.add('print-mode');
-  setTimeout(function(){
-    window.print();
-    setTimeout(function(){
-      preview.classList.remove('print-only');
-      document.body.classList.remove('print-mode');
-      preview.querySelectorAll('.print-header-inner').forEach(function(el){ el.remove(); });
-    }, 500);
-  }, 50);
-}
 </script>

@@ -103,12 +103,7 @@
       <% } %>
 
       <!-- ── Faculty Roster ── -->
-      <div class="content-card report-table" data-table="faculty" data-subtitle="<%= dean.department %>">
-        <div class="card-header">
-          <h3 class="card-title">Faculty Roster</h3>
-          <span class="result-count" data-role="count">—</span>
-        </div>
-        <div class="table-toolbar">
+      <div class="table-toolbar" data-toolbar-for="faculty">
           <div class="toolbar-group">
             <span class="toolbar-label">Search</span>
             <input type="search" class="table-search" data-role="search" placeholder="Name, position or office…">
@@ -134,11 +129,17 @@
             </select>
           </div>
           <div class="toolbar-spacer"></div>
-          <button class="btn-header-action" data-role="export">
+          <button class="btn-header-action export-btn" data-role="export">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
         </div>
+      <div class="content-card report-table" data-table="faculty" data-subtitle="<%= dean.department %>">
+        <div class="card-header">
+          <h3 class="card-title">Faculty Roster</h3>
+          <span class="result-count" data-role="count">—</span>
+        </div>
+        
         <div class="card-body" style="padding:0">
           <div class="table-scroll">
             <table class="data-table" id="facultyRosterTable">
@@ -172,12 +173,7 @@
       </div>
 
       <!-- ── Make-Up Class Requests ── -->
-      <div class="content-card report-table" data-table="makeup" data-subtitle="<%= dean.department %>">
-        <div class="card-header">
-          <h3 class="card-title">Make-Up Class Requests</h3>
-          <span class="result-count" data-role="count">—</span>
-        </div>
-        <div class="table-toolbar">
+      <div class="table-toolbar" data-toolbar-for="makeup">
           <div class="toolbar-group">
             <span class="toolbar-label">Search</span>
             <input type="search" class="table-search" data-role="search" placeholder="Instructor, subject or section…">
@@ -201,11 +197,17 @@
             </select>
           </div>
           <div class="toolbar-spacer"></div>
-          <button class="btn-header-action" data-role="export">
+          <button class="btn-header-action export-btn" data-role="export">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
         </div>
+      <div class="content-card report-table" data-table="makeup" data-subtitle="<%= dean.department %>">
+        <div class="card-header">
+          <h3 class="card-title">Make-Up Class Requests</h3>
+          <span class="result-count" data-role="count">—</span>
+        </div>
+        
         <div class="card-body" style="padding:0">
           <div class="table-scroll">
             <table class="data-table" id="makeupTable">
@@ -240,12 +242,7 @@
       </div>
 
       <!-- ── Faculty Presence History ── -->
-      <div class="content-card report-table" data-table="presence" data-subtitle="<%= dean.department %>">
-        <div class="card-header">
-          <h3 class="card-title">Faculty Presence History</h3>
-          <span class="result-count" data-role="count">—</span>
-        </div>
-        <div class="table-toolbar">
+      <div class="table-toolbar" data-toolbar-for="presence">
           <div class="toolbar-group">
             <span class="toolbar-label">Search</span>
             <input type="search" class="table-search" data-role="search" placeholder="Faculty or room…">
@@ -268,11 +265,17 @@
             </select>
           </div>
           <div class="toolbar-spacer"></div>
-          <button class="btn-header-action" data-role="export" <%= presenceLogs.length ? '' : 'disabled' %>>
+          <button class="btn-header-action export-btn" data-role="export" <%= presenceLogs.length ? '' : 'disabled' %>>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
         </div>
+      <div class="content-card report-table" data-table="presence" data-subtitle="<%= dean.department %>">
+        <div class="card-header">
+          <h3 class="card-title">Faculty Presence History</h3>
+          <span class="result-count" data-role="count">—</span>
+        </div>
+        
         <div class="card-body" style="padding:0">
           <div class="table-scroll">
             <table class="data-table" id="presenceTable">
@@ -302,12 +305,7 @@
       </div>
 
       <!-- ── Unanswered Requests ── -->
-      <div class="content-card report-table" data-table="unanswered" data-subtitle="<%= dean.department %>" hidden>
-        <div class="card-header">
-          <h3 class="card-title">Unanswered Consultation Requests</h3>
-          <span class="result-count" data-role="count">—</span>
-        </div>
-        <div class="table-toolbar">
+      <div class="table-toolbar" data-toolbar-for="unanswered" hidden>
           <div class="toolbar-group">
             <span class="toolbar-label">Search</span>
             <input type="search" class="table-search" data-role="search" placeholder="Instructor, student or topic…">
@@ -321,11 +319,17 @@
             </select>
           </div>
           <div class="toolbar-spacer"></div>
-          <button class="btn-header-action" data-role="export" <%= unansweredRequests.length ? '' : 'disabled' %>>
+          <button class="btn-header-action export-btn" data-role="export" <%= unansweredRequests.length ? '' : 'disabled' %>>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export
           </button>
         </div>
+      <div class="content-card report-table" data-table="unanswered" data-subtitle="<%= dean.department %>" hidden>
+        <div class="card-header">
+          <h3 class="card-title">Unanswered Consultation Requests</h3>
+          <span class="result-count" data-role="count">—</span>
+        </div>
+        
         <div class="card-body" style="padding:0">
           <div class="table-scroll">
             <table class="data-table" id="unansweredTable">

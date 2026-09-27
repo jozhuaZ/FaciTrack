@@ -27,50 +27,11 @@
 .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.375rem;}
 .dash-col{display:flex;flex-direction:column;gap:1.375rem;}
 
-/* ── Today Strip ── */
-/* Sits between the page header (0.5s) and the stat cards (0.6s), so it leads the stagger */
-.today-strip{background:linear-gradient(135deg,#0a3d62 0%,#1565c0 100%);border-radius:var(--radius-lg);padding:1rem 1.375rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;box-shadow:0 4px 16px rgba(10,61,98,.2);margin-bottom:1.5rem;animation:fadeInUp .5s ease-out backwards;animation-delay:.08s;}
-/* Pills fade in just behind the banner itself */
-.today-pill,.today-strip-empty{animation:fadeInUp .4s ease-out backwards;}
-.today-strip-items > *:nth-child(1){animation-delay:.20s;}
-.today-strip-items > *:nth-child(2){animation-delay:.26s;}
-.today-strip-items > *:nth-child(3){animation-delay:.32s;}
-.today-strip-items > *:nth-child(4){animation-delay:.38s;}
-.today-strip-items > *:nth-child(n+5){animation-delay:.44s;}
-@media (prefers-reduced-motion:reduce){
-  .today-strip,.today-pill,.today-strip-empty{animation:none;}
-}
-.today-strip-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.65);margin:0 0 .2rem;}
-.today-strip-date{font-size:1rem;font-weight:700;color:#fff;margin:0;}
-.today-strip-divider{width:1px;height:36px;background:rgba(255,255,255,.2);flex-shrink:0;}
-.today-strip-items{display:flex;gap:.625rem;flex:1;flex-wrap:wrap;align-items:center;}
-.today-pill{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .75rem;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);border-radius:20px;font-size:.75rem;font-weight:600;color:#fff;white-space:nowrap;}
-.today-pill.confirmed{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.4);}
-.today-pill.pending{background:rgba(251,191,36,.2);border-color:rgba(251,191,36,.35);}
-.today-pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-.today-pill.confirmed .today-pill-dot{background:#4ade80;}
-.today-pill.pending .today-pill-dot{background:#fbbf24;}
-.today-strip-empty{font-size:.8rem;color:rgba(255,255,255,.6);font-style:italic;}
-
-/* ── Pending requests ── */
-.apt-item{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border:1px solid var(--gray-200);border-radius:var(--radius-md);background:#fff;transition:all .2s;}
-.apt-item:hover{border-color:var(--primary-blue);background:rgba(10,61,98,.02);box-shadow:0 2px 8px rgba(10,61,98,.08);}
-.apt-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0a3d62,#1e88e5);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;}
-.apt-info{flex:1;min-width:0;}
-.apt-name{font-size:.8125rem;font-weight:700;color:var(--gray-900);margin:0 0 .2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.apt-sid{font-size:.69rem;color:var(--gray-400);margin:0 0 .15rem;}
-.apt-meta{font-size:.71rem;color:var(--gray-500);margin:0;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
-.apt-actions{display:flex;gap:.375rem;flex-shrink:0;}
-.btn-apt-approve{width:32px;height:32px;border-radius:8px;border:none;background:rgba(34,197,94,.1);color:#16a34a;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
-.btn-apt-approve:hover{background:#16a34a;color:#fff;box-shadow:0 3px 8px rgba(22,163,74,.3);}
-.btn-apt-decline{width:32px;height:32px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:#dc2626;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
-.btn-apt-decline:hover{background:#dc2626;color:#fff;box-shadow:0 3px 8px rgba(220,38,38,.3);}
-
-/* ── Decline presets ── */
-.decline-presets{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0 .5rem;}
-.decline-preset-chip{padding:.3rem .7rem;border:1.5px solid var(--gray-200);border-radius:20px;font-size:.75rem;font-weight:600;color:var(--gray-600);cursor:pointer;transition:all .15s;background:#fff;font-family:var(--font-body);}
-.decline-preset-chip:hover{border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.04);}
-.decline-preset-chip.selected{border-color:#dc2626;color:#dc2626;background:rgba(220,38,38,.08);}
+/* ── Pending requests ──
+   Rows use the .upco-item styling below. The View button matches the one on
+   the Appointments page (.apt-lv-btn.view / .day-panel-btn.view). */
+.dash-view-btn{display:inline-flex;align-items:center;justify-content:center;gap:.25rem;padding:.375rem .6rem;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:.72rem;font-weight:700;font-family:inherit;white-space:nowrap;text-decoration:none;flex-shrink:0;transition:all .14s;}
+.dash-view-btn:hover{border-color:#0a3d62;color:#0a3d62;background:#f0f9ff;}
 
 /* ── Upcoming appointments ── */
 .upco-filter-tabs{display:flex;gap:0;background:var(--gray-100);padding:.2rem;border-radius:8px;width:fit-content;}
@@ -80,9 +41,17 @@
 .upco-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border-left:3px solid #1e88e5;background:#f8faff;border-radius:0 var(--radius-md) var(--radius-md) 0;transition:all .2s;}
 .upco-item.today-apt{border-left-color:#16a34a;background:#f0fdf4;}
 .upco-item:hover{box-shadow:0 2px 8px rgba(10,61,98,.08);transform:translateX(2px);}
+/* An upcoming row is a link to its popup: no underline, text keeps its colours */
+.upco-link{text-decoration:none;color:inherit;cursor:pointer;}
+.upco-link:focus-visible{outline:2px solid var(--primary-blue);outline-offset:2px;}
 .upco-time{font-size:.7rem;font-weight:700;color:var(--primary-blue);min-width:56px;flex-shrink:0;line-height:1.3;}
 .upco-date-sub{font-size:.62rem;font-weight:500;color:var(--gray-400);display:block;margin-top:.05rem;}
 .upco-item.today-apt .upco-time{color:#15803d;}
+/* Pending requests use the same rows in the pending colour (amber, as the
+   Pending badges), today or not. */
+.upco-item.pending-apt{border-left-color:#f59e0b;background:#fffbeb;}
+.upco-item.pending-apt .upco-time,
+.upco-item.pending-apt .upco-date-sub.is-today{color:#b45309;}
 .upco-info{flex:1;min-width:0;}
 .upco-name{font-size:.8rem;font-weight:700;color:var(--gray-900);margin:0 0 .1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .upco-topic{font-size:.69rem;color:var(--gray-500);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -94,7 +63,9 @@
 .slot-strip{display:flex;flex-direction:column;gap:.5rem;}
 .slot-row{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border:1px solid var(--gray-100);border-radius:var(--radius-md);background:#fff;transition:border-color .15s;}
 .slot-row:hover{border-color:var(--gray-300);}
-.slot-day-pill{font-size:.65rem;font-weight:800;padding:.22rem .55rem;border-radius:6px;background:rgba(10,61,98,.08);color:var(--primary-blue);letter-spacing:.04em;flex-shrink:0;min-width:38px;text-align:center;}
+/* The day pill, booked label and status badge have fixed widths so every row's
+   time and progress bar start and end at the same x, whatever they say. */
+.slot-day-pill{font-size:.65rem;font-weight:800;padding:.22rem 0;border-radius:6px;background:rgba(10,61,98,.08);color:var(--primary-blue);letter-spacing:.04em;flex-shrink:0;width:42px;text-align:center;box-sizing:border-box;}
 .slot-info{flex:1;min-width:0;}
 .slot-time{font-size:.78rem;font-weight:600;color:var(--gray-800);margin:0 0 .3rem;}
 .slot-progress-wrap{display:flex;align-items:center;gap:.5rem;}
@@ -103,8 +74,8 @@
 .slot-progress-fill.low{background:#16a34a;}
 .slot-progress-fill.mid{background:#f59e0b;}
 .slot-progress-fill.high{background:#dc2626;}
-.slot-cap-label{font-size:.67rem;color:var(--gray-500);white-space:nowrap;flex-shrink:0;}
-.slot-badge{font-size:.65rem;font-weight:700;padding:.22rem .55rem;border-radius:5px;flex-shrink:0;}
+.slot-cap-label{font-size:.67rem;color:var(--gray-500);white-space:nowrap;flex-shrink:0;width:62px;text-align:right;font-variant-numeric:tabular-nums;}
+.slot-badge{font-size:.65rem;font-weight:700;padding:.22rem 0;border-radius:5px;flex-shrink:0;width:74px;text-align:center;box-sizing:border-box;}
 /* Matches the pending/confirmed/declined palette used on the appointments page */
 .slot-badge.available{background:rgba(22,163,74,.12);color:#15803d;}
 .slot-badge.pending{background:rgba(251,146,60,.12);color:#c2410c;}
@@ -152,18 +123,10 @@
 /* Grid and flex children default to min-width:auto, so one wide row inside a
    card stretched the whole column past the right edge of the screen. */
 .dash-grid,.dash-col,.dash-col > *{min-width:0;}
-.apt-meta-topic::before{content:" · ";}
 @media(max-width:640px){
   .upco-time{min-width:0;}
   .upco-item{gap:.5rem;padding:.7rem .75rem;}
-  /* A pill reading "9:00 AM - 9:20 AM · Name (Pending)" cannot fit one line */
-  .today-strip-items{min-width:0;width:100%;}
-  .today-pill{white-space:normal;max-width:100%;}
-  /* Give the topic its own line so the separator never dangles at a wrap */
-  .apt-meta-topic{display:block;}
-  .apt-meta-topic::before{content:none;}
 }
-@media(max-width:640px){.today-strip{flex-direction:column;align-items:flex-start;gap:.75rem;}.today-strip-divider{display:none;}}
 </style>
 
 <div class="instructor-layout">
@@ -171,6 +134,15 @@
 
   <main class="instructor-main">
     <div class="main-container">
+      <%# Today's consultations sit in the banner beside the greeting (large
+          screens only), in start order, at most four. %>
+      <%- include('../../partials/greeting-banner', {
+            name: instructor.name,
+            today: {
+              items: todayAppointments.slice(0, 4).map(a => ({ time: a.time, name: a.studentName, status: a.status })),
+              more: Math.max(0, todayAppointments.length - 4),
+            },
+          }) %>
 
       <!-- ── Page Header ── -->
       <div class="page-header">
@@ -206,43 +178,6 @@
               <div class="status-option<%= _status==='travel' ? ' active' : '' %>" data-status="travel" role="menuitem"><span class="status-indicator travel"></span><div><span class="status-option-label">On Official Travel</span><span class="status-option-desc">On official business trip</span></div></div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- ── Today Strip ── -->
-      <%
-        const _todayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
-        const _todayLabel = new Date().toLocaleDateString('en-PH', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
-        const _todayApts = appointments.filter(a => a.isToday || (a.date && (new Date(a.date).toDateString() === new Date().toDateString())));
-        const _todayConfirmed = _todayApts.filter(a => a.status === 'confirmed');
-        const _todayPending   = _todayApts.filter(a => a.status === 'pending');
-      %>
-      <div class="today-strip">
-        <div>
-          <p class="today-strip-label">Today</p>
-          <p class="today-strip-date"><%= _todayLabel %></p>
-        </div>
-        <div class="today-strip-divider"></div>
-        <div class="today-strip-items">
-          <% if (_todayApts.length === 0) { %>
-            <span class="today-strip-empty">No consultations scheduled for today</span>
-          <% } else { %>
-            <% _todayConfirmed.slice(0, 4).forEach(apt => { %>
-            <span class="today-pill confirmed">
-              <span class="today-pill-dot"></span>
-              <%= apt.time %> · <%= apt.studentName %>
-            </span>
-            <% }); %>
-            <% _todayPending.slice(0, 2).forEach(apt => { %>
-            <span class="today-pill pending">
-              <span class="today-pill-dot"></span>
-              <%= apt.time %> · <%= apt.studentName %> (Pending)
-            </span>
-            <% }); %>
-            <% if (_todayApts.length > 6) { %>
-            <span class="today-pill" style="background:rgba(255,255,255,.1);">+<%= _todayApts.length - 6 %> more</span>
-            <% } %>
-          <% } %>
         </div>
       </div>
 
@@ -319,27 +254,27 @@
                 <p>No pending consultation requests right now.</p>
               </div>
               <% } else { %>
-              <div style="display:flex;flex-direction:column;gap:.625rem;" id="pendingList">
+              <%# Same rows as Upcoming Appointments. Approving or declining
+                  happens in the appointment's popup, which View opens. %>
+              <div style="display:flex;flex-direction:column;gap:.5rem;" id="pendingList">
                 <% pendingApts.slice(0, 5).forEach(apt => { %>
-                <div class="apt-item" data-student="<%= apt.studentName.toLowerCase() %>" data-topic="<%= (apt.topic||'').toLowerCase() %>">
-                  <div class="apt-avatar"><%= ((apt.firstName || '')[0] || '') + ((apt.lastName || '')[0] || '') %></div>
-                  <div class="apt-info">
-                    <p class="apt-name"><%= apt.studentName %></p>
-                    <% if (apt.studentId) { %><p class="apt-sid"><%= apt.studentId %></p><% } %>
-                    <p class="apt-meta">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      <%= apt.date %> · <%= apt.time %>
-                      <% if (apt.topic) { %><span class="apt-meta-topic"><em><%= apt.topic.substring(0,40) %><%= apt.topic.length>40?'…':'' %></em></span><% } %>
-                    </p>
+                <% const _isToday = apt.date === todayKey; %>
+                <div class="upco-item pending-apt">
+                  <div class="upco-time">
+                    <%= apt.time %>
+                    <% if (_isToday) { %>
+                    <span class="upco-date-sub is-today">Today</span>
+                    <% } else if (apt.date) { %>
+                    <span class="upco-date-sub"><%= new Date(apt.date + 'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'}) %></span>
+                    <% } %>
                   </div>
-                  <div class="apt-actions">
-                    <button class="btn-apt-approve" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Approve appointment">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    </button>
-                    <button class="btn-apt-decline" data-id="<%= apt.id %>" data-student="<%= apt.studentName %>" title="Decline appointment">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
+                  <div class="upco-info">
+                    <p class="upco-name"><%= apt.studentName %></p>
+                    <p class="upco-topic"><%= apt.topic || '—' %></p>
                   </div>
+                  <a class="dash-view-btn" href="/instructor/appointments?openApt=<%= encodeURIComponent(apt.id) %>">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View
+                  </a>
                 </div>
                 <% }); %>
                 <% if (pendingApts.length > 5) { %>
@@ -418,31 +353,34 @@
               </div>
             </div>
             <div class="card-body">
-              <%
-                const _allUpcoming = appointments.filter(a => a.status === 'confirmed' || a.status === 'pending');
-                const _todayStr = new Date().toDateString();
-                const _weekEnd  = new Date(); _weekEnd.setDate(_weekEnd.getDate() + 7);
-              %>
+              <%# Confirmed only, soonest first, and only what has not ended:
+                  the controller filters and sorts by start time. "Today" and "This
+                  week" compare date keys in the app's timezone, not new Date(),
+                  which runs on UTC on the server. %>
+              <% const _allUpcoming = upcomingAppointments; %>
               <% if (_allUpcoming.length === 0) { %>
               <div class="empty-dash">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <strong>No upcoming appointments</strong>
-                <p>Confirmed and pending bookings will appear here.</p>
+                <p>Confirmed bookings will appear here.</p>
               </div>
               <% } else { %>
               <div style="display:flex;flex-direction:column;gap:.5rem;" id="upcoList">
                 <% _allUpcoming.slice(0, 8).forEach(apt => { %>
                 <%
-                  const _aptDateStr = apt.date ? new Date(apt.date).toDateString() : '';
-                  const _isToday    = _aptDateStr === _todayStr;
-                  const _isThisWeek = apt.date && new Date(apt.date) <= _weekEnd;
+                  const _isToday    = apt.date === todayKey;
+                  const _isThisWeek = apt.date && apt.date <= weekEndKey;
                   const _dateFilter = _isToday ? 'today week all' : (_isThisWeek ? 'week all' : 'all');
                 %>
-                <div class="upco-item <%= _isToday ? 'today-apt' : '' %>" data-filter-groups="<%= _dateFilter %>">
+                <%# The whole row opens this appointment's popup on the
+                    Appointments page — the same ?openApt= link notifications use. %>
+                <a class="upco-item upco-link <%= _isToday ? 'today-apt' : '' %>" data-filter-groups="<%= _dateFilter %>"
+                   href="/instructor/appointments?openApt=<%= encodeURIComponent(apt.id) %>"
+                   title="Open this appointment">
                   <div class="upco-time">
                     <%= apt.time %>
                     <% if (!_isToday && apt.date) { %>
-                    <span class="upco-date-sub"><%= new Date(apt.date).toLocaleDateString('en-PH',{month:'short',day:'numeric'}) %></span>
+                    <span class="upco-date-sub"><%= new Date(apt.date + 'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'}) %></span>
                     <% } else if (_isToday) { %>
                     <span class="upco-date-sub" style="color:#15803d;">Today</span>
                     <% } %>
@@ -451,8 +389,8 @@
                     <p class="upco-name"><%= apt.studentName %></p>
                     <p class="upco-topic"><%= apt.topic || '—' %></p>
                   </div>
-                  <span class="upco-badge <%= apt.status %>"><%= apt.status.charAt(0).toUpperCase() + apt.status.slice(1) %></span>
-                </div>
+                  <span class="upco-badge confirmed">Confirmed</span>
+                </a>
                 <% }); %>
                 <% if (_allUpcoming.length > 8) { %>
                 <a href="/instructor/consultations" class="view-more-link">+<%= _allUpcoming.length - 8 %> more appointments →</a>
@@ -467,35 +405,6 @@
 
     </div><!-- /main-container -->
   </main>
-</div>
-
-<!-- ── Decline Modal (with reason presets) ── -->
-<div class="modal-overlay" id="declineModal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3 class="modal-title">Decline Appointment</h3>
-      <button class="modal-close" id="closeModal">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <p class="modal-description">You are about to decline <strong id="declineStudentName"></strong>'s request. Provide a reason — they will be notified by email.</p>
-      <p style="font-size:.78rem;font-weight:600;color:var(--gray-700);margin:.75rem 0 .35rem;">Quick reasons</p>
-      <div class="decline-presets" id="declinePresets">
-        <button type="button" class="decline-preset-chip" data-reason="Schedule conflict on that date">Schedule conflict</button>
-        <button type="button" class="decline-preset-chip" data-reason="Consultation slots are fully booked">Fully booked</button>
-        <button type="button" class="decline-preset-chip" data-reason="I will be on leave on that date">On leave that day</button>
-        <button type="button" class="decline-preset-chip" data-reason="Please choose a different consultation slot">Different slot needed</button>
-        <button type="button" class="decline-preset-chip" data-reason="Please coordinate with the department office">Coordinate with department</button>
-      </div>
-      <label class="modal-label">Reason <span style="font-weight:400;color:var(--gray-400)">(or type your own)</span></label>
-      <textarea id="declineReason" class="modal-textarea" placeholder="Describe why you are declining this request…" rows="3"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-modal btn-cancel" id="cancelDecline">Cancel</button>
-      <button class="btn-modal btn-confirm" id="confirmDecline">Decline &amp; Notify Student</button>
-    </div>
-  </div>
 </div>
 
 <%- include('../../partials/unavailability-modal') %>
@@ -593,94 +502,6 @@ document.querySelectorAll('#statusDropdown .status-option').forEach(opt => {
 });
 
 /* ══════════════════════════════════════
-   APPROVE / DECLINE
-══════════════════════════════════════ */
-let pendingDeclineId   = null;
-let pendingDeclineName = null;
-
-function openDeclineModal(id, name) {
-  pendingDeclineId   = id;
-  pendingDeclineName = name;
-  document.getElementById('declineStudentName').textContent = name;
-  document.getElementById('declineReason').value = '';
-  document.querySelectorAll('.decline-preset-chip').forEach(c => c.classList.remove('selected'));
-  document.getElementById('declineModal').classList.add('show');
-  document.body.classList.add('modal-open');
-}
-function closeDeclineModal() {
-  document.getElementById('declineModal').classList.remove('show');
-  document.body.classList.remove('modal-open');
-  pendingDeclineId = pendingDeclineName = null;
-}
-
-document.getElementById('closeModal').addEventListener('click', closeDeclineModal);
-document.getElementById('cancelDecline').addEventListener('click', closeDeclineModal);
-document.getElementById('declineModal').addEventListener('click', e => { if (e.target === document.getElementById('declineModal')) closeDeclineModal(); });
-
-// Decline reason preset chips
-document.querySelectorAll('.decline-preset-chip').forEach(chip => {
-  chip.addEventListener('click', function () {
-    document.querySelectorAll('.decline-preset-chip').forEach(c => c.classList.remove('selected'));
-    this.classList.add('selected');
-    document.getElementById('declineReason').value = this.dataset.reason;
-  });
-});
-
-document.getElementById('confirmDecline').addEventListener('click', function () {
-  if (!pendingDeclineId) return;
-  const reason = document.getElementById('declineReason').value.trim();
-  if (!reason) { showToast('error', 'Reason Required', 'Please provide a reason for declining.'); return; }
-  const btn = this;
-  btn.disabled = true;
-  btn.textContent = 'Declining…';
-  fetch('/instructor/consultations/' + pendingDeclineId + '/decline', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason })
-  })
-    .then(r => r.json())
-    .then(() => {
-      closeDeclineModal();
-      showToast('success', 'Appointment Declined', pendingDeclineName + ' has been notified by email.');
-      removePendingRow(pendingDeclineId);
-    })
-    .catch(() => showToast('error', 'Error', 'Could not decline appointment. Please try again.'))
-    .finally(() => { btn.disabled = false; btn.textContent = 'Decline & Notify Student'; });
-});
-
-// Approve buttons
-document.querySelectorAll('.btn-apt-approve').forEach(btn => {
-  btn.addEventListener('click', function () {
-    const id      = this.dataset.id;
-    const student = this.dataset.student;
-    const row     = this.closest('.apt-item');
-    this.disabled = true;
-    fetch('/instructor/consultations/' + id + '/approve', { method: 'POST' })
-      .then(r => r.json())
-      .then(() => {
-        showToast('success', 'Appointment Approved', student + '\'s consultation has been confirmed.');
-        if (row) { row.style.opacity = '0'; row.style.transform = 'translateX(-12px)'; setTimeout(() => row.remove(), 300); }
-      })
-      .catch(() => { showToast('error', 'Error', 'Could not approve. Please try again.'); this.disabled = false; });
-  });
-});
-
-// Decline buttons
-document.querySelectorAll('.btn-apt-decline').forEach(btn => {
-  btn.addEventListener('click', function () {
-    openDeclineModal(this.dataset.id, this.dataset.student);
-  });
-});
-
-function removePendingRow(id) {
-  setTimeout(() => {
-    const row = document.querySelector('.apt-item [data-id="' + id + '"]');
-    const item = row ? row.closest('.apt-item') : null;
-    if (item) { item.style.opacity = '0'; item.style.transform = 'translateX(-12px)'; setTimeout(() => item.remove(), 320); }
-  }, 400);
-}
-
-/* ══════════════════════════════════════
    UPCOMING FILTER TABS (All / Today / This Week)
 ══════════════════════════════════════ */
 document.querySelectorAll('.upco-tab').forEach(tab => {
@@ -704,7 +525,7 @@ document.querySelectorAll('.upco-tab').forEach(tab => {
 ══════════════════════════════════════ */
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeDeclineModal(); UnavailModal.requestClose(); }
+  if (e.key === 'Escape') UnavailModal.requestClose();
 });
 
 // Blocking a date can cancel or move appointments — reload so the lists are accurate
@@ -713,19 +534,43 @@ window.onUnavailabilityChanged = function () {
 };
 
 /* ══════════════════════════════════════
-   AUTO-REFRESH PENDING LIST (every 45s)
+   LIVE REFRESH — a request arrived or was withdrawn
 ══════════════════════════════════════ */
-setInterval(() => {
-  fetch('/instructor/consultations/data')
-    .then(r => r.json())
-    .then(data => {
-      const newPending = (data.appointments || []).filter(a => a.status === 'pending');
-      const oldCount   = document.querySelectorAll('.btn-apt-approve').length;
-      // Only reload if count changed — avoids disrupting the instructor mid-action
-      if (newPending.length !== oldCount) window.location.reload();
-    })
-    .catch(() => {}); // Silent fail — no toast on background polls
-}, 45000);
+// This used to poll /instructor/consultations/data every 45s and reload when
+// the pending count differed. That route no longer exists (it became
+// /appointments), so the poll got a 404, read it as "0 pending", and reloaded
+// the page every 45 seconds whenever any request was waiting.
+//
+// The notification a booking or cancellation sends already reaches this page
+// live (Realtime: a stream, or polling where the host cannot hold one), so the
+// dashboard reloads on exactly those events instead.
+(function () {
+  const REFRESH_ON = ['new-request', 'cancellation'];
+  let queued = false;
+
+  // Never pull the page out from under an open dropdown or modal: wait until
+  // it has closed, checking every few seconds.
+  function busy() {
+    return document.querySelector('#statusDropdown.show, .modal-overlay.show, #notifPanel.open');
+  }
+  function reloadWhenIdle() {
+    if (queued) return;
+    queued = true;
+    (function attempt() {
+      if (busy()) { setTimeout(attempt, 3000); return; }
+      window.location.reload();
+    })();
+  }
+
+  function subscribe() {
+    if (!window.Realtime) return;
+    window.Realtime.on('notification:new', function (notif) {
+      if (notif && REFRESH_ON.indexOf(notif.type) !== -1) reloadWhenIdle();
+    });
+  }
+  if (window.Realtime) subscribe();
+  else document.addEventListener('DOMContentLoaded', subscribe);
+})();
 
 /* ══════════════════════════════════════
    TOAST

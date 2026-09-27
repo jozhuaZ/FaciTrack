@@ -570,114 +570,50 @@
     showMo('exportModal');
   }
 
-  async function exportWorkload() {
+  function exportWorkload() {
     const semester = document.getElementById('exportSemester').value.trim();
     const schoolYear = document.getElementById('exportSchoolYear').value.trim();
     const effectiveDate = document.getElementById('exportEffectiveDate').value.trim();
 
     if (!semester || !schoolYear) { toast('Semester and School Year are required', 'error'); return; }
     hideMo('exportModal');
+    if (!window.ExportSystem) { toast('Export is unavailable right now', 'error'); return; }
 
-    // Go directly to print without showing destination/format dialog
-    toast('Preparing document for printing…', 'info');
-    const html = buildExportHTML(semester, schoolYear, effectiveDate);
-    const win = window.open('', '_blank', 'width=1200,height=900');
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => {
-      win.focus();
-      win.print();
-      win.close();
-    }, 800);
+    // The shared preview shows the workload form itself; Print prints it and
+    // Save as PDF/DOCX/XLSX uses the same schedule as table rows.
+    window.ExportSystem.openPreview(Object.assign(
+      buildWorkloadPayload(semester, schoolYear, effectiveDate),
+      { html: buildExportHTML(semester, schoolYear, effectiveDate) }
+    ));
   }
 
-  async function exportWorkloadFormat(format, semester, schoolYear, effectiveDate) {
-    try {
-      const all = Object.values(blocks);
-      const rows = [];
+  /** The schedule as rows for Save as PDF/DOCX/XLSX: the weekly grid, then a subject legend. */
+  function buildWorkloadPayload(semester, schoolYear, effectiveDate) {
+    const all = Object.values(blocks);
+    const rows = [];
 
-      // Build schedule table data
-      const exportSlots = SLOTS.filter(s => s % 2 === 0);
-      rows.push(['Time'].concat(DAYS));
-
-      exportSlots.forEach(slot => {
-        const row = [slotLabel(slot)];
-        DAYS.forEach(day => {
-          const b = Object.values(blocks).find(b => b.day === day && b.startSlot === slot);
-          if (b) {
-            row.push(b.subjectCode + ' - ' + b.subjectName + (b.room ? ' (' + b.room + ')' : ''));
-          } else {
-            row.push('');
-          }
-        });
-        rows.push(row);
+    SLOTS.filter(s => s % 2 === 0).forEach(slot => {
+      const row = [slotLabel(slot)];
+      DAYS.forEach(day => {
+        const b = all.find(b => b.day === day && b.startSlot === slot);
+        row.push(b ? b.subjectCode + ' - ' + b.subjectName + (b.room ? ' (' + b.room + ')' : '') : '');
       });
+      rows.push(row);
+    });
 
-      // Subject legend
-      rows.push([]);
-      rows.push(['Subject Type', 'Subject Code', 'Subject Name', 'Room']);
-      const seen = {};
-      all.forEach(b => { if (!seen[b.subjectCode]) seen[b.subjectCode] = b; });
-      Object.values(seen).forEach(b => {
-        rows.push([b.type, b.subjectCode, b.subjectName, b.room || '']);
-      });
+    rows.push([]);
+    rows.push(['Subject Type', 'Subject Code', 'Subject Name', 'Room']);
+    const seen = {};
+    all.forEach(b => { if (!seen[b.subjectCode]) seen[b.subjectCode] = b; });
+    Object.values(seen).forEach(b => rows.push([b.type, b.subjectCode, b.subjectName, b.room || '']));
 
-      const columns = ['Time'].concat(DAYS);
-      const payload = {
-        title: 'Class Plotting - ' + semester + ', SY ' + schoolYear,
-        subtitle: 'Workload Schedule Export' + (effectiveDate ? ' - Effective: ' + effectiveDate : ''),
-        columns: columns,
-        rows: rows,
-        meta: ['Semester: ' + semester, 'School Year: ' + schoolYear]
-      };
-
-      const res = await fetch('/export/' + format, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Export failed');
-      }
-
-      const dispo = res.headers.get('content-disposition') || '';
-      const match = dispo.match(/filename="([^"]+)"/);
-      const filename = match ? match[1] : 'workload_schedule.' + format;
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2500);
-
-      toast('Workload exported successfully', 'success');
-    } catch (e) {
-      toast('Export failed: ' + e.message, 'error');
-    }
-  }
-
-  function showExportPreview(html, format) {
-    const win = window.open('', '_blank', 'width=1200,height=900');
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-
-    setTimeout(() => {
-      win.focus();
-      if (format === 'PDF') {
-        toast('Use "Save as PDF" or "Print" in the print dialog', 'info');
-      } else if (format === 'DOCX') {
-        toast('Use "Print to file" or copy to Word', 'info');
-      }
-      win.print();
-    }, 800);
+    return {
+      title: 'Class Plotting - ' + semester + ', SY ' + schoolYear,
+      subtitle: 'Workload Schedule' + (effectiveDate ? ' - Effective: ' + effectiveDate : ''),
+      columns: ['Time'].concat(DAYS),
+      rows: rows,
+      meta: ['Semester: ' + semester, 'School Year: ' + schoolYear],
+    };
   }
 
   function buildExportHTML(semester, schoolYear, effectiveDate) {
@@ -1084,7 +1020,6 @@ body{font-family:Arial,sans-serif;font-size:7.5pt;color:#000;background:#fff;-we
       btn.addEventListener('click', (e) => {
         document.getElementById('exportWorkloadDropdown').style.display = 'none';
         openExportModal();
-        document.getElementById('exportFormat').value = 'print';
       });
     });
     // Close export dropdown on outside click

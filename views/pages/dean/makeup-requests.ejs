@@ -21,7 +21,7 @@
     ].join(' ').toLowerCase();
   }
 
-  const allRequests = pending.concat(approved, declined);
+  const allRequests = pending.concat(approved, declined, typeof expired !== 'undefined' ? expired : []);
 %>
 
 <div class="instructor-layout">
@@ -62,6 +62,7 @@
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="declined">Declined</option>
+          <option value="expired">Expired</option>
         </select>
 
         <select class="mk-filter-select" id="mkTypeFilter" aria-label="Filter by class type">
@@ -74,6 +75,7 @@
 
       <p class="mk-empty" id="mkFilterEmpty" hidden></p>
 
+      <div class="mk-grid">
       <% allRequests.forEach(function (r) { %>
         <%
           var classTypes = r.sessions.map(function(s){ return (s.class_type || '').toLowerCase(); })
@@ -142,6 +144,7 @@
           </div>
         </div>
       <% }); %>
+      </div>
     </div>
   </main>
 </div>

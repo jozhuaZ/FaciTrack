@@ -4,6 +4,8 @@ const AppointmentModel = require('../models/AppointmentModel');
 const NotificationModel = require('../models/NotificationModel');
 const { formatFullDate, to12Hour } = require('../utils/timeFormat');
 const { notifyUser } = require('../services/notify');
+const MakeupRequestModel = require('../models/MakeupRequestModel');
+const { toWallClock } = require('../utils/wallClock');
 
 // How long to wait before chasing the same unclosed consultation again
 const COMPLETION_NUDGE_EVERY_HOURS = Number(process.env.COMPLETION_NUDGE_EVERY_HOURS) || 24;
@@ -120,6 +122,40 @@ async function expireUnansweredRequests() {
     console.log('[ReminderJob] Expired ' + expired.length + ' unanswered request(s).');
 }
 
+/**
+ * Close off make-up requests the dean never decided before the class was due.
+ *
+ * The make-up counterpart of expireUnansweredRequests(): once the earliest
+ * session has started, Approve and Decline cannot mean anything. The
+ * instructor is told, since the request was theirs and they may need to file
+ * a new one. Also called before the make-up pages load, so they are accurate
+ * even where nothing runs this on a timer (a serverless host with no pinger).
+ */
+async function expireUndecidedMakeups() {
+    const now = toWallClock(new Date());
+    const pad = (n) => String(n).padStart(2, '0');
+    const nowWallClock = now.date + ' ' + pad(now.hour) + ':' + pad(now.minute) + ':00';
+
+    const expired = await MakeupRequestModel.expireUndecided(nowWallClock);
+    for (const req of expired) {
+        try {
+            await notifyUser(
+                req.instructor_id,
+                'makeup',
+                'Your make-up class request' + (req.subjects ? ' for ' + req.subjects : '') + ' was not decided before the class was due, so it has expired. File a new request if you still need the make-up class.',
+                null,
+                { pushTitle: 'Make-up request expired' }
+            );
+        } catch (err) {
+            // One notice failing must not strand the rest; the request is
+            // already expired either way.
+            console.error('[ReminderJob] Could not notify about make-up expiry:', err.message);
+        }
+    }
+    if (expired.length) console.log('[ReminderJob] Expired ' + expired.length + ' undecided make-up request(s).');
+    return expired;
+}
+
 async function sendPendingRequestNudges() {
     const everyHours = await appSettings.get('pending_nudge_every_hours');
     const waiting = await AppointmentModel.getPendingAppointmentsAwaitingAction(everyHours);
@@ -221,12 +257,19 @@ function startReminderJob() {
         } catch (err) {
             console.error('[ReminderJob] Expiring unanswered requests failed:', err);
         }
+        try {
+            await expireUndecidedMakeups();
+        } catch (err) {
+            console.error('[ReminderJob] Expiring make-up requests failed:', err);
+        }
     });
 
     // Anything that went stale while the server was down is closed off at
     // startup rather than waiting for the first tick.
     expireUnansweredRequests().catch(err =>
         console.error('[ReminderJob] Startup expiry sweep failed:', err.message));
+    expireUndecidedMakeups().catch(err =>
+        console.error('[ReminderJob] Startup make-up expiry sweep failed:', err.message));
 
     // Follow-up nudges — hourly; each one's own throttle decides who is due.
     // Kept in separate try blocks so one failing query cannot stop the others.
@@ -277,4 +320,5 @@ module.exports.sendCompletionNudges = sendCompletionNudges;
 module.exports.sendMissingLinkNudges = sendMissingLinkNudges;
 module.exports.sendPendingRequestNudges = sendPendingRequestNudges;
 module.exports.expireUnansweredRequests = expireUnansweredRequests;
+module.exports.expireUndecidedMakeups = expireUndecidedMakeups;
 module.exports.escalateUnansweredToDean = escalateUnansweredToDean;

@@ -84,6 +84,32 @@
     margin-bottom: 1rem;
 }
 
+/* The student's version: logo on the left, name with the email below it on
+   the right. It had no rule, so the logo stacked above the text. */
+.student-profile-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+.student-profile-mini .profile-avatar-mini { flex-shrink: 0; }
+.student-profile-mini .profile-info-mini { flex: 1; min-width: 0; text-align: left; }
+
+/* The CSPC logo in the student sidebar. It lived in student/dashboard.css,
+   which only the Faculty Directory loads, so on every other page the logo sat
+   on the default avatar gradient instead of a white disc. */
+.cspc-logo-avatar {
+    background: white !important;
+    border: 2px solid var(--gray-200);
+    overflow: hidden;
+    padding: 2px;
+}
+.cspc-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
 .profile-avatar-mini {
     width: 48px;
     height: 48px;
@@ -206,8 +232,10 @@
     background: rgba(34, 197, 94, 0.3);
 }
 
+/* Only an instructor who is in a room pulses; out of room is a still grey dot. */
 .ble-indicator-mini.out-of-room .ble-pulse-mini {
-    background: rgba(107, 114, 128, 0.3);
+    animation: none;
+    background: transparent;
 }
 
 .ble-dot-mini {
@@ -675,6 +703,14 @@
     font-size: 0.75rem;
     font-weight: 700;
     flex-shrink: 0;
+    overflow: hidden;
+}
+/* A profile photo fills the same circle as the initials. */
+.apt-avatar-xs img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .apt-row-info {
@@ -1275,6 +1311,28 @@
     /* Remove the old ::after arrow */
     .sidebar-header::after {
         display: none;
+    }
+
+    /* The whole sidebar collapses behind the site header's hamburger: its
+       header row (profile, and on the instructor side the BLE status) is shown
+       only while the menu is open, together with the nav and footer. Closed,
+       the sidebar takes no space at all, so the page starts right under the
+       site header. Set here, not per page, so every instructor and student
+       page gets it. (The sidebar's own hamburger in that row is hidden at this
+       width by header.css; the site header's one drives it.) */
+    .instructor-sidebar:not(:has(.sidebar-nav.mobile-open)) .sidebar-header {
+        display: none;
+    }
+    /* The student's header row (logo, name, email) stays hidden even with the
+       menu open: the page's greeting banner already names them. */
+    .student-sidebar .sidebar-header {
+        display: none;
+    }
+    /* Closed, the sidebar has no height, and its bottom border would sit as a
+       stray line under the site header's own. Show it only while open. */
+    .instructor-sidebar:not(:has(.sidebar-nav.mobile-open)),
+    .student-sidebar:not(:has(.sidebar-nav.mobile-open)) {
+        border-bottom: none;
     }
 
     /* Hamburger button — only visible on mobile */
@@ -1928,6 +1986,12 @@
 .table-badge.pending {
     background: rgba(251, 146, 60, 0.12);
     color: #c2410c;
+}
+
+/* Never decided in time: muted slate, as expired appears everywhere else. */
+.table-badge.expired {
+    background: #f1f5f9;
+    color: #475569;
 }
 
 .table-badge.workload {

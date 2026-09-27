@@ -106,13 +106,50 @@
 }
 .mk-remove:hover { background: #fef2f2; color: #dc2626; }
 
-.mk-session-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; }
+/*
+ * The session grid sizes itself by the card's own width, not the screen's.
+ * On an iPad in landscape the sidebar stays open, so the screen is "wide"
+ * while the form is not: four columns were squeezed to ~180px each, and
+ * Safari's date and time inputs will not shrink that far, so they spilled
+ * into the next column. minmax(0, 1fr) lets a column go narrower than its
+ * content; the container queries drop to two and then one column when the
+ * card itself is narrow.
+ */
+.mk-session { container-type: inline-size; }
+.mk-session-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; }
+@container (max-width: 760px) {
+    .mk-session-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mk-field-wide { grid-column: span 2; }
+}
+@container (max-width: 420px) {
+    .mk-session-grid { grid-template-columns: minmax(0, 1fr); }
+    .mk-field-wide { grid-column: span 1; }
+}
 .mk-field { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
 .mk-field > span {
     font-size: .68rem; font-weight: 700; color: var(--gray-500);
     text-transform: uppercase; letter-spacing: .04em;
 }
-.mk-field .modal-input { width: 100%; padding: .45rem .875rem; font-size: .8125rem; }
+.mk-field .modal-input { width: 100%; min-width: 0; padding: .45rem .875rem; font-size: .8125rem; }
+/* One height for every text box, date, time and dropdown in a row. Safari
+   draws selects taller than inputs, so without this the rows looked uneven. */
+.mk-field input.modal-input,
+.mk-field select.modal-input { height: 2.4rem; box-sizing: border-box; }
+/* At a fixed height a select's vertical padding clipped its text in Safari;
+   without it the text centres on its own. */
+.mk-field select.modal-input { padding-top: 0; padding-bottom: 0; }
+/* Safari (iPad/iPhone) draws date and time inputs natively, with a minimum
+   width of their own and centred text, ignoring width:100%. Dropping the
+   native appearance makes them size and align like the other inputs. */
+.mk-field input[type="date"],
+.mk-field input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    text-align: left;
+}
+.mk-field input[type="date"]::-webkit-date-and-time-value,
+.mk-field input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 .mk-field-wide { grid-column: span 2; }
 
 .mk-conflict {
@@ -145,7 +182,22 @@
 .mk-req {
     border: 1px solid var(--gray-200); border-radius: var(--radius-lg);
     background: #fff; overflow: hidden; margin-bottom: 1rem;
+    scroll-margin-top: 1.25rem;
 }
+/* Two requests per row; the grid gap replaces each card's bottom margin.
+   Cards stretch to the row's height with their actions pinned to the bottom. */
+.mk-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem; align-items: stretch;
+}
+.mk-grid > .mk-req { margin-bottom: 0; display: flex; flex-direction: column; min-width: 0; }
+.mk-grid > .mk-req[hidden] { display: none; }
+.mk-grid > .mk-req > .mk-req-body { flex: 1; }
+@media (max-width: 900px) {
+    .mk-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* The request the dean dashboard's View button jumped to */
+.mk-req:target { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.22); }
 .mk-req-head {
     display: flex; align-items: center; justify-content: space-between;
     gap: .75rem; flex-wrap: wrap;
@@ -162,6 +214,9 @@
 .mk-status.approved  { background: #d1fae5; color: #065f46; }
 .mk-status.declined  { background: #fee2e2; color: #991b1b; }
 .mk-status.withdrawn { background: var(--gray-100); color: var(--gray-600); }
+/* Never decided before the class was due. Muted slate, as expired
+   appointments are: nobody declined it, so it is not red. */
+.mk-status.expired   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
 
 .mk-req-body { padding: .85rem 1rem; }
 .mk-session-line {
@@ -328,13 +383,10 @@
 
 /* ── Mobile ── */
 @media (max-width: 900px) {
-    .mk-session-grid { grid-template-columns: repeat(2, 1fr); }
-    .mk-field-wide { grid-column: span 2; }
+    /* The session grid follows its card's width instead — see .mk-session. */
     .mk-upload-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
-    .mk-session-grid { grid-template-columns: 1fr; }
-    .mk-field-wide { grid-column: span 1; }
     .mk-actions { flex-direction: column-reverse; }
     .mk-actions > * { width: 100%; justify-content: center; text-align: center; }
     .mk-filter-bar { flex-direction: column; align-items: stretch; }

@@ -361,6 +361,10 @@
     margin: 0;
     line-height: 1.4;
 }
+/* An email is one long word; let it break rather than run past the card. */
+.card-email { overflow-wrap: anywhere; min-width: 0; }
+.card-spec-empty { color: var(--gray-400); font-style: italic; }
+.card-spec svg { flex-shrink: 0; margin-top: 0.1rem; }
 
 .card-college svg,
 .card-spec svg {
@@ -564,22 +568,6 @@
         font-size: 0.75rem;
         padding: 0.3rem 0.625rem;
     }
-}
-
-/* ── CSPC Logo in Sidebar ── */
-.cspc-logo-avatar {
-    background: white !important;
-    border: 2px solid var(--gray-200);
-    overflow: hidden;
-    padding: 2px;
-}
-
-.cspc-logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 50%;
-}
 }
 
 /* ── Student Dashboard Mobile Fixes ── */

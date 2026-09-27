@@ -60,6 +60,8 @@
     <main class="instructor-main">
         <div class="main-container">
 
+            <%- include('../../partials/greeting-banner', { name: student.name || student.firstName }) %>
+
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Faculty Directory</h1>
@@ -113,9 +115,19 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                                     <%= faculty.department_name %>
                                 </p>
-                                <p class="card-spec">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                    <%= faculty.position %>
+                                <%# Email in place of a second copy of the position,
+                                    and the base office (moved here from the lounge page). %>
+                                <% if (faculty.email) { %>
+                                <p class="card-spec card-email">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>
+                                    <%= faculty.email %>
+                                </p>
+                                <% } %>
+                                <%# Always shown so every card has the same lines; muted
+                                    when no base office is assigned (e.g. the Dean). %>
+                                <p class="card-spec<%= faculty.officeRoom ? '' : ' card-spec-empty' %>">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                    <%= faculty.officeRoom || 'No base office' %>
                                 </p>
                             </div>
                             <div class="card-footer">

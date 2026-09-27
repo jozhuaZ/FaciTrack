@@ -8,6 +8,7 @@ const path = require('path');
 const pool = require('./configs/db');
 const { requireRole } = require('./middleware/auth');
 const attachNotifications = require('./middleware/attachNotifications');
+const attachPresence = require('./middleware/attachPresence');
 const auditNavigation = require('./middleware/auditNavigation');
 const passport = require('./configs/passport');
 const startReminderJob = require('./jobs/reminder');
@@ -140,6 +141,8 @@ app.use(passport.session());
 
 // Middleware: notifications
 app.use(attachNotifications);
+// Middleware: the instructor sidebar's own room status
+app.use(attachPresence);
 // Middleware: audit navigations
 app.use(auditNavigation);
 

@@ -47,8 +47,14 @@
 
                             <!-- Faculty Summary -->
                             <div class="faculty-summary-card">
+                                <%# The instructor's photo in the same circle the
+                                    initials use; initials when there is none. %>
                                 <div class="faculty-summary-avatar">
+                                    <% if (faculty.profile_picture) { %>
+                                    <img src="<%= faculty.profile_picture %>" alt="<%= faculty.first_name %> <%= faculty.last_name %>" class="faculty-summary-photo">
+                                    <% } else { %>
                                     <%= faculty.first_name[0] + faculty.last_name[0] %>
+                                    <% } %>
                                 </div>
                                 <div>
                                     <p

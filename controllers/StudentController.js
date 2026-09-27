@@ -6,7 +6,7 @@ const SlotReservation = require('../models/SlotReservationModel');
 const AuditLogModel = require('../models/AuditLogModel');
 const StudentSettingsModel = require('../models/StudentSettingsModel');
 const { buildStudentUser } = require('../utils/sessionUser');
-const { to12Hour, timeAgo } = require('../utils/timeFormat');
+const { to12Hour } = require('../utils/timeFormat');
 const { isWithinLeadTime, bookingLeadTimeHours } = require('../services/scheduling');
 
 /**
@@ -170,6 +170,24 @@ function groupByInstructor(appointments) {
     });
 }
 
+/**
+ * How long ago the lounge page says someone was last seen: "Just now",
+ * "30 minutes ago", "2 hours ago", "3 days ago"; past a week, the date.
+ */
+function lastSeenAgo(value) {
+    const then = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(then.getTime())) return null;
+    const plural = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+    const mins = Math.floor((Date.now() - then.getTime()) / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return plural(mins, 'minute');
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return plural(hrs, 'hour');
+    const days = Math.floor(hrs / 24);
+    if (days < 7) return plural(days, 'day');
+    return 'Last seen ' + then.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
 const StudentController = {
 
     async renderDashboardPage(req, res) {
@@ -222,7 +240,12 @@ const StudentController = {
 
                 const nextAvailable = findNextAvailable(consultationSlots) || 'No upcoming slots';
 
-                return { ...f, nextAvailable };
+                // Same "building, room" wording the lounge page used for it.
+                const officeRoom = f.office_room_number
+                    ? [f.office_building, f.office_room_number].filter(Boolean).join(', ')
+                    : null;
+
+                return { ...f, nextAvailable, officeRoom };
             }));
 
             // Settings > "Start in my department" chooses the opening filter
@@ -502,9 +525,17 @@ const StudentController = {
                     bleStatus: loungePresence(row, { covered: coverage.covered }),
                     detectedRoom: row.detected_room_number || null,
                     detectedRoomType: row.detected_room_type || null,
-                    lastDetected: row.presence_updated_at ? timeAgo(row.presence_updated_at) : null,
+                    // For the muted line under the status: how long since the
+                    // scanners last saw someone who is now out.
+                    lastSeen: row.presence_updated_at ? lastSeenAgo(row.presence_updated_at) : null,
                 };
             });
+
+            // Whoever is at the lounge first, then everyone alphabetically by the
+            // name the card shows.
+            faculty.sort((a, b) =>
+                (b.bleStatus === 'in-room') - (a.bleStatus === 'in-room')
+                || a.name.localeCompare(b.name));
 
             const departments = [...new Set(faculty.map(f => f.department).filter(Boolean))].sort();
 

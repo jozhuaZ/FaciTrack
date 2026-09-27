@@ -12,30 +12,68 @@
   function ensurePreviewModal() {
     if (document.getElementById('docPreviewModal')) return;
 
+    // Screen styles live in one block so the header can reflow on phones:
+    // title on the left, actions on the right, Close always last (far right).
+    var css = document.createElement('style');
+    css.textContent =
+      '#docPreviewModal{display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:1rem}' +
+      '.dp-dialog{background:#fff;border-radius:16px;width:100%;max-width:980px;height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 70px rgba(0,0,0,.3);overflow:hidden}' +
+      '.dp-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f8fafc;gap:.75rem;flex-wrap:wrap}' +
+      '.dp-heading{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 220px}' +
+      '.dp-heading h3{font-size:1rem;font-weight:800;color:#111827;margin:0}' +
+      '.dp-heading p{font-size:.75rem;color:#6b7280;margin:0}' +
+      '.dp-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end;align-items:center}' +
+      '.dp-actions .btn-page,.dp-actions .btn-header-action{height:36px;padding:0 1rem;font-size:.75rem}' +
+      '.dp-sep{width:1px;height:24px;background:#e5e7eb;margin:0 .125rem}' +
+      '.dp-close{display:inline-flex;align-items:center;gap:.3rem}' +
+      '#docPreviewScroll{flex:1;overflow:auto;padding:2.5rem;background:#e5e7eb;display:flex;justify-content:center;align-items:flex-start}' +
+      '#docPreviewArea{background:#fff;width:210mm;min-height:297mm;padding:18mm;box-shadow:0 0 20px rgba(0,0,0,.1);font-family:Arial,Helvetica,sans-serif;color:#000;flex-shrink:0}' +
+      '#docPreviewArea.is-frame{padding:0}' +
+      '#docPreviewArea iframe{display:block;width:100%;min-height:297mm;border:0}' +
+      '@media (max-width:640px){' +
+      '  #docPreviewModal{padding:0}' +
+      '  .dp-dialog{height:100%;border-radius:0}' +
+      '  .dp-head{padding:.875rem 1rem}' +
+      '  .dp-actions{width:100%;justify-content:flex-start}' +
+      '  .dp-sep{display:none}' +
+      '  .dp-close{margin-left:auto}' +
+      '  #docPreviewScroll{padding:1rem;justify-content:flex-start}' +
+      '}';
+    document.head.appendChild(css);
+
     var wrap = document.createElement('div');
     wrap.innerHTML =
-      '<div id="docPreviewModal" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);align-items:center;justify-content:center;padding:1rem">' +
-      '  <div style="background:#fff;border-radius:16px;width:100%;max-width:980px;height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 70px rgba(0,0,0,.3);overflow:hidden">' +
-      '    <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f8fafc;gap:.75rem;flex-wrap:wrap">' +
-      '      <div style="display:flex;flex-direction:column;gap:2px;min-width:220px">' +
-      '        <h3 id="docPreviewTitle" style="font-size:1rem;font-weight:800;color:#111827;margin:0">Document Preview</h3>' +
-      '        <p id="docPreviewSub" style="font-size:.75rem;color:#6b7280;margin:0">Preview → choose save format or print</p>' +
+      '<div id="docPreviewModal" role="dialog" aria-modal="true" aria-labelledby="docPreviewTitle">' +
+      '  <div class="dp-dialog">' +
+      '    <div class="dp-head">' +
+      '      <div class="dp-heading">' +
+      '        <h3 id="docPreviewTitle">Document Preview</h3>' +
+      '        <p id="docPreviewSub">Preview → choose save format or print</p>' +
       '      </div>' +
-      '      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end">' +
-      '        <button id="docPreviewCancel" class="btn-page" style="height:36px;padding:0 1rem">Close</button>' +
-      '        <button id="docPreviewPrint" class="btn-page" style="height:36px;padding:0 1rem">Print</button>' +
-      '        <button id="docPreviewPdf" class="btn-header-action primary" style="height:36px;padding:0 1rem;font-size:.75rem">Save as PDF</button>' +
-      '        <button id="docPreviewDocx" class="btn-page" style="height:36px;padding:0 1rem">Save as DOCX</button>' +
-      '        <button id="docPreviewXlsx" class="btn-page" style="height:36px;padding:0 1rem">Save as XLSX</button>' +
+      '      <div class="dp-actions">' +
+      '        <button id="docPreviewPrint" type="button" class="btn-page">Print</button>' +
+      '        <button id="docPreviewPdf" type="button" class="btn-header-action primary">Save as PDF</button>' +
+      '        <button id="docPreviewDocx" type="button" class="btn-page">Save as DOCX</button>' +
+      '        <button id="docPreviewXlsx" type="button" class="btn-page">Save as XLSX</button>' +
+      '        <span class="dp-sep" aria-hidden="true"></span>' +
+      '        <button id="docPreviewCancel" type="button" class="btn-page dp-close">' +
+      '          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Close' +
+      '        </button>' +
       '      </div>' +
       '    </div>' +
-      '    <div id="docPreviewScroll" style="flex:1;overflow:auto;padding:2.5rem;background:#e5e7eb;display:flex;justify-content:center">' +
-      '      <div id="docPreviewArea" style="background:#fff;width:210mm;min-height:297mm;padding:18mm 18mm;box-shadow:0 0 20px rgba(0,0,0,.1);font-family:Arial,Helvetica,sans-serif;color:#000">' +
-      '      </div>' +
+      '    <div id="docPreviewScroll">' +
+      '      <div id="docPreviewArea"></div>' +
       '    </div>' +
       '  </div>' +
       '</div>';
     document.body.appendChild(wrap.firstChild);
+
+    // Backdrop tap and Escape close it, like the other modals
+    var modal = document.getElementById('docPreviewModal');
+    modal.addEventListener('click', function (e) { if (e.target === modal) closePreview(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.style.display === 'flex') closePreview();
+    });
 
     // Basic print CSS so print matches preview
     var style = document.createElement('style');
@@ -157,7 +195,9 @@
     );
   }
 
-  var state = { payload: null, html: '' };
+  // html: the body shown and printed. doc: set when the caller supplied its own
+  // full document (the workload form), which is previewed in an iframe.
+  var state = { payload: null, html: '', doc: '' };
 
   function openPreview(opts) {
     ensurePreviewModal();
@@ -174,11 +214,33 @@
       columns: opts.columns || [],
       rows: opts.rows || [],
     };
-    state.html = buildDocumentHtml(state.payload);
+    state.doc = opts.html || '';
+    state.html = state.doc ? '' : buildDocumentHtml(state.payload);
 
     titleEl.textContent = opts.title || 'Document Preview';
     subEl.textContent = 'Preview → choose save format or print';
-    area.innerHTML = state.html;
+
+    area.classList.toggle('is-frame', !!state.doc);
+    if (state.doc) {
+      // Its own stylesheet must not leak into the page, hence the iframe
+      area.innerHTML = '';
+      var frame = document.createElement('iframe');
+      frame.title = 'Document preview';
+      frame.addEventListener('load', function () {
+        try { frame.style.height = frame.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) { /* cross-origin */ }
+      });
+      frame.srcdoc = state.doc;
+      area.appendChild(frame);
+    } else {
+      area.innerHTML = state.html;
+    }
+
+    // Save-as needs table rows; a document without them can only be printed
+    var canSave = state.payload.columns.length > 0;
+    ['docPreviewPdf', 'docPreviewDocx', 'docPreviewXlsx'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = canSave ? '' : 'none';
+    });
 
     modal.style.display = 'flex';
     setBusy(false);
@@ -194,7 +256,7 @@
     // Print should match preview; easiest reliable way is a new window containing the same HTML.
     var win = window.open('', '_blank', 'width=1200,height=900');
     if (!win) return;
-    var html =
+    var html = state.doc ||
       '<!doctype html><html><head><meta charset="utf-8"><title>' +
       esc(state.payload?.title || 'Report') +
       '</title>' +
@@ -235,6 +297,8 @@
         try {
           setBusy(true);
           await postExport('pdf', state.payload);
+        } catch (err) {
+          alert(err.message || 'Export failed.');
         } finally {
           setBusy(false);
         }
@@ -246,6 +310,8 @@
         try {
           setBusy(true);
           await postExport('docx', state.payload);
+        } catch (err) {
+          alert(err.message || 'Export failed.');
         } finally {
           setBusy(false);
         }
@@ -257,6 +323,8 @@
         try {
           setBusy(true);
           await postExport('xlsx', state.payload);
+        } catch (err) {
+          alert(err.message || 'Export failed.');
         } finally {
           setBusy(false);
         }

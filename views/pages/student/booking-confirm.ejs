@@ -1,3 +1,8 @@
+<%- include('../../partials/header') %>
+<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
+<link rel="stylesheet" href="/css/student/profile.css?v=<%= assetVersion %>">
+<%# After the header, not before it: above it, this landed ahead of <!DOCTYPE>
+    and put the whole page in quirks mode. %>
 <style>
   .meet-pending {
     display: flex; align-items: flex-start; gap: .5rem;
@@ -6,9 +11,6 @@
     color: #1e40af; font-size: .8rem; line-height: 1.5;
   }
 </style>
-<%- include('../../partials/header') %>
-<link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
-<link rel="stylesheet" href="/css/student/profile.css?v=<%= assetVersion %>">
 
 <div class="instructor-layout">
     <main class="instructor-main">
@@ -69,6 +71,10 @@
         </div>
     </main>
 </div>
+
+<%# This page has no sidebar, and the sidebar is where every other student page
+    gets the panel the header's bell opens. %>
+<%- include('../../partials/student-notification-panel') %>
 
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>

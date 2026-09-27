@@ -18,12 +18,18 @@
                 <p class="profile-role-mini"><%= instructor.position %></p>
             </div>
         </div>
-        <div class="ble-status-mini">
-            <span class="ble-indicator-mini <%= instructor.bleStatus %>">
+        <%# Room status from the BLE scanners (middleware/attachPresence): the
+            room's name while the instructor is detected in one, otherwise Out
+            of Room. Display only; it never affects appointments. It used to
+            read instructor.bleStatus, which nothing set, so the dot had no
+            colour and the text always said Out of Room. %>
+        <% const _presence = locals.ownPresence || { inRoom: false, room: null }; %>
+        <div class="ble-status-mini" id="sidebarPresence">
+            <span class="ble-indicator-mini <%= _presence.inRoom ? 'in-room' : 'out-of-room' %>">
                 <span class="ble-pulse-mini"></span>
                 <span class="ble-dot-mini"></span>
             </span>
-            <span class="ble-text-mini"><%= instructor.bleStatus === 'in-room' ? 'In Room' : 'Out of Room' %></span>
+            <span class="ble-text-mini"><%= _presence.inRoom ? (_presence.room || 'In Room') : 'Out of Room' %></span>
         </div>
         <!-- Mobile hamburger toggle -->
         <button class="sidebar-mobile-toggle" id="sidebarToggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -443,7 +449,28 @@
             })
             .on('connection:error', function () {
                 console.warn('[Notifications] Live updates interrupted.');
-            });
+            })
+            // A scanner reported someone arriving or leaving. The broadcast
+            // carries internal ids, not this instructor's, so ask for our own
+            // status rather than guessing whether the event was about us.
+            .on('presence:changed', refreshPresence);
+    }
+
+    // ── Room status (sidebar) ──
+    function refreshPresence() {
+        var box = document.getElementById('sidebarPresence');
+        if (!box) return;
+        fetch('/instructor/presence/me', { headers: { Accept: 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (p) {
+                if (!p || !p.success) return;
+                var ind = box.querySelector('.ble-indicator-mini');
+                var txt = box.querySelector('.ble-text-mini');
+                ind.classList.toggle('in-room', !!p.inRoom);
+                ind.classList.toggle('out-of-room', !p.inRoom);
+                txt.textContent = p.inRoom ? (p.room || 'In Room') : 'Out of Room';
+            })
+            .catch(function () { /* keep what is shown */ });
     }
     // realtime.js is loaded by partials/script.ejs at the end of the page, after
     // this partial. Calling it immediately threw "Realtime is undefined" and

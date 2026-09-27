@@ -4,7 +4,7 @@
  *
  * Filters:
  *   - Search  : text match against pre-built data-search haystack
- *   - Status  : data-status  (all | pending | approved | declined | withdrawn)
+ *   - Status  : data-status  (all | pending | approved | declined | withdrawn | expired)
  *   - Class Type : data-class-type  (all | lecture | laboratory | online)
  *
  * Every card is rendered once with data-status, data-class-type, and

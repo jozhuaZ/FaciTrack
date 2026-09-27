@@ -10,6 +10,7 @@ const CalendarModel = require('../models/CalendarModel');
 const bcrypt = require('bcryptjs');
 const { to12Hour, formatFullDate } = require('../utils/timeFormat');
 const { buildInstructorUser } = require('../utils/sessionUser');
+const { toWallClock, addDays } = require('../utils/wallClock');
 
 // Must mirror the users.availability_status enum
 const AVAILABILITY_STATUSES = ['available', 'dnd', 'travel', 'leave', 'meeting'];
@@ -88,8 +89,10 @@ function mapAppointmentRow(row) {
         date: row.consultation_date,
         dayOfWeek: row.day_of_the_week,
         time: `${to12Hour(row.start_time)} – ${to12Hour(row.end_time)}`,
-        // Local wall-clock end, so the page can tell which consultations have
-        // finished without re-deriving it from the formatted time string
+        // Local wall-clock start and end, so a page can order consultations and
+        // tell which have finished without re-deriving it from the formatted
+        // time string
+        startsAt: `${row.consultation_date}T${row.start_time}`,
         endsAt: `${row.consultation_date}T${row.end_time}`,
         duration: computeDuration(row.start_time, row.end_time),
         roomNumber: row.room_number,
@@ -797,12 +800,38 @@ const InstructorController = {
                     }))
                 );
 
+            // "Now", "today" and "this week" in the app's timezone. The server
+            // runs on UTC on Vercel, so new Date() on a stored date would call
+            // an early-morning Manila appointment yesterday's.
+            const now = toWallClock(new Date());
+            const pad = (n) => String(n).padStart(2, '0');
+            const nowKey = `${now.date}T${pad(now.hour)}:${pad(now.minute)}`;
+            const todayKey = now.date;
+            const weekEndKey = addDays(todayKey, 7);
+
+            // Live bookings in start order. The model sorts pending ahead of
+            // confirmed, which is right for the request queue but not for
+            // "what comes next".
+            const byStart = (a, b) => a.startsAt.localeCompare(b.startsAt);
+            const live = appointments
+                .filter(a => a.status === 'confirmed' || a.status === 'pending')
+                .sort(byStart);
+
             res.render('pages/instructor/dashboard', {
                 title: 'FaciTrack - Dashboard',
                 instructor,
                 appointments,
                 consultationSlots,
                 pendingCount: appointments.filter(a => a.status === 'pending').length,
+                // Everything booked for today, finished or not: the day at a glance.
+                todayAppointments: live.filter(a => a.date === todayKey),
+                // Confirmed consultations that have not ended yet, soonest
+                // first. One in progress still counts; one that has ended is
+                // not upcoming. Pending requests have their own card.
+                upcomingAppointments: live.filter(a =>
+                    a.status === 'confirmed' && a.endsAt.slice(0, 16) > nowKey),
+                todayKey,
+                weekEndKey,
             });
         } catch (err) {
             console.error('[InstructorController.renderDashboardPage]', err);

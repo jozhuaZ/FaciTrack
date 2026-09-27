@@ -96,10 +96,14 @@ const UserModel = {
                    IF(u.middle_name IS NOT NULL AND u.middle_name != '',
                       CONCAT(' ', u.middle_name), '')) AS full_name,
             u.position,
+            u.email,
             u.status,
             u.department_id,
             d.full_name          AS department_name,
             u.profile_picture,
+            -- Base office, shown on the directory card (moved from the lounge page)
+            office.room_number   AS office_room_number,
+            officeDept.building  AS office_building,
             -- Needed to work out whether a slot is actually offerable, the same
             -- way the profile page does
             u.default_meeting_link,
@@ -113,6 +117,8 @@ const UserModel = {
             next_slot.start_time        AS next_start_time
         FROM users u
         LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN rooms office           ON u.base_room_id       = office.id
+        LEFT JOIN departments officeDept ON office.department_id = officeDept.id
         LEFT JOIN google_accounts ga ON ga.user_id = u.id AND ga.last_error IS NULL
         LEFT JOIN (
             SELECT

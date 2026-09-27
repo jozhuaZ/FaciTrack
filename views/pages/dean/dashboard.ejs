@@ -10,6 +10,27 @@
 .presence-notice svg { color:#2563eb; flex-shrink:0; margin-top:1px; }
 .presence-notice p { font-size:.8125rem; color:#1e40af; margin:0; line-height:1.5; }
 .stat-card-value.muted { color:var(--gray-300); }
+/* Pending Make-Up Requests rows — copied from the instructor dashboard's
+   Pending Requests (.upco-item.pending-apt) so both read the same */
+.upco-list{display:flex;flex-direction:column;gap:.5rem;}
+.upco-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border-left:3px solid #f59e0b;background:#fffbeb;border-radius:0 var(--radius-md) var(--radius-md) 0;transition:all .2s;}
+.upco-item:hover{box-shadow:0 2px 8px rgba(10,61,98,.08);transform:translateX(2px);}
+.upco-time{font-size:.7rem;font-weight:700;color:#b45309;min-width:56px;flex-shrink:0;line-height:1.3;}
+.upco-date-sub{font-size:.62rem;font-weight:500;color:var(--gray-400);display:block;margin-top:.05rem;}
+.upco-date-sub.is-today{color:#b45309;}
+.upco-info{flex:1;min-width:0;}
+.upco-name{font-size:.8rem;font-weight:700;color:var(--gray-900);margin:0 0 .1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upco-topic{font-size:.69rem;color:var(--gray-500);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dash-view-btn{display:inline-flex;align-items:center;justify-content:center;gap:.25rem;padding:.375rem .6rem;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:.72rem;font-weight:700;font-family:inherit;white-space:nowrap;text-decoration:none;flex-shrink:0;transition:all .14s;}
+.dash-view-btn:hover{border-color:#0a3d62;color:#0a3d62;background:#f0f9ff;}
+.empty-dash{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.55rem;padding:2rem 1rem;color:var(--gray-400);text-align:center;}
+.empty-dash svg{opacity:.35;}
+.empty-dash p{font-size:.8125rem;margin:0;color:var(--gray-500);}
+.empty-dash strong{font-size:.9rem;color:var(--gray-700);}
+@media (max-width:640px){
+    .upco-time{min-width:0;}
+    .upco-item{gap:.5rem;padding:.7rem .75rem;}
+}
 @media (max-width:580px){
     .presence-notice { padding:.75rem .875rem; }
     .presence-notice p { font-size:.75rem; }
@@ -20,12 +41,33 @@
 
     <main class="instructor-main">
         <div class="main-container">
+            <%# Beside the greeting (large screens only): the make-up requests
+                waiting on the dean's decision, soonest class first, at most
+                four — the dean's counterpart of the instructor's consultations. %>
+            <%
+                const _mkDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : 'No date';
+                const _mkPending = makeupRequests
+                    .filter(r => r.status === 'pending')
+                    .sort((a, b) => String(a.firstDate || '9999').localeCompare(String(b.firstDate || '9999')));
+            %>
+            <%- include('../../partials/greeting-banner', {
+                    name: dean.name,
+                    today: {
+                        label: 'Make-up requests awaiting you',
+                        empty: 'No make-up requests waiting on you',
+                        pendingNote: false,
+                        items: _mkPending.slice(0, 4).map(r => ({
+                            text: _mkDate(r.firstDate) + ' · ' + r.instructorName + (r.subject && r.subject !== '—' ? ' · ' + r.subject : ''),
+                            status: 'pending',
+                        })),
+                        more: Math.max(0, _mkPending.length - 4),
+                    },
+                }) %>
 
             <%
                 const inRoom  = faculty.filter(f => f.bleStatus === 'in-room');
                 const outRoom = faculty.filter(f => f.bleStatus === 'out-of-room');
                 const pendingMakeup  = makeupRequests.filter(r => r.status === 'pending');
-                const decidedMakeup  = makeupRequests.filter(r => r.status !== 'pending');
                 const awayFaculty    = faculty.filter(f => f.availability === 'travel' || f.availability === 'leave');
                 const maxHours = Math.max(1, ...faculty.map(f => f.hoursThisMonth));
             %>
@@ -97,45 +139,50 @@
             <!-- Dashboard Grid -->
             <div class="dashboard-content-grid">
 
-                <!-- Real-time Faculty Presence -->
+                <!-- Pending Make-Up Requests awaiting the dean -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h3 class="card-title">Faculty Presence</h3>
-                        <a href="/dean/faculty" class="card-link">View All →</a>
+                        <h3 class="card-title">
+                            Pending Make-Up Requests
+                            <% if (pendingMakeup.length) { %><span class="card-count-badge"><%= pendingMakeup.length %></span><% } %>
+                        </h3>
+                        <a href="/dean/makeup/requests" class="card-link">View all →</a>
                     </div>
                     <div class="card-body">
-                        <% if (!faculty.length) { %>
-                        <div class="dean-empty">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                            <p>No instructors are assigned to <%= dean.department %> yet. An administrator adds them under Users.</p>
+                        <% if (!_mkPending.length) { %>
+                        <div class="empty-dash">
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            <strong>All caught up!</strong>
+                            <p>No make-up class requests waiting on you.</p>
                         </div>
                         <% } else { %>
-                        <div class="appointments-list-dashboard">
-                            <% faculty.slice(0, 4).forEach(f => { %>
-                            <div class="appointment-row">
-                                <div class="apt-row-left">
-                                    <div class="apt-avatar-xs"><%= f.name.split(' ').map(n => n[0]).join('') %></div>
-                                    <div class="apt-row-info">
-                                        <h4 class="apt-row-name"><%= f.name %></h4>
-                                        <p class="apt-row-details">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                            <%= f.officeRoom %>
-                                        </p>
-                                    </div>
-                                </div>
-                                <div>
-                                    <% if (f.bleStatus === 'unknown') { %>
-                                    <span class="table-badge" data-presence-badge="<%= f.id %>"
-                                          title="No BLE scanner has reported on this faculty member">No data</span>
-                                    <% } else { %>
-                                    <span class="table-badge <%= f.bleStatus === 'in-room' ? 'confirmed' : 'declined' %>"
-                                          data-presence-badge="<%= f.id %>">
-                                        <%= f.bleStatus === 'in-room' ? 'In Room' : 'Out' %>
-                                    </span>
+                        <%# Same rows as the instructor's Pending Requests: first class
+                            time and date on the left, soonest first. View jumps to the
+                            request on the review page, where approving happens. %>
+                        <% const _todayKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date()); %>
+                        <div class="upco-list">
+                            <% _mkPending.slice(0, 5).forEach(req => { %>
+                            <div class="upco-item">
+                                <div class="upco-time">
+                                    <%= (req.timeLabel || '').split(' – ')[0] || '—' %>
+                                    <% if (req.firstDate === _todayKey) { %>
+                                    <span class="upco-date-sub is-today">Today</span>
+                                    <% } else if (req.firstDate) { %>
+                                    <span class="upco-date-sub"><%= _mkDate(req.firstDate) %></span>
                                     <% } %>
                                 </div>
+                                <div class="upco-info">
+                                    <p class="upco-name"><%= req.instructorName %></p>
+                                    <p class="upco-topic"><%= req.subject %> · <%= req.sessionCount %> session<%= req.sessionCount === 1 ? '' : 's' %></p>
+                                </div>
+                                <a class="dash-view-btn" href="/dean/makeup/requests#req-<%= encodeURIComponent(req.id) %>">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View
+                                </a>
                             </div>
                             <% }); %>
+                            <% if (_mkPending.length > 5) { %>
+                            <a href="/dean/makeup/requests" class="view-more-link">+<%= _mkPending.length - 5 %> more pending requests →</a>
+                            <% } %>
                         </div>
                         <% } %>
                     </div>
@@ -175,41 +222,43 @@
                     </div>
                 </div>
 
-                <!-- Make-Up Requests awaiting the dean -->
+                <!-- Real-time Faculty Presence -->
                 <div class="content-card">
                     <div class="card-header">
-                        <h3 class="card-title">
-                            Make-Up Requests
-                            <% if (pendingMakeup.length) { %><span class="card-count-badge"><%= pendingMakeup.length %></span><% } %>
-                        </h3>
-                        <a href="/dean/makeup/requests" class="card-link">Review →</a>
+                        <h3 class="card-title">Faculty Presence</h3>
+                        <a href="/dean/faculty" class="card-link">View All →</a>
                     </div>
                     <div class="card-body">
-                        <%# Pending first — they are the ones needing a decision — then the
-                            most recent decisions, so the card is never empty after a busy week %>
-                        <% const makeupPreview = [...pendingMakeup, ...decidedMakeup].slice(0, 3); %>
-                        <% if (!makeupPreview.length) { %>
+                        <% if (!faculty.length) { %>
                         <div class="dean-empty">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <p>No make-up class requests from <%= dean.department %> yet.</p>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                            <p>No instructors are assigned to <%= dean.department %> yet. An administrator adds them under Users.</p>
                         </div>
                         <% } else { %>
                         <div class="appointments-list-dashboard">
-                            <% makeupPreview.forEach(req => { %>
+                            <% faculty.slice(0, 4).forEach(f => { %>
                             <div class="appointment-row">
                                 <div class="apt-row-left">
-                                    <div class="apt-avatar-xs"><%= req.instructorName.split(' ').map(n => n[0]).join('') %></div>
+                                    <div class="apt-avatar-xs"><% if (f.photo) { %><img src="<%= f.photo %>" alt="<%= f.name %>" loading="lazy"><% } else { %><%= f.name.split(' ').map(n => n[0]).join('') %><% } %></div>
                                     <div class="apt-row-info">
-                                        <h4 class="apt-row-name"><%= req.instructorName %></h4>
+                                        <h4 class="apt-row-name"><%= f.name %></h4>
                                         <p class="apt-row-details">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                            <%= req.subject %> · <%= req.sessionCount %> session<%= req.sessionCount === 1 ? '' : 's' %><%= req.firstDate ? ` from ${req.firstDate}` : '' %>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            <%= f.officeRoom %>
                                         </p>
                                     </div>
                                 </div>
-                                <span class="table-badge <%= req.status === 'approved' ? 'confirmed' : (req.status === 'declined' ? 'declined' : 'pending') %>">
-                                    <%= req.status.charAt(0).toUpperCase() + req.status.slice(1) %>
-                                </span>
+                                <div>
+                                    <% if (f.bleStatus === 'unknown') { %>
+                                    <span class="table-badge" data-presence-badge="<%= f.id %>"
+                                          title="No BLE scanner has reported on this faculty member">No data</span>
+                                    <% } else { %>
+                                    <span class="table-badge <%= f.bleStatus === 'in-room' ? 'confirmed' : 'declined' %>"
+                                          data-presence-badge="<%= f.id %>">
+                                        <%= f.bleStatus === 'in-room' ? 'In Room' : 'Out' %>
+                                    </span>
+                                    <% } %>
+                                </div>
                             </div>
                             <% }); %>
                         </div>

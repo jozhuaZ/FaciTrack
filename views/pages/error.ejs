@@ -42,7 +42,10 @@
       box-shadow: 0 4px 16px rgba(10, 61, 98, 0.08);
     }
 
-    .error-logo { width: 56px; height: 56px; margin: 0 auto 1.5rem; display: block; }
+    /* The full FaciTrack wordmark (406×171). Only the height is set; the width
+       follows it, so the logo keeps its proportions instead of being squeezed
+       into the square the app icon used. */
+    .error-logo { height: 48px; width: auto; max-width: 100%; margin: 0 auto 1.5rem; display: block; object-fit: contain; }
 
     .error-icon {
       width: 64px; height: 64px;
@@ -130,7 +133,7 @@
 <body>
 
 <main class="error-card">
-  <img src="/images/icon-192.png" alt="FaciTrack" class="error-logo"
+  <img src="/images/FaciTrack-logo.png" alt="FaciTrack" class="error-logo" width="114" height="48"
        onerror="this.style.display='none'">
 
   <div class="error-icon <%= unavailable ? '' : 'fault' %>">

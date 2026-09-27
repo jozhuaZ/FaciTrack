@@ -155,6 +155,10 @@
             cards.forEach(function (card) {
                 card.hidden = card.getAttribute('data-table') !== name;
             });
+            // Each toolbar sits above its card, so it is shown and hidden with it
+            document.querySelectorAll('[data-toolbar-for]').forEach(function (bar) {
+                bar.hidden = bar.getAttribute('data-toolbar-for') !== name;
+            });
             buttons.forEach(function (btn) {
                 var on = btn.getAttribute('data-show') === name;
                 btn.classList.toggle('active', on);

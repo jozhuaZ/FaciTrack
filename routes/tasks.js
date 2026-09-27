@@ -90,6 +90,7 @@ function schedule(path, tasks) {
 schedule('/minute', {
     upcomingReminders: reminders.sendUpcomingReminders,
     expireUnanswered: reminders.expireUnansweredRequests,
+    expireMakeups: reminders.expireUndecidedMakeups,
 });
 
 /** Follow-ups and housekeeping. Each has its own throttle deciding who is due. */

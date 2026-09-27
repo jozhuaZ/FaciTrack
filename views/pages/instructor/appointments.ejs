@@ -668,9 +668,29 @@ window.onUnavailabilityChanged = function () {
     min-height: 0;              /* a flex child will not shrink below content without this */
 }
 
-.ev-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-.ev-field { margin-bottom: .875rem; }
-.ev-field .modal-input { width: 100%; }
+/* minmax(0, 1fr), not 1fr: a plain 1fr column cannot shrink below its
+   content, and Safari (iPad/iPhone) gives date and time inputs a native
+   minimum width, so the Date and Start/End fields pushed past the modal. */
+.ev-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.ev-field { margin-bottom: .875rem; min-width: 0; }
+.ev-field .modal-input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+/* One height for inputs and dropdowns: Safari draws selects taller. */
+.ev-field input.modal-input,
+.ev-field select.modal-input { height: 2.75rem; }
+/* Without vertical padding a fixed-height select centres its text; with it,
+   Safari clipped the text. */
+.ev-field select.modal-input { padding-top: 0; padding-bottom: 0; }
+/* Drop Safari's native date/time styling so the inputs obey width:100% and
+   line up with the other fields. */
+.ev-field input[type="date"],
+.ev-field input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    text-align: left;
+}
+.ev-field input[type="date"]::-webkit-date-and-time-value,
+.ev-field input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 .ev-optional { font-weight: 400; color: var(--gray-400); }
 .ev-check {
     display: flex; align-items: center; gap: .5rem;
@@ -700,7 +720,7 @@ window.onUnavailabilityChanged = function () {
 }
 .btn-danger-soft:hover { background: #fef2f2; border-color: #dc2626; }
 @media (max-width: 480px) {
-    .ev-grid { grid-template-columns: 1fr; gap: 0; }
+    .ev-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 
 /* ── Blocking prompt ── */

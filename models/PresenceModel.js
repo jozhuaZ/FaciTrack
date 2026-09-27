@@ -311,6 +311,23 @@ const PresenceModel = {
         return { wasStale, isNew };
     },
 
+    /**
+     * One instructor's own presence and the room it places them in, by public
+     * id. For the instructor's sidebar; is_present is null when no scanner has
+     * ever reported on them.
+     */
+    async getOwn(publicId) {
+        const [[row]] = await pool.execute(
+            `SELECT fp.is_present, r.room_number
+               FROM users u
+               LEFT JOIN faculty_presence fp ON fp.instructor_id = u.id
+               LEFT JOIN rooms r             ON fp.room_id       = r.id
+              WHERE u.public_id = ?`,
+            [publicId]
+        );
+        return row || null;
+    },
+
     /** Where an instructor is currently recorded, so a change can be detected. */
     async getCurrent(instructorIds) {
         if (!instructorIds.length) return new Map();

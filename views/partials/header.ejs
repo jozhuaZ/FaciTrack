@@ -25,6 +25,15 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="/css/style.css?v=<%= assetVersion %>">
     <link rel="stylesheet" href="/css/header.css?v=<%= assetVersion %>">
+    <%# The browser's "this can be installed" event can fire before the page's
+        scripts load, so it is caught here and kept for pwa-install.js. %>
+    <script>
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__ftInstallPrompt = e;
+            document.dispatchEvent(new Event('ft:installable'));
+        });
+    </script>
 </head>
 <body>
     <header class="main-header">

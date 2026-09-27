@@ -899,3 +899,13 @@
 .apt-lv-status.expired    { background: #f1f5f9; color: #475569; }
 .pop-stripe.expired       { background: linear-gradient(90deg,#64748b,#94a3b8); }
 .pop-status-pill.expired  { background: #f1f5f9; color: #475569; }
+/* The day panel's pill and dot, which expired had neither of, so it read as
+   bare text beside the pills of every other status. */
+.day-panel-status.expired { background: #f1f5f9; color: #475569; }
+.day-panel-dot.expired    { background: #94a3b8; }
+
+/* ── Cancelled: withdrawn after booking ──
+   Had no styling at all in the day panel, so it showed as bare text too.
+   A muted rose rather than decline's red: nobody refused it. */
+.day-panel-status.cancelled { background: #fff1f2; color: #9f1239; }
+.day-panel-dot.cancelled    { background: #fb7185; }

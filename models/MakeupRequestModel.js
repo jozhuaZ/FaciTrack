@@ -485,6 +485,57 @@ const MakeupRequestModel = {
         }
     },
 
+    /**
+     * Requests the dean never decided before the class was due.
+     *
+     * A request expires once its earliest session's start time has passed while
+     * still pending: approving a make-up class after it should already have
+     * begun cannot mean anything. "Now" is passed in as campus wall-clock time
+     * because class_date and the slots are stored that way, while the database
+     * clock (NOW()) may run on UTC, which would expire requests hours late.
+     *
+     * Locked, so a dean pressing Approve at the same moment either wins outright
+     * or finds nothing left to decide. Returns what was expired so the caller
+     * can tell the instructors.
+     */
+    async expireUndecided(nowWallClock) {
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [stale] = await conn.execute(
+                `SELECT mr.id, mr.instructor_id,
+                        MIN(TIMESTAMP(s.class_date, SEC_TO_TIME(s.start_slot * 1800))) AS first_start,
+                        GROUP_CONCAT(DISTINCT s.subject_code ORDER BY s.subject_code SEPARATOR ', ') AS subjects
+                   FROM makeup_requests mr
+                   JOIN makeup_request_schedules s ON s.request_id = mr.id
+                  WHERE mr.status = 'pending'
+                  GROUP BY mr.id, mr.instructor_id
+                 HAVING first_start < ?
+                  FOR UPDATE`,
+                [nowWallClock]
+            );
+
+            if (!stale.length) {
+                await conn.commit();
+                return [];
+            }
+
+            await conn.query(
+                "UPDATE makeup_requests SET status = 'expired' WHERE status = 'pending' AND id IN (?)",
+                [stale.map(r => r.id)]
+            );
+
+            await conn.commit();
+            return stale;
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
+    },
+
     /** Instructor pulls a pending request back out of the dean's queue. */
     async withdraw(requestId, instructorPublicId) {
         const [result] = await pool.execute(
@@ -620,7 +671,7 @@ const MakeupRequestModel = {
      */
     async getByDepartment(deanPublicId, { status = null } = {}) {
         const [rows] = await pool.execute(
-            `SELECT mr.*, u.first_name, u.last_name, u.position,
+            `SELECT mr.*, u.first_name, u.last_name, u.position, u.profile_picture,
                     dc.first_name AS decided_by_first, dc.last_name AS decided_by_last
                FROM makeup_requests mr
                JOIN users u ON mr.instructor_id = u.id

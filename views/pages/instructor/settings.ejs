@@ -269,26 +269,27 @@
             </div>
             <div class="card-body">
               <p class="settings-description" style="margin-bottom:1rem;">Set your current campus status. Students see this before booking, and anything other than Available blocks same-day bookings.</p>
+              <%# Dot colours match the status selector on the dashboard. %>
               <div id="statusGroup">
                 <label class="status-option">
                   <input type="radio" name="campusStatus" value="available" <%= instructor.availabilityStatus === 'available' ? 'checked' : '' %>>
-                  <span class="status-dot" style="background:#16a34a;"></span> Available
+                  <span class="status-dot" style="background:#22c55e;"></span> Available
                 </label>
                 <label class="status-option">
                   <input type="radio" name="campusStatus" value="dnd" <%= instructor.availabilityStatus === 'dnd' ? 'checked' : '' %>>
-                  <span class="status-dot" style="background:#dc2626;"></span> Do Not Disturb
+                  <span class="status-dot" style="background:#ef4444;"></span> Do Not Disturb
                 </label>
                 <label class="status-option">
                   <input type="radio" name="campusStatus" value="meeting" <%= instructor.availabilityStatus === 'meeting' ? 'checked' : '' %>>
-                  <span class="status-dot" style="background:#dc2626;"></span> In Meeting
+                  <span class="status-dot" style="background:#f59e0b;"></span> In Meeting
                 </label>
                 <label class="status-option">
                   <input type="radio" name="campusStatus" value="travel" <%= instructor.availabilityStatus === 'travel' ? 'checked' : '' %>>
-                  <span class="status-dot" style="background:#dc2626;"></span> On Official Travel
+                  <span class="status-dot" style="background:#8b5cf6;"></span> On Official Travel
                 </label>
                 <label class="status-option">
                   <input type="radio" name="campusStatus" value="leave" <%= instructor.availabilityStatus === 'leave' ? 'checked' : '' %>>
-                  <span class="status-dot" style="background:#dc2626;"></span> On Leave
+                  <span class="status-dot" style="background:#6b7280;"></span> On Leave
                 </label>
               </div>
 

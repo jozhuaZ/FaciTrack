@@ -347,3 +347,30 @@ img {
         border-radius: 12px;
     }
 }
+
+/* ── Export buttons ──
+   One look for every Export / Print button, copied from the instructor
+   Reports page: outlined navy that fills navy on hover. Doubled class so it
+   outranks .btn-header-action and its :hover in dashboard.css. */
+.export-btn.export-btn {
+    background: #fff;
+    color: var(--primary-blue, #0a3d62);
+    border: 1.5px solid var(--primary-blue, #0a3d62);
+    box-shadow: none;
+    font-weight: 700;
+    transition: background .15s, color .15s;
+}
+.export-btn.export-btn:hover:not(:disabled) {
+    background: var(--primary-blue, #0a3d62);
+    color: #fff;
+    border-color: var(--primary-blue, #0a3d62);
+    box-shadow: none;
+}
+.export-btn.export-btn:focus-visible {
+    outline: 2px solid var(--primary-blue, #0a3d62);
+    outline-offset: 2px;
+}
+.export-btn.export-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}

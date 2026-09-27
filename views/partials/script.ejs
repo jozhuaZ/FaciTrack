@@ -9,6 +9,9 @@
     opening a connection of their own. %>
 <script src="/js/realtime.js?v=<%= assetVersion %>"></script>
 <script src="/js/export-system.js?v=<%= assetVersion %>"></script>
+<%# "Install FaciTrack" pill — signed-in pages only, once per visit, never in the installed app %>
+<link rel="stylesheet" href="/css/pwa-install.css?v=<%= assetVersion %>">
+<script src="/js/pwa-install.js?v=<%= assetVersion %>"></script>
 <%# Asking to enable notifications. Included here rather than per page so every
     signed-in view can offer it — the landing and login pages do not include
     this partial, so it never runs for somebody who is not signed in. The modal
@@ -98,6 +101,27 @@
             cursor: pointer;
         }
         #notifPanelClose svg { width: 20px; height: 20px; }
+
+        /* The title and the Mark all read / Clear read buttons shared one row
+           with no gap to spare: the title ran into "Mark all read", which then
+           wrapped onto two lines. A fixed gap, a slightly smaller title and
+           compact single-line buttons keep them apart on a phone. */
+        #notifPanel .notif-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+        #notifPanel .notif-panel-header > div:first-child { min-width: 0; }
+        #notifPanel .notif-panel-title { font-size: 1.05rem; white-space: nowrap; }
+        #notifPanel .notif-panel-header > div:last-child { flex-shrink: 0; gap: 0.3rem !important; }
+        #notifMarkAll,
+        #notifClearRead {
+            font-size: 0.68rem !important;
+            padding: 0.35rem 0.55rem !important;
+            white-space: nowrap;
+            line-height: 1.2;
+        }
     }
 </style>
 <script>

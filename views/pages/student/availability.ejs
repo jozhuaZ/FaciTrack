@@ -9,14 +9,34 @@
     .avail-photo { width:100%; aspect-ratio:1/1; background:linear-gradient(135deg,#e8eef5,#d0dce8); display:flex; align-items:center; justify-content:center; position:relative; flex-shrink:0; }
     .avail-photo svg { width:42%; height:42%; color:#a0b4c8; }
     .avail-photo img { width:100%; height:100%; object-fit:cover; }
-    .avail-status-dot { position:absolute; bottom:8px; right:8px; width:16px; height:16px; border-radius:50%; border:2.5px solid white; box-shadow:0 1px 4px rgba(0,0,0,.2); }
-    .avail-status-dot.in-room     { background:#16a34a; }
-    .avail-status-dot.out-of-room { background:#9ca3af; }
-    .avail-status-dot.unknown     { background:#cbd5e1; }
-    .avail-info { padding:.75rem .875rem; display:flex; flex-direction:column; gap:.375rem; }
+    /* "IN" on the photo's top-left corner while the lounge detects them: a soft
+       green wash with a light blur so it reads over any photo without shouting. */
+    /* Lounge presence on the photo's top-left corner: a rounded square. IN is
+       green and breathes gently; OUT is a muted red that stays quiet next to
+       it. No badge when nothing has ever reported on the person. */
+    .avail-presence { position:absolute; top:8px; left:8px; padding:3px 8px; border-radius:6px; font-size:.625rem; font-weight:800; letter-spacing:.08em; line-height:1.4; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
+    .avail-presence[hidden] { display:none; }
+    .avail-presence.in-room { background:rgba(240,253,244,.92); color:#15803d; border:1px solid rgba(22,163,74,.35); animation:presence-breathe 2.4s ease-in-out infinite; }
+    /* A green dot before "IN"; drawn by CSS so live updates, which only swap
+       the class, keep it without touching the markup. */
+    .avail-presence.in-room { display:inline-flex; align-items:center; gap:4px; }
+    .avail-presence.in-room::before { content:''; width:6px; height:6px; border-radius:50%; background:#16a34a; flex-shrink:0; }
+    .avail-presence.in-room[hidden] { display:none; }
+    .avail-presence.out-of-room { background:rgba(254,242,242,.85); color:#b4636b; border:1px solid rgba(220,38,38,.15); }
+    /* Breathing: the IN badge fades down and back to full, with a soft glow
+       swelling at the same time, so it reads as alive without flashing. */
+    @keyframes presence-breathe {
+        0%, 100% { opacity:1;   box-shadow:0 0 0 0 rgba(22,163,74,.45); }
+        50%      { opacity:.35; box-shadow:0 0 0 6px rgba(22,163,74,0); }
+    }
+    @media (prefers-reduced-motion: reduce) { .avail-presence.in-room { animation:none; } }
+    /* Third line of the card: when they were last seen, muted. */
+    .avail-seen { font-size:.6875rem; color:var(--gray-400); margin:0; }
+    .avail-seen:empty { display:none; }
+    /* Name, status badge and last-seen line, centred under the photo. */
+    .avail-info { padding:.75rem .875rem; display:flex; flex-direction:column; align-items:center; text-align:center; gap:.375rem; }
+    .avail-info .avail-badge { align-self:center; }
     .avail-name { font-weight:700; font-size:.875rem; color:var(--gray-900); margin:0; line-height:1.3; }
-    .avail-position { font-size:.6875rem; color:var(--gray-500); margin:0; }
-    .avail-office { font-size:.6875rem; color:var(--gray-400); margin:0; display:flex; align-items:center; gap:.25rem; }
 
     /* Two independent signals, never merged into one verdict */
     .avail-badge { display:inline-flex; align-items:center; gap:.3rem; padding:3px 10px; border-radius:var(--radius-full); font-size:.6875rem; font-weight:700; letter-spacing:.4px; align-self:flex-start; white-space:nowrap; }
@@ -27,11 +47,6 @@
     .avail-badge.meeting   { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
     .avail-badge.none      { background:var(--gray-100); color:var(--gray-500); border:1px solid var(--gray-200); }
 
-    .avail-ble { font-size:.6875rem; margin:0; display:flex; align-items:center; gap:.3rem; }
-    .avail-ble.in-room     { color:#16a34a; font-weight:700; }
-    .avail-ble.out-of-room { color:var(--gray-500); }
-    .avail-ble.unknown     { color:var(--gray-400); font-style:italic; }
-    .avail-ble-dot { width:6px; height:6px; border-radius:50%; background:currentColor; flex-shrink:0; }
 
     .live-pill { display:inline-flex; align-items:center; gap:6px; border-radius:var(--radius-full); padding:5px 14px; font-size:.78rem; font-weight:700; letter-spacing:.5px; }
     .live-pill.on  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
@@ -129,7 +144,7 @@
                     <div class="avail-toolbar">
                         <div class="avail-search-wrap">
                             <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                            <input type="search" class="avail-search" id="availSearch" placeholder="Search instructor, position or room…">
+                            <input type="search" class="avail-search" id="availSearch" placeholder="Search instructor or department…">
                         </div>
                         <% if (departments.length > 1) { %>
                         <select class="avail-select" id="availDept">
@@ -176,40 +191,27 @@
                              data-status="<%= f.availability || 'none' %>"
                              data-presence="<%= f.bleStatus %>"
                              data-dept="<%= f.department %>"
-                             data-search="<%= [f.name, f.position, f.department, f.officeRoom].filter(Boolean).join(' ').toLowerCase() %>">
+                             data-name="<%= f.name %>"
+                             data-search="<%= [f.name, f.department].filter(Boolean).join(' ').toLowerCase() %>">
                             <div class="avail-photo">
                                 <% if (f.photo) { %>
                                     <img src="<%= f.photo %>" alt="<%= f.name %>">
                                 <% } else { %>
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                 <% } %>
-                                <span class="avail-status-dot <%= f.bleStatus %>"
-                                      title="<%= f.bleStatus === 'unknown' ? 'No lounge presence data' : (f.bleStatus === 'in-room' ? 'At the Faculty Lounge' : 'Not at the Faculty Lounge') %>"></span>
+                                <%# IN / OUT at the lounge; no badge when no scanner has
+                                    ever reported on this person. %>
+                                <span class="avail-presence <%= f.bleStatus %>"
+                                      title="<%= f.bleStatus === 'in-room' ? 'At the Faculty Lounge' : 'Not at the Faculty Lounge' %>"
+                                      <%= f.bleStatus === 'unknown' ? 'hidden' : '' %>><%= f.bleStatus === 'in-room' ? 'IN' : 'OUT' %></span>
                             </div>
                             <div class="avail-info">
                                 <p class="avail-name"><%= f.name %></p>
-                                <p class="avail-position"><%= f.position %></p>
+                                <%# The instructor's own status, separate from lounge presence. %>
                                 <span class="avail-badge <%= f.availability || 'none' %>"><%= f.availabilityLabel %></span>
-
-                                <%# The BLE line stays separate from the badge above so a
-                                    self-reported status is never mistaken for a detection %>
-                                <p class="avail-ble <%= f.bleStatus %>">
-                                    <span class="avail-ble-dot"></span>
-                                    <% if (f.bleStatus === 'in-room') { %>
-                                        At the Faculty Lounge<%= f.lastDetected ? ` · ${f.lastDetected}` : '' %>
-                                    <% } else if (f.bleStatus === 'out-of-room') { %>
-                                        Not at the lounge<%= f.lastDetected ? ` · ${f.lastDetected}` : '' %>
-                                    <% } else { %>
-                                        No lounge presence data
-                                    <% } %>
-                                </p>
-
-                                <% if (f.officeRoom) { %>
-                                <p class="avail-office">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                    <%= f.officeRoom %>
-                                </p>
-                                <% } %>
+                                <%# Third line, muted: "Just now" while in, otherwise when
+                                    they were last seen. Empty when nothing is known. %>
+                                <p class="avail-seen"><%= f.bleStatus === 'in-room' ? 'Just now' : (f.bleStatus === 'out-of-room' && f.lastSeen ? f.lastSeen : '') %></p>
                             </div>
                         </div>
                         <% }); %>
@@ -263,16 +265,6 @@
        count beside the search box has to agree with what is on screen. */
 
     var PRESENCE_CLASSES = ['in-room', 'out-of-room', 'unknown'];
-    var DOT_TITLE = {
-        'in-room': 'At the Faculty Lounge',
-        'out-of-room': 'Not at the Faculty Lounge',
-        unknown: 'No lounge presence data',
-    };
-    var BLE_TEXT = {
-        'in-room': 'At the Faculty Lounge',
-        'out-of-room': 'Not at the lounge',
-        unknown: 'No lounge presence data',
-    };
 
     function swap(el, presence) {
         if (!el) return;
@@ -291,24 +283,26 @@
             // The lounge answer, not the building-wide one — this page asks
             // whether somebody is at the lounge, and the feed carries both.
             var presence = entry.lounge;
+            var previous = card.getAttribute('data-presence');
 
             swap(card, presence);
             card.setAttribute('data-presence', presence);
 
-            var dot = card.querySelector('.avail-status-dot');
-            swap(dot, presence);
-            if (dot) dot.title = DOT_TITLE[presence];
+            var tag = card.querySelector('.avail-presence');
+            if (tag) {
+                swap(tag, presence);
+                tag.hidden = presence === 'unknown';
+                tag.textContent = presence === 'in-room' ? 'IN' : 'OUT';
+                tag.title = presence === 'in-room' ? 'At the Faculty Lounge' : 'Not at the Faculty Lounge';
+            }
 
-            // The detection line drops the room and the elapsed time on a live
-            // update: this page never had permission to say where somebody is,
-            // and re-deriving "3 minutes ago" on the client would drift from
-            // what the server rendered.
-            var ble = card.querySelector('.avail-ble');
-            if (ble) {
-                swap(ble, presence);
-                var dotSpan = ble.querySelector('.avail-ble-dot');
-                ble.textContent = ' ' + BLE_TEXT[presence];
-                if (dotSpan) ble.insertBefore(dotSpan, ble.firstChild);
+            // Only touch the "last seen" line when this person's presence
+            // changed: the event covers everyone, and rewriting every card
+            // would wipe each "2 hours ago" the server rendered. Arriving or
+            // just leaving both mean they were seen now.
+            var seen = card.querySelector('.avail-seen');
+            if (seen && previous !== presence) {
+                seen.textContent = presence === 'unknown' ? '' : 'Just now';
             }
 
             // Availability is the instructor's own word about themselves and
@@ -321,7 +315,23 @@
             card.setAttribute('data-status', entry.availability || 'none');
         });
 
+        sortCards();
         filter.apply();
+    }
+
+    // Same order the server renders: whoever is IN first, then by name.
+    // Re-run after a live update so an arrival moves to the front.
+    function sortCards() {
+        var grid = document.getElementById('availGrid');
+        if (!grid) return;
+        var cards = Array.prototype.slice.call(grid.querySelectorAll('.avail-card'));
+        cards.sort(function (a, b) {
+            var ai = a.getAttribute('data-presence') === 'in-room' ? 0 : 1;
+            var bi = b.getAttribute('data-presence') === 'in-room' ? 0 : 1;
+            if (ai !== bi) return ai - bi;
+            return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || '');
+        });
+        cards.forEach(function (c) { grid.appendChild(c); });
     }
 
     if (window.PresenceLive) window.PresenceLive.onUpdate(repaint);

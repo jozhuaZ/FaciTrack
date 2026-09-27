@@ -1,5 +1,6 @@
 const DeanModel = require('../models/DeanModel');
 const MakeupRequestModel = require('../models/MakeupRequestModel');
+const { expireUndecidedMakeups } = require('../jobs/reminder');
 const NotificationModel = require('../models/NotificationModel');
 const InstructorSettingsModel = require('../models/InstructorSettingsModel');
 const { timeAgo, to12Hour, formatFullDate } = require('../utils/timeFormat');
@@ -100,6 +101,7 @@ function makeupRow(row) {
     return {
         id: row.id,
         instructorName: `${row.first_name} ${row.last_name}`,
+        instructorPhoto: row.profile_picture || null,
         position: row.position || 'Faculty',
         subject: subjects.join(', ') || '—',
         subjectName: unique(sessions.map(s => s.subject_name)).join(', '),
@@ -184,6 +186,11 @@ function formatDuration(minutes) {
  * reports table, rather than being queried twice for the same rows.
  */
 async function loadDepartment(deanPublicId) {
+    // Close off make-up requests nobody decided in time first, so the queue,
+    // counts and banner never offer a decision on a class already due.
+    await expireUndecidedMakeups().catch(err =>
+        console.error('[Dean] Make-up expiry sweep failed:', err.message));
+
     const { since, until } = monthWindow();
 
     const staleHours = await appSettings.get('pending_escalate_hours');

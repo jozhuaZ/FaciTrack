@@ -1,0 +1,90 @@
+/* ── "Install FaciTrack" pill ──
+   A round button in the lower-right corner that fades in, widens to show its
+   label, holds, narrows back to a circle, holds, then fades away. Same
+   gradient as the greeting banner. Timings are driven by pwa-install.js. */
+.pwa-pill {
+    position: fixed;
+    right: max(1.25rem, env(safe-area-inset-right));
+    bottom: max(1.25rem, env(safe-area-inset-bottom));
+    z-index: 1150;                 /* over the page, under the notification sheet and modals */
+    display: inline-flex;
+    align-items: center;
+    height: 52px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 0% 100%, rgba(3, 20, 40, 0.45) 0%, rgba(3, 20, 40, 0) 60%),
+        linear-gradient(135deg, #0a3d62 0%, #1565c0 100%);
+    color: #fff;
+    font-family: var(--font-body, 'Inter', sans-serif);
+    box-shadow: 0 10px 28px rgba(10, 61, 98, 0.32);
+    cursor: pointer;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+.pwa-pill:not(.is-visible) { pointer-events: none; }
+.pwa-pill.is-visible { opacity: 1; transform: none; }
+.pwa-pill:hover { box-shadow: 0 12px 32px rgba(10, 61, 98, 0.42); }
+.pwa-pill:focus-visible { outline: 3px solid rgba(21, 101, 192, 0.45); outline-offset: 3px; }
+
+.pwa-pill-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+}
+
+/* The label is always in the DOM; widening max-width is what opens the pill */
+.pwa-pill-label {
+    display: block;
+    max-width: 0;
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: max-width 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease, padding 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pwa-pill.is-expanded .pwa-pill-label {
+    max-width: 260px;
+    opacity: 1;
+    padding-right: 1.25rem;
+    transition-delay: 0s, 0.12s, 0s;
+}
+
+/* Safari's Add to Home Screen instruction is longer than "Install FaciTrack":
+   it may wrap onto two lines, and the pill never grows past the screen edge. */
+.pwa-pill.is-hint {
+    height: auto;
+    min-height: 52px;
+    border-radius: 26px;
+    max-width: calc(100vw - 2rem);
+    text-align: left;
+}
+.pwa-pill-hint {
+    display: block;
+    width: min(230px, calc(100vw - 2rem - 52px - 1.25rem));
+    white-space: normal;
+    line-height: 1.35;
+    padding: .55rem 0;
+}
+.pwa-pill.is-expanded.is-hint .pwa-pill-label {
+    max-width: min(260px, calc(100vw - 2rem - 52px));
+}
+
+@media (max-width: 480px) {
+    .pwa-pill { right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pwa-pill, .pwa-pill-label { transition-duration: 0.01s !important; }
+}
+
+@media print { .pwa-pill { display: none !important; } }

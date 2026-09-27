@@ -71,6 +71,9 @@
             <% if (counts.withdrawn) { %>
               <option value="withdrawn">Withdrawn</option>
             <% } %>
+            <% if (counts.expired) { %>
+              <option value="expired">Expired</option>
+            <% } %>
           </select>
 
           <select class="mk-filter-select" id="mkTypeFilter" aria-label="Filter by class type">
@@ -83,6 +86,7 @@
 
         <p class="mk-empty" id="mkFilterEmpty" hidden></p>
 
+        <div class="mk-grid">
         <% requests.forEach(function (r) { %>
           <%
             // Collect unique class types across all sessions for this request
@@ -152,6 +156,7 @@
             </div>
           </div>
         <% }); %>
+        </div>
       <% } %>
     </div>
   </main>

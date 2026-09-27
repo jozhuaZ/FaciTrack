@@ -19,7 +19,7 @@ function safeBaseFilename(title) {
 }
 
 // Role names must match the capitalized values stored in req.session.role
-router.use(requireRole('Admin', 'Dean', 'Instructor'));
+router.use(requireRole('Admin', 'Dean', 'Instructor', 'superadmin'));
 
 router.post('/:format', async (req, res, next) => {
   try {

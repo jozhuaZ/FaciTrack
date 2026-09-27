@@ -64,6 +64,19 @@
   .apt-avatar-xs{display:none!important}
   .stat-card-large,.content-card:not(:has(.report-preview)){display:none!important}
 }
+
+/* The log toolbar sits on the page, not inside a card: no in-card bottom
+   padding or rule, so only the page's normal spacing separates it from the
+   table. It used to stack that padding with a 1.5rem margin on the card. */
+.table-toolbar.is-standalone{padding-bottom:0;border-bottom:none;}
+
+/* Export / Print: an outlined navy button the height of the inputs beside it,
+   so it reads as one of the toolbar's controls rather than a gradient banner. */
+.rp-export-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;height:2.4rem;padding:0 1rem;box-sizing:border-box;border:1.5px solid var(--primary-blue);border-radius:var(--radius-md);background:#fff;color:var(--primary-blue);font-family:var(--font-body);font-size:.8125rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}
+.rp-export-btn:hover{background:var(--primary-blue);color:#fff;}
+.rp-export-btn:focus-visible{outline:2px solid var(--primary-blue);outline-offset:2px;}
+@media (max-width:768px){ .rp-export-btn{width:100%;} }
+@media print{ .rp-export-btn{display:none!important;} }
 </style>
 
 <div class="instructor-layout">
@@ -167,44 +180,47 @@
       </div>
 
       <!-- ── Consultation Logs ── -->
-      <div class="content-card report-table" data-table="log" data-subtitle="<%= instructor.name %>" style="margin-top:1.5rem">
+       <%# Sits on the page, not inside a card, so it drops the in-card bottom
+           padding and rule; the page's normal spacing separates it from the
+           table below. %>
+       <div class="table-toolbar is-standalone">
+        <div class="toolbar-group">
+          <span class="toolbar-label">Search</span>
+          <input type="search" class="table-search" data-role="search" placeholder="Student or topic…">
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">Status</span>
+          <select class="table-select" data-role="filter" data-field="status">
+            <option value="all">All Status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="declined">Declined</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">Period</span>
+          <select class="table-select" id="logPeriod">
+            <option value="all">All Time</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-label">Specific Day</span>
+          <input type="date" class="table-date" id="logDate">
+        </div>
+        <div class="toolbar-spacer"></div>
+        <button class="rp-export-btn" id="btnPrintLog">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Export / Print
+        </button>
+      </div>
+      <div class="content-card report-table" data-table="log" data-subtitle="<%= instructor.name %>">
         <div class="card-header">
           <h3 class="card-title">Consultation Logs</h3>
           <span class="result-count" data-role="count">—</span>
-        </div>
-        <div class="table-toolbar">
-          <div class="toolbar-group">
-            <span class="toolbar-label">Search</span>
-            <input type="search" class="table-search" data-role="search" placeholder="Student or topic…">
-          </div>
-          <div class="toolbar-group">
-            <span class="toolbar-label">Status</span>
-            <select class="table-select" data-role="filter" data-field="status">
-              <option value="all">All Status</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="declined">Declined</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div class="toolbar-group">
-            <span class="toolbar-label">Period</span>
-            <select class="table-select" id="logPeriod">
-              <option value="all">All Time</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
-          </div>
-          <div class="toolbar-group">
-            <span class="toolbar-label">Specific Day</span>
-            <input type="date" class="table-date" id="logDate">
-          </div>
-          <div class="toolbar-spacer"></div>
-          <button class="btn-header-action primary" id="btnPrintLog">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Export / Print
-          </button>
         </div>
         <div class="card-body" style="padding:0">
           <div class="report-preview">
