@@ -35,12 +35,47 @@
 
 /* ── Upcoming appointments ── */
 .upco-filter-tabs{display:flex;gap:0;background:var(--gray-100);padding:.2rem;border-radius:8px;width:fit-content;}
-.upco-tab{padding:.3rem .75rem;border:none;border-radius:6px;font-size:.75rem;font-weight:600;color:var(--gray-500);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font-body);white-space:nowrap;}
+.upco-tab{padding:.3rem .55rem;border:none;border-radius:6px;font-size:.75rem;font-weight:600;color:var(--gray-500);cursor:pointer;transition:all .15s;background:transparent;font-family:var(--font-body);white-space:nowrap;}
 .upco-tab:hover{color:var(--gray-800);}
 .upco-tab.active{background:#fff;color:var(--primary-blue);box-shadow:0 1px 3px rgba(0,0,0,.1);}
 .upco-item{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border-left:3px solid #1e88e5;background:#f8faff;border-radius:0 var(--radius-md) var(--radius-md) 0;transition:all .2s;}
 .upco-item.today-apt{border-left-color:#16a34a;background:#f0fdf4;}
 .upco-item:hover{box-shadow:0 2px 8px rgba(10,61,98,.08);transform:translateX(2px);}
+
+/* ── Pending Requests & Upcoming Appointments lists ──
+   The three most urgent items only, in a box exactly three rows tall: the two
+   cards stay the same height side by side however many (or few) items there
+   are. No scrolling — the rest is one click away through "View all", and the
+   count badge says how many there are. */
+.dash-list{--row:66px;--gap:.5rem;display:flex;flex-direction:column;gap:var(--gap);height:calc(var(--row) * 3 + var(--gap) * 2);overflow:hidden;}
+.dash-list > .upco-item{height:var(--row);min-height:var(--row);box-sizing:border-box;flex-shrink:0;}
+/* One width for the time column, so names line up row to row whether the
+   slot reads "8:00 AM – 9:00 AM" or "10:00 AM – 11:00 AM" */
+.dash-list .upco-time{width:7.4rem;min-width:7.4rem;}
+/* The nudge on hover would be clipped by the box */
+.dash-list > .upco-item:hover{transform:none;}
+.dash-list-note{margin:auto 0;text-align:center;font-size:.8rem;color:var(--gray-400);}
+/* An empty list keeps the same footprint, message centred */
+.dash-list-empty{height:calc(66px * 3 + .5rem * 2);display:flex;flex-direction:column;justify-content:center;padding-top:0;padding-bottom:0;}
+/* Both headers the same height (Upcoming's carries the filter tabs), so the
+   two lists start level */
+.dash-card-pending .card-header,.dash-card-upcoming .card-header{min-height:72px;box-sizing:border-box;align-items:center;}
+/* Upcoming's count, in the confirmed/upcoming blue rather than pending orange */
+.card-count-badge.is-upcoming{background:var(--primary-blue);}
+
+/* ── Filler under a short list ──
+   Fewer than three rows leaves the fixed box half empty. This fills the rest
+   with a quiet note instead of bare white: a dashed tile, a tinted icon, one
+   line saying what the space is for. */
+.dash-list-fill{flex:1 1 auto;min-height:66px;display:flex;align-items:center;justify-content:center;gap:.85rem;padding:.9rem 1.1rem;border:1.5px dashed var(--gray-200);border-radius:var(--radius-md);background:linear-gradient(135deg,#fafbff 0%,#f5f8fc 100%);box-sizing:border-box;}
+.dash-list-fill-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dash-list-fill.pending .dash-list-fill-icon{background:#fef3c7;color:#b45309;}
+.dash-list-fill.upcoming .dash-list-fill-icon{background:#dbeafe;color:#1d4ed8;}
+.dash-list-fill-text{margin:0;min-width:0;line-height:1.4;}
+.dash-list-fill-text strong{display:block;font-size:.8rem;font-weight:700;color:var(--gray-800);}
+.dash-list-fill-text span{display:block;font-size:.72rem;color:var(--gray-500);}
+.dash-list-fill-text a{display:inline-block;margin-top:.2rem;font-size:.72rem;font-weight:700;color:var(--primary-blue);text-decoration:none;}
+.dash-list-fill-text a:hover{text-decoration:underline;}
 /* An upcoming row is a link to its popup: no underline, text keeps its colours */
 .upco-link{text-decoration:none;color:inherit;cursor:pointer;}
 .upco-link:focus-visible{outline:2px solid var(--primary-blue);outline-offset:2px;}
@@ -59,28 +94,58 @@
 .upco-badge.confirmed{background:rgba(22,163,74,.12);color:#15803d;}
 .upco-badge.pending{background:rgba(234,88,12,.12);color:#c2410c;}
 
-/* ── Consultation slots with progress bars ── */
-.slot-strip{display:flex;flex-direction:column;gap:.5rem;}
-.slot-row{display:flex;align-items:center;gap:.75rem;padding:.7rem 1rem;border:1px solid var(--gray-100);border-radius:var(--radius-md);background:#fff;transition:border-color .15s;}
-.slot-row:hover{border-color:var(--gray-300);}
-/* The day pill, booked label and status badge have fixed widths so every row's
-   time and progress bar start and end at the same x, whatever they say. */
-.slot-day-pill{font-size:.65rem;font-weight:800;padding:.22rem 0;border-radius:6px;background:rgba(10,61,98,.08);color:var(--primary-blue);letter-spacing:.04em;flex-shrink:0;width:42px;text-align:center;box-sizing:border-box;}
-.slot-info{flex:1;min-width:0;}
-.slot-time{font-size:.78rem;font-weight:600;color:var(--gray-800);margin:0 0 .3rem;}
-.slot-progress-wrap{display:flex;align-items:center;gap:.5rem;}
-.slot-progress-bar{flex:1;height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;}
-.slot-progress-fill{height:100%;border-radius:3px;transition:width .4s ease;}
-.slot-progress-fill.low{background:#16a34a;}
-.slot-progress-fill.mid{background:#f59e0b;}
-.slot-progress-fill.high{background:#dc2626;}
-.slot-cap-label{font-size:.67rem;color:var(--gray-500);white-space:nowrap;flex-shrink:0;width:62px;text-align:right;font-variant-numeric:tabular-nums;}
-.slot-badge{font-size:.65rem;font-weight:700;padding:.22rem 0;border-radius:5px;flex-shrink:0;width:74px;text-align:center;box-sizing:border-box;}
-/* Matches the pending/confirmed/declined palette used on the appointments page */
-.slot-badge.available{background:rgba(22,163,74,.12);color:#15803d;}
-.slot-badge.pending{background:rgba(251,146,60,.12);color:#c2410c;}
-.slot-badge.confirmed{background:rgba(37,99,235,.12);color:#1d4ed8;}
-.slot-badge.closed{background:rgba(107,114,128,.12);color:#374151;}
+/* ── Appointments by day (bar chart) ──
+   One bar per weekday, height = number of appointments with the chosen
+   status. Plain HTML: seven bars need no chart library. Grid and axes stay
+   recessive so the bars carry the reading. */
+.apd-toolbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:1rem;}
+.apd-select{height:2.25rem;padding:0 2rem 0 .75rem;border:1.5px solid var(--gray-200);border-radius:8px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right .65rem center;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--gray-800);cursor:pointer;-webkit-appearance:none;appearance:none;}
+/* Same look and hover as Approve All on the Appointments page
+   (.apt-btn-approve-all): a light blue tint that fills solid navy on hover.
+   The arrow is redrawn to match each state. */
+.apd-select{transition:border-color .2s ease,background-color .2s ease,color .2s ease;
+  background-color:#e8f2ff;color:var(--primary-blue);border-color:#bfdbfe;border-radius:var(--radius-md);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230a3d62' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");}
+/* The opened list keeps plain text on white, whatever the button state */
+.apd-select option{color:var(--gray-800);background:#fff;}
+/* background-color, not background: the shorthand would drop the arrow */
+.apd-select:hover{border-color:var(--primary-blue);background-color:var(--primary-blue);color:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");}
+.apd-select:focus-visible{outline:2px solid var(--primary-blue);outline-offset:2px;}
+.apd-summary{margin:0;font-size:.75rem;color:var(--gray-500);}
+.apd-summary strong{color:var(--gray-800);font-weight:700;}
+.apd-chart{display:grid;grid-template-columns:auto 1fr;gap:0 .5rem;}
+.apd-yaxis{position:relative;width:1.5rem;height:180px;margin-top:1.1rem;}
+.apd-ytick{position:absolute;right:0;transform:translateY(50%);font-size:.65rem;color:var(--gray-400);font-variant-numeric:tabular-nums;line-height:1;}
+.apd-plot{position:relative;height:180px;margin-top:1.1rem;border-bottom:1px solid var(--gray-300);}
+.apd-grid{position:absolute;left:0;right:0;border-top:1px dashed var(--gray-200);}
+.apd-bars{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);gap:0 2px;align-items:end;}
+/* The column is the hover/tap target, taller than the bar itself */
+.apd-col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;cursor:default;outline:none;}
+.apd-bar{width:min(34px,70%);border-radius:4px 4px 0 0;background:var(--primary-blue);transition:height .35s cubic-bezier(.22,1,.36,1),background .15s;}
+.apd-col.is-zero .apd-bar{background:transparent;}
+.apd-col:hover .apd-bar,.apd-col:focus-visible .apd-bar{background:#1565c0;}
+.apd-col:focus-visible{box-shadow:inset 0 0 0 2px rgba(21,101,192,.35);border-radius:6px;}
+.apd-peak{position:absolute;left:50%;transform:translateX(-50%);margin-bottom:.25rem;font-size:.68rem;font-weight:700;color:var(--gray-800);font-variant-numeric:tabular-nums;white-space:nowrap;transition:bottom .35s cubic-bezier(.22,1,.36,1);}
+.apd-tip{position:absolute;left:50%;bottom:calc(var(--bar, 0%) + 1.6rem);transform:translateX(-50%);z-index:5;padding:.4rem .6rem;border-radius:8px;background:#0f172a;color:#fff;font-size:.7rem;line-height:1.35;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;}
+.apd-tip strong{font-weight:700;}
+.apd-col.show-tip .apd-tip{opacity:1;}
+/* Edge days keep their tooltip inside the card */
+.apd-col:nth-child(-n+2) .apd-tip{left:0;transform:none;}
+.apd-col:nth-last-child(-n+2) .apd-tip{left:auto;right:0;transform:none;}
+.apd-xaxis{display:grid;grid-template-columns:repeat(7,1fr);gap:0 2px;margin-left:2rem;padding-top:.4rem;}
+.apd-xlabel{text-align:center;font-size:.7rem;font-weight:600;color:var(--gray-500);}
+.apd-xlabel.today{color:var(--primary-blue);font-weight:800;}
+.apd-xlabel .short{display:none;}
+.apd-axis-title{margin:.35rem 0 0;text-align:center;font-size:.65rem;color:var(--gray-400);letter-spacing:.02em;}
+.apd-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 1rem;font-size:.8rem;color:var(--gray-400);pointer-events:none;}
+.apd-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+@media(max-width:480px){
+  .apd-xlabel .full{display:none;}
+  .apd-xlabel .short{display:inline;}
+  .apd-toolbar{align-items:stretch;flex-direction:column;}
+  .apd-select{width:100%;}
+}
 
 /* ── Recent activity ── */
 .act-item{display:flex;align-items:flex-start;gap:.65rem;padding:.65rem .25rem;border-bottom:1px solid var(--gray-50);}
@@ -114,11 +179,11 @@
   /* One column collapses the two columns into DOM order, which would bury
      Upcoming Appointments below the slot list. Dissolving the columns lets the
      cards be ordered for a phone: what needs answering, then what's coming up,
-     then the slots that only need managing occasionally. */
+     then the weekly picture. */
   .dash-col{display:contents;}
   .dash-card-pending {order:1;}
   .dash-card-upcoming{order:2;}
-  .dash-card-slots   {order:3;}
+  .dash-card-chart   {order:3;}
 }
 /* Grid and flex children default to min-width:auto, so one wide row inside a
    card stretched the whole column past the right edge of the screen. */
@@ -229,7 +294,7 @@
           <div class="stat-card-content">
             <p class="stat-card-label">Open Slots</p>
             <h2 class="stat-card-value"><%= openSlots %> / <%= totalSlots %></h2>
-            <p class="stat-card-sublabel">Available consultation slots</p>
+            <p class="stat-card-sublabel">Available consultation slots this week</p>
           </div>
         </div>
       </div>
@@ -251,16 +316,21 @@
             </div>
             <div class="card-body">
               <% if (pendingApts.length === 0) { %>
-              <div class="empty-dash">
+              <div class="empty-dash dash-list-empty">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                 <strong>All caught up!</strong>
                 <p>No pending consultation requests right now.</p>
               </div>
               <% } else { %>
               <%# Same rows as Upcoming Appointments. Approving or declining
-                  happens in the appointment's popup, which View opens. %>
-              <div style="display:flex;flex-direction:column;gap:.5rem;" id="pendingList">
-                <% pendingApts.slice(0, 5).forEach(apt => { %>
+                  happens in the appointment's popup, which View opens.
+                  The three most urgent: the soonest consultations, since they
+                  need an answer first. The rest is under "View all". %>
+              <% const _pendingTop = [...pendingApts]
+                   .sort((a, b) => String(a.startsAt).localeCompare(String(b.startsAt)))
+                   .slice(0, 3); %>
+              <div class="dash-list" id="pendingList">
+                <% _pendingTop.forEach(apt => { %>
                 <% const _isToday = apt.date === todayKey; %>
                 <div class="upco-item pending-apt">
                   <div class="upco-time">
@@ -280,62 +350,208 @@
                   </a>
                 </div>
                 <% }); %>
-                <% if (pendingApts.length > 5) { %>
-                <a href="/instructor/appointments?status=pending" class="view-more-link">+<%= pendingApts.length - 5 %> more pending requests →</a>
+                <% if (pendingApts.length < 3) { %>
+                <div class="dash-list-fill pending">
+                  <span class="dash-list-fill-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  </span>
+                  <p class="dash-list-fill-text">
+                    <strong>That's everything waiting on you</strong>
+                    <span>New requests show up here the moment a student books.</span>
+                  </p>
+                </div>
                 <% } %>
               </div>
               <% } %>
             </div>
           </div>
 
-          <!-- Consultation Schedule -->
-          <div class="content-card dash-card-slots">
+          <!-- Appointments by day of the week -->
+          <%
+            // Every appointment this instructor has, any status: just the
+            // date and status, which is all the chart needs. JSON goes in a
+            // script tag, so "<" is escaped to keep it from closing the tag.
+            const _apdData = JSON.stringify(appointments.map(a => ({ d: a.date, s: a.status })))
+                                 .replace(/</g, '\\u003c');
+            const _apdStatuses = ['pending', 'confirmed', 'completed', 'declined', 'cancelled', 'rescheduled', 'expired'];
+            const _apdCount = s => appointments.filter(a => a.status === s).length;
+          %>
+          <div class="content-card dash-card-chart">
             <div class="card-header">
-              <h3 class="card-title">Consultation Slots</h3>
-              <a href="/instructor/consultation-schedule" class="card-link">Manage →</a>
+              <h3 class="card-title">Your appointments by this week</h3>
+              <a href="/instructor/appointments" class="card-link">View all →</a>
             </div>
             <div class="card-body">
-              <% if (!consultationSlots || consultationSlots.length === 0) { %>
-              <div class="empty-dash">
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                <strong>No slots set up yet</strong>
-                <p>Set your consultation availability so students can book appointments.</p>
-                <a href="/instructor/consultation-schedule" style="font-size:.8rem;color:var(--primary-blue);font-weight:700;">Set up slots →</a>
+              <div class="apd-toolbar">
+                <label class="apd-sr" for="apdStatus">Show appointments with status</label>
+                <select class="apd-select" id="apdStatus">
+                  <option value="all">All statuses</option>
+                  <% _apdStatuses.forEach(s => { %>
+                  <option value="<%= s %>"><%= s.charAt(0).toUpperCase() + s.slice(1) %></option>
+                  <% }); %>
+                </select>
+                <p class="apd-summary" id="apdSummary" aria-live="polite"></p>
               </div>
-              <% } else { %>
-              <div class="slot-strip">
-                <%
-                  // Each row is one bookable sub-slot — capacity is always 1,
-                  // so the bar is either empty (open) or full (taken).
-                  const _statusLabels = { available: 'Available', pending: 'Pending', confirmed: 'Confirmed', closed: 'Closed' };
-                %>
-                <% consultationSlots.slice(0, 6).forEach(slot => { %>
-                <%
-                  const _booked = slot.isBooked ? 1 : 0;
-                  const _pct    = _booked ? 100 : 0;
-                  const _fillClass = slot.displayStatus === 'pending' ? 'mid' : _booked ? 'high' : 'low';
-                %>
-                <div class="slot-row">
-                  <span class="slot-day-pill"><%= slot.day.substring(0,3).toUpperCase() %></span>
-                  <div class="slot-info">
-                    <p class="slot-time"><%= slot.timeStart %> – <%= slot.timeEnd %></p>
-                    <div class="slot-progress-wrap">
-                      <div class="slot-progress-bar">
-                        <div class="slot-progress-fill <%= _fillClass %>" style="width:<%= _pct %>%"></div>
-                      </div>
-                      <span class="slot-cap-label"><%= _booked %>/1 booked</span>
-                    </div>
-                  </div>
-                  <span class="slot-badge <%= slot.displayStatus %>"><%= _statusLabels[slot.displayStatus] %></span>
+
+              <div class="apd-chart" role="img" aria-labelledby="apdSummary">
+                <div class="apd-yaxis" id="apdYAxis" aria-hidden="true"></div>
+                <div class="apd-plot" id="apdPlot" aria-hidden="true">
+                  <div class="apd-bars" id="apdBars"></div>
                 </div>
-                <% }); %>
-                <% if (consultationSlots.length > 6) { %>
-                <a href="/instructor/consultation-schedule" class="view-more-link">+<%= consultationSlots.length - 6 %> more slots →</a>
-                <% } %>
               </div>
-              <% } %>
+              <div class="apd-xaxis" id="apdXAxis" aria-hidden="true"></div>
+              <p class="apd-axis-title" aria-hidden="true">Number of appointments per day of the week</p>
+
+              <%# The same numbers as a table, for screen readers %>
+              <%# Wrapped, not classed: a table ignores the 1px width that hides it,
+                  and stretched the page sideways on phones. %>
+              <div class="apd-sr">
+              <table id="apdTable">
+                <caption>Appointments per day of the week</caption>
+                <thead><tr><th scope="col">Day</th><th scope="col">Appointments</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              </div>
             </div>
           </div>
+          <script type="application/json" id="apdData"><%- _apdData %></script>
+          <script>
+          (function () {
+            var DAYS  = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            var SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            var STORE = 'facitrack_apd_status';
+            var data = [];
+            try { data = JSON.parse(document.getElementById('apdData').textContent) || []; } catch (e) {}
+
+            var select = document.getElementById('apdStatus');
+            var yAxis = document.getElementById('apdYAxis');
+            var plot = document.getElementById('apdPlot');
+            var barsEl = document.getElementById('apdBars');
+            var xAxis = document.getElementById('apdXAxis');
+            var summary = document.getElementById('apdSummary');
+            var tbody = document.querySelector('#apdTable tbody');
+            if (!select || !barsEl) return;
+
+            // Monday-first index from a YYYY-MM-DD date (local, no timezone shift)
+            function weekday(dateStr) {
+              var p = String(dateStr || '').split('-');
+              if (p.length !== 3) return -1;
+              return (new Date(+p[0], +p[1] - 1, +p[2]).getDay() + 6) % 7;
+            }
+            var todayIdx = (new Date().getDay() + 6) % 7;
+
+            // Axis ticks in whole appointments: 1, 2, 5, 10… so there are at most five
+            function niceScale(max) {
+              if (max <= 0) return { top: 4, step: 1 };
+              if (max <= 4) return { top: 4, step: 1 };
+              var steps = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+              var step = steps.find(function (s) { return max / s <= 5; }) || 1000;
+              return { top: Math.max(step, Math.ceil(max / step) * step), step: step };
+            }
+
+            // Columns built once; a filter change only resizes them, so the bars animate
+            var cols = DAYS.map(function (day, i) {
+              var col = document.createElement('div');
+              col.className = 'apd-col';
+              col.tabIndex = 0;
+              col.innerHTML = '<span class="apd-tip"></span><span class="apd-peak" hidden></span><span class="apd-bar"></span>';
+              col.addEventListener('mouseenter', function () { col.classList.add('show-tip'); });
+              col.addEventListener('mouseleave', function () { col.classList.remove('show-tip'); });
+              col.addEventListener('focus', function () { col.classList.add('show-tip'); });
+              col.addEventListener('blur', function () { col.classList.remove('show-tip'); });
+              // Touch: a tap shows this day's tooltip and hides the others
+              col.addEventListener('click', function () {
+                cols.forEach(function (c) { if (c !== col) c.classList.remove('show-tip'); });
+                col.classList.toggle('show-tip');
+              });
+              barsEl.appendChild(col);
+
+              var label = document.createElement('span');
+              label.className = 'apd-xlabel' + (i === todayIdx ? ' today' : '');
+              label.innerHTML = '<span class="full">' + day.slice(0, 3) + '</span><span class="short">' + SHORT[i] + '</span>';
+              if (i === todayIdx) label.title = 'Today';
+              xAxis.appendChild(label);
+              return col;
+            });
+
+            var emptyEl = document.createElement('div');
+            emptyEl.className = 'apd-empty';
+            plot.appendChild(emptyEl);
+
+            function render() {
+              var status = select.value;
+              var statusName = status === 'all' ? '' : select.options[select.selectedIndex].text.replace(/\s*\(\d+\)$/, '').toLowerCase() + ' ';
+
+              var counts = [0, 0, 0, 0, 0, 0, 0];
+              data.forEach(function (a) {
+                if (status !== 'all' && a.s !== status) return;
+                var i = weekday(a.d);
+                if (i >= 0) counts[i]++;
+              });
+              var total = counts.reduce(function (s, n) { return s + n; }, 0);
+              var max = Math.max.apply(null, counts);
+              var scale = niceScale(max);
+
+              // Gridlines and y ticks
+              plot.querySelectorAll('.apd-grid').forEach(function (g) { g.remove(); });
+              yAxis.innerHTML = '';
+              for (var v = 0; v <= scale.top; v += scale.step) {
+                var pct = v / scale.top * 100;
+                if (v > 0) {
+                  var g = document.createElement('div');
+                  g.className = 'apd-grid';
+                  g.style.bottom = pct + '%';
+                  plot.insertBefore(g, barsEl);
+                }
+                var t = document.createElement('span');
+                t.className = 'apd-ytick';
+                t.style.bottom = pct + '%';
+                t.textContent = v;
+                yAxis.appendChild(t);
+              }
+
+              cols.forEach(function (col, i) {
+                var n = counts[i];
+                var h = n / scale.top * 100;
+                col.classList.toggle('is-zero', n === 0);
+                col.querySelector('.apd-bar').style.height = (n ? Math.max(h, 1.5) : 0) + '%';
+                col.style.setProperty('--bar', h + '%');   // the tooltip sits just above the bar
+                col.querySelector('.apd-tip').innerHTML = '<strong>' + DAYS[i] + '</strong><br>' + n + ' ' + statusName + 'appointment' + (n === 1 ? '' : 's');
+                col.setAttribute('aria-label', DAYS[i] + ': ' + n);
+
+                // Only the busiest day carries its number; the axis and tooltips give the rest
+                var peak = col.querySelector('.apd-peak');
+                var isPeak = max > 0 && n === max;
+                peak.hidden = !isPeak;
+                if (isPeak) { peak.textContent = n; peak.style.bottom = h + '%'; }
+              });
+
+              emptyEl.textContent = total ? '' : 'No ' + statusName + 'appointments yet';
+              emptyEl.hidden = !!total;
+
+              if (total) {
+                var busiest = DAYS.filter(function (d, i) { return counts[i] === max; });
+                summary.innerHTML = '<strong style="font-size:1rem;">' + total + '</strong> ' + statusName + 'appointment' + (total === 1 ? '' : 's')
+                  + ' · busiest: <strong style="font-size:0.90rem;">' + busiest.join(', ') + '</strong>';
+              } else {
+                summary.textContent = 'No ' + statusName + 'appointments yet';
+              }
+
+              tbody.innerHTML = DAYS.map(function (d, i) { return '<tr><th scope="row">' + d + '</th><td>' + counts[i] + '</td></tr>'; }).join('');
+            }
+
+            // Remember the chosen status for next time (this browser only)
+            try {
+              var saved = localStorage.getItem(STORE);
+              if (saved && select.querySelector('option[value="' + saved + '"]')) select.value = saved;
+            } catch (e) {}
+            select.addEventListener('change', function () {
+              try { localStorage.setItem(STORE, select.value); } catch (e) {}
+              render();
+            });
+            render();
+          })();
+          </script>
 
         </div><!-- /left col -->
 
@@ -345,8 +561,11 @@
           <!-- Upcoming Appointments -->
           <div class="content-card dash-card-upcoming">
             <div class="card-header" style="flex-wrap:wrap;gap:.625rem;">
-              <h3 class="card-title">Upcoming Appointments</h3>
-              <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+              <h3 class="card-title">
+                Upcoming Appointments
+                <% if (upcomingAppointments.length > 0) { %><span class="card-count-badge is-upcoming" id="upcoCount"><%= upcomingAppointments.length %></span><% } %>
+              </h3>
+              <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
                 <div class="upco-filter-tabs" id="upcoFilterTabs">
                   <button class="upco-tab active" data-filter="all">All</button>
                   <button class="upco-tab" data-filter="today">Today</button>
@@ -362,14 +581,18 @@
                   which runs on UTC on the server. %>
               <% const _allUpcoming = upcomingAppointments; %>
               <% if (_allUpcoming.length === 0) { %>
-              <div class="empty-dash">
+              <div class="empty-dash dash-list-empty">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 <strong>No upcoming appointments</strong>
                 <p>Confirmed bookings will appear here.</p>
               </div>
               <% } else { %>
-              <div style="display:flex;flex-direction:column;gap:.5rem;" id="upcoList">
-                <% _allUpcoming.slice(0, 8).forEach(apt => { %>
+              <%# Soonest first (the controller sorts by start time), three at a
+                  time. Every row is in the page so the Today / This Week tabs
+                  can filter; rows past the third start hidden and the tabs
+                  show the first three that match. %>
+              <div class="dash-list" id="upcoList">
+                <% _allUpcoming.forEach((apt, _i) => { %>
                 <%
                   const _isToday    = apt.date === todayKey;
                   const _isThisWeek = apt.date && apt.date <= weekEndKey;
@@ -379,7 +602,7 @@
                     Appointments page — the same ?openApt= link notifications use. %>
                 <a class="upco-item upco-link <%= _isToday ? 'today-apt' : '' %>" data-filter-groups="<%= _dateFilter %>"
                    href="/instructor/appointments?openApt=<%= encodeURIComponent(apt.id) %>"
-                   title="Open this appointment">
+                   title="Open this appointment"<%- _i >= 3 ? ' style="display:none"' : '' %>>
                   <div class="upco-time">
                     <%= apt.time %>
                     <% if (!_isToday && apt.date) { %>
@@ -395,9 +618,20 @@
                   <span class="upco-badge confirmed">Confirmed</span>
                 </a>
                 <% }); %>
-                <% if (_allUpcoming.length > 8) { %>
-                <a href="/instructor/consultations" class="view-more-link">+<%= _allUpcoming.length - 8 %> more appointments →</a>
-                <% } %>
+                <%# Fills the box under a short list. Always in the page; the
+                    Today / This Week tabs show it while 1–2 rows are visible. %>
+                <div class="dash-list-fill upcoming" id="upcoFill"<%- _allUpcoming.length >= 3 ? ' style="display:none"' : '' %>>
+                  <span class="dash-list-fill-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+                  </span>
+                  <p class="dash-list-fill-text">
+                    <strong>Nothing else on the calendar</strong>
+                    <span>Open more slots to give students room to book.</span>
+                    <a href="/instructor/consultation-schedule">Add slots →</a>
+                  </p>
+                </div>
+                <%# Shown by the Today / This Week tabs when nothing falls in range %>
+                <p class="dash-list-note" id="upcoEmptyFiltered" style="display:none">No confirmed appointments in this range.</p>
               </div>
               <% } %>
             </div>
@@ -505,6 +739,29 @@ document.querySelectorAll('#statusDropdown .status-option').forEach(opt => {
 });
 
 /* ══════════════════════════════════════
+   LEVEL HEADERS
+   Pending Requests and Upcoming Appointments sit side by side, and the
+   Upcoming header also holds the filter tabs, so on a narrower screen it wraps
+   onto two lines and its list starts lower. Both headers take the taller one's
+   height while the two cards share a row; stacked (one column) they are left
+   alone.
+══════════════════════════════════════ */
+(function () {
+  var a = document.querySelector('.dash-card-pending .card-header');
+  var b = document.querySelector('.dash-card-upcoming .card-header');
+  if (!a || !b) return;
+  function level() {
+    a.style.minHeight = b.style.minHeight = '';
+    if (Math.abs(a.getBoundingClientRect().top - b.getBoundingClientRect().top) > 2) return; // stacked
+    var h = Math.max(a.offsetHeight, b.offsetHeight) + 'px';
+    a.style.minHeight = b.style.minHeight = h;
+  }
+  level();
+  window.addEventListener('resize', level);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(level);
+})();
+
+/* ══════════════════════════════════════
    UPCOMING FILTER TABS (All / Today / This Week)
 ══════════════════════════════════════ */
 document.querySelectorAll('.upco-tab').forEach(tab => {
@@ -512,14 +769,22 @@ document.querySelectorAll('.upco-tab').forEach(tab => {
     document.querySelectorAll('.upco-tab').forEach(t => t.classList.remove('active'));
     this.classList.add('active');
     const filter = this.dataset.filter;
+    // The first three that match, in the order the server sent (soonest first)
+    let shown = 0;
     document.querySelectorAll('#upcoList .upco-item').forEach(item => {
       const groups = (item.dataset.filterGroups || 'all').split(' ');
-      item.style.display = groups.includes(filter) ? '' : 'none';
+      const show = groups.includes(filter) && shown < 3;
+      if (show) shown++;
+      item.style.display = show ? '' : 'none';
     });
     // Show empty message if nothing visible
     const visible = document.querySelectorAll('#upcoList .upco-item:not([style*="none"])');
     const emptyMsg = document.getElementById('upcoEmptyFiltered');
     if (emptyMsg) emptyMsg.style.display = visible.length === 0 ? '' : 'none';
+    // The filler takes the space under one or two rows; nothing, or a full
+    // box, does not need it
+    const fill = document.getElementById('upcoFill');
+    if (fill) fill.style.display = visible.length > 0 && visible.length < 3 ? '' : 'none';
   });
 });
 

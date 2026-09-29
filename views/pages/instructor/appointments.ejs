@@ -19,13 +19,13 @@
                     <button class="btn-header-action apt-btn-approve-all" id="approveAllBtn"
                             <%= pendingApts.length ? '' : 'hidden' %>>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                        Approve All (<span id="approveAllCount"><%= pendingApts.length %></span>)
+                        Approve All <span class="apt-btn-count" id="approveAllCount"><%= pendingApts.length %></span>
                     </button>
                     <%# Shown only when a confirmed consultation has actually ended;
                         the count is worked out client-side from endsAt. %>
                     <button class="btn-header-action apt-btn-complete-all" id="completeAllBtn" hidden>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                        Complete All (<span id="completeAllCount">0</span>)
+                        Complete All <span class="apt-btn-count" id="completeAllCount">0</span>
                     </button>
                     <button class="btn-header-action" id="btnAddEvent" title="Add your own event or task to this calendar">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
@@ -564,6 +564,23 @@ window.onUnavailabilityChanged = function () {
     background: #15803d; color: #fff; border-color: #15803d;
 }
 .apt-btn-complete-all[hidden] { display: none; }
+
+/* The count on Approve All / Complete All, in a circle like the Pending
+   Requests badge. Each takes its button's colour at full strength, so it
+   stands out against the light tint, and inverts when the button fills on
+   hover. */
+.apt-btn-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box;
+    border-radius: 999px;
+    font-size: .68rem; font-weight: 800; line-height: 1;
+    font-variant-numeric: tabular-nums;
+    transition: background .2s ease, color .2s ease;
+}
+.apt-btn-approve-all .apt-btn-count { background: var(--primary-blue); color: #fff; }
+.apt-btn-approve-all:hover .apt-btn-count { background: #fff; color: var(--primary-blue); }
+.apt-btn-complete-all .apt-btn-count { background: #15803d; color: #fff; }
+.apt-btn-complete-all:hover .apt-btn-count { background: #fff; color: #15803d; }
 
 .apt-approve-list {
     list-style: none; margin: .9rem 0; padding: 0;
