@@ -355,6 +355,9 @@ CREATE TABLE faculty_presence (
     instructor_id BIGINT NOT NULL,
     room_id       INT UNSIGNED NULL,
     is_present    TINYINT(1) NOT NULL DEFAULT 0,
+    -- Held in a room whose scanner has stopped reporting: shown as unknown,
+    -- never as out. See migrations/2026-09-29-presence-signal-lost.sql.
+    signal_lost   TINYINT(1) NOT NULL DEFAULT 0,
     -- The reading the owning room heard. Two scanners can hear one tag, and
     -- without this the room that POSTed last won — so presence flipped between
     -- adjacent rooms every few seconds. The room that hears the tag best owns

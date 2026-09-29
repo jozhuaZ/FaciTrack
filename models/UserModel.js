@@ -380,6 +380,7 @@ const UserModel = {
                     office.room_number     AS office_room_number,
                     officeDept.building    AS office_building,
                     fp.is_present,
+                    fp.signal_lost,
                     fp.last_updated        AS presence_updated_at,
                     fp.room_id             AS detected_room_id,
                     detected.room_number   AS detected_room_number,

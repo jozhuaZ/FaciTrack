@@ -527,12 +527,19 @@
 /* ── Mobile ── */
 @media (max-width: 640px) {
     .apt-lv-card { grid-template-columns: 36px 1fr; }
-    .apt-lv-actions { display: none; }
-    .apt-lv-card-mobile-actions {
-        grid-column: 1/-1; display: flex; gap: .375rem;
-        padding: 0 .875rem .75rem calc(.875rem + 36px + .875rem);
+    /* The action column becomes a row across the bottom of the card, lined up
+       with the text above it. (It used to be hidden here, waiting for a
+       separate mobile row that was never built, so phones had no buttons.) */
+    .apt-lv-actions {
+        grid-column: 1 / -1;
+        flex-direction: row;
         flex-wrap: wrap;
+        min-width: 0;
+        gap: .375rem;
+        padding: .625rem .875rem 0 calc(.875rem + 36px + .875rem);
     }
+    .apt-lv-actions:empty { display: none; }
+    .apt-lv-btn { flex: 1 1 0; min-height: 36px; padding: .45rem .5rem; }
     .apt-lv-decline-form { padding-left: .875rem; }
     .apt-lv-declined-reason { margin-left: .875rem; }
 }

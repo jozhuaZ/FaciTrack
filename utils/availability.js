@@ -32,11 +32,17 @@ function availabilityLabel(status) {
  * and showing the second when the first is true tells a visitor something
  * nobody actually knows.
  *
+ * The same goes for somebody held in a room whose scanner has gone silent
+ * (signal_lost): the last reading said "in", but nothing is watching now, so
+ * neither In nor Out is known.
+ *
  * @param {number|boolean|null|undefined} isPresent  faculty_presence.is_present
+ * @param {number|boolean} [signalLost]  faculty_presence.signal_lost
  * @returns {'in-room'|'out-of-room'|'unknown'}
  */
-function presenceStatus(isPresent) {
+function presenceStatus(isPresent, signalLost = false) {
     if (isPresent === null || isPresent === undefined) return 'unknown';
+    if (signalLost) return 'unknown';
     return isPresent ? 'in-room' : 'out-of-room';
 }
 
@@ -64,6 +70,7 @@ const FACULTY_LOUNGE_ROOM_TYPE = 'Faculty Lounge';
 function loungePresence(row, { covered = true } = {}) {
     if (!covered) return 'unknown';
     if (row.is_present === null || row.is_present === undefined) return 'unknown';
+    if (row.signal_lost) return 'unknown';   // held by a scanner that went silent
     if (row.is_present && row.detected_room_type === FACULTY_LOUNGE_ROOM_TYPE) return 'in-room';
     return 'out-of-room';
 }

@@ -318,7 +318,7 @@ const PresenceModel = {
      */
     async getOwn(publicId) {
         const [[row]] = await pool.execute(
-            `SELECT fp.is_present, r.room_number
+            `SELECT fp.is_present, fp.signal_lost, r.room_number
                FROM users u
                LEFT JOIN faculty_presence fp ON fp.instructor_id = u.id
                LEFT JOIN rooms r             ON fp.room_id       = r.id
@@ -344,11 +344,12 @@ const PresenceModel = {
     /** Mark an instructor present in a room. One row per instructor, updated in place. */
     async markPresent(instructorId, roomId, rssi = null) {
         await pool.execute(
-            `INSERT INTO faculty_presence (instructor_id, room_id, is_present, last_rssi, detected_at)
-             VALUES (?, ?, 1, ?, NOW())
+            `INSERT INTO faculty_presence (instructor_id, room_id, is_present, signal_lost, last_rssi, detected_at)
+             VALUES (?, ?, 1, 0, ?, NOW())
              ON DUPLICATE KEY UPDATE
                  room_id     = VALUES(room_id),
                  is_present  = 1,
+                 signal_lost = 0,
                  last_rssi   = VALUES(last_rssi),
                  detected_at = NOW()`,
             [instructorId, roomId, rssi === undefined ? null : rssi]
@@ -405,7 +406,7 @@ const PresenceModel = {
             }
 
             await conn.query(
-                'UPDATE faculty_presence SET is_present = 0 WHERE instructor_id IN (?)',
+                'UPDATE faculty_presence SET is_present = 0, signal_lost = 0 WHERE instructor_id IN (?)',
                 [gone.map(r => r.instructor_id)]
             );
             await conn.commit();
@@ -418,7 +419,19 @@ const PresenceModel = {
         }
     },
 
-    async expireStale(absentAfterSeconds) {
+    /**
+     * Anyone not heard for absentAfterSeconds has left — but only in a room
+     * whose scanner is still reporting.
+     *
+     * Silence has two causes that look identical from here: the person walked
+     * out of range, or the scanner stopped (Wi-Fi dropped, power cut). Only the
+     * first is evidence of leaving. A room whose scanner has been quiet longer
+     * than scannerOfflineAfterSeconds is not watching anybody, so the people it
+     * holds are left as they are — syncSignal() marks them signal_lost, pages
+     * show them as unknown, and the scanner's first report after it comes back
+     * settles it either way.
+     */
+    async expireStale(absentAfterSeconds, scannerOfflineAfterSeconds = 60) {
         // Two callers now run this — every ingest, and the sweep timer that
         // covers the case where no scanner is reporting at all. Selecting the
         // stale rows and then clearing them in separate statements would let
@@ -430,12 +443,15 @@ const PresenceModel = {
             await conn.beginTransaction();
 
             const [stale] = await conn.execute(
-                `SELECT instructor_id, room_id
-                   FROM faculty_presence
-                  WHERE is_present = 1
-                    AND last_updated < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                `SELECT fp.instructor_id, fp.room_id
+                   FROM faculty_presence fp
+                  WHERE fp.is_present = 1
+                    AND fp.last_updated < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                    AND EXISTS (SELECT 1 FROM ble_scanners s
+                                 WHERE s.room_id = fp.room_id
+                                   AND s.last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND))
                   FOR UPDATE`,
-                [absentAfterSeconds]
+                [absentAfterSeconds, scannerOfflineAfterSeconds]
             );
 
             if (!stale.length) {
@@ -444,7 +460,7 @@ const PresenceModel = {
             }
 
             await conn.query(
-                'UPDATE faculty_presence SET is_present = 0 WHERE instructor_id IN (?)',
+                'UPDATE faculty_presence SET is_present = 0, signal_lost = 0 WHERE instructor_id IN (?)',
                 [stale.map(r => r.instructor_id)]
             );
             await conn.commit();
@@ -457,15 +473,123 @@ const PresenceModel = {
         }
     },
 
-    /** Append-only history. Nothing else writes to this table. */
+    /**
+     * Keep signal_lost in step with whether each held person's room still has
+     * a live scanner. Returns who changed, so the caller can tell open pages.
+     *
+     * last_updated is written back to itself on purpose: it carries ON UPDATE
+     * CURRENT_TIMESTAMP, and letting this bump it would restart the absence
+     * timer every time a scanner's health changed.
+     */
+    async syncSignal(scannerOfflineAfterSeconds = 60) {
+        const liveRoom = `EXISTS (SELECT 1 FROM ble_scanners s
+                                   WHERE s.room_id = fp.room_id
+                                     AND s.last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND))`;
+
+        const [rows] = await pool.execute(
+            `SELECT fp.instructor_id, fp.room_id, fp.signal_lost, ${liveRoom} AS room_live
+               FROM faculty_presence fp
+              WHERE fp.is_present = 1`,
+            [scannerOfflineAfterSeconds]
+        );
+
+        const lost = rows.filter(r => !r.room_live && !r.signal_lost);
+        const restored = rows.filter(r => r.room_live && r.signal_lost);
+
+        if (lost.length) {
+            await pool.query(
+                'UPDATE faculty_presence SET signal_lost = 1, last_updated = last_updated WHERE instructor_id IN (?)',
+                [lost.map(r => r.instructor_id)]
+            );
+        }
+        if (restored.length) {
+            await pool.query(
+                'UPDATE faculty_presence SET signal_lost = 0, last_updated = last_updated WHERE instructor_id IN (?)',
+                [restored.map(r => r.instructor_id)]
+            );
+        }
+        return { lost, restored };
+    },
+
+    /**
+     * Append-only history. Nothing else writes to this table.
+     *
+     * An entry with ageSec is written that many seconds in the past — the
+     * scanner backlog replaying what it heard while it could not reach the
+     * server. Measured against the database's own clock, like every other
+     * timestamp here, so the scanner never needs to know the time.
+     */
     async log(entries) {
         if (!entries.length) return;
-        const values = entries.map(e => [e.instructorId, e.roomId, e.event, e.rssi ?? null, e.scannerId ?? null]);
+        const values = entries.map(e => [
+            e.instructorId, e.roomId, e.event, e.rssi ?? null, e.scannerId ?? null,
+            Math.max(0, Math.round(Number(e.ageSec) || 0)),
+        ]);
         await pool.query(
-            `INSERT INTO presence_logs (instructor_id, room_id, event, rssi, scanner_id)
-             VALUES ${values.map(() => '(?, ?, ?, ?, ?)').join(', ')}`,
+            `INSERT INTO presence_logs (instructor_id, room_id, event, rssi, scanner_id, occurred_at)
+             VALUES ${values.map(() => '(?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? SECOND))').join(', ')}`,
             values.flat()
         );
+    },
+
+    /* ── Scanner backlog (store-and-forward) ── */
+
+    /**
+     * Where each instructor stood just before a point in the past, from the
+     * history: the last event older than ageSec. Used as the starting state
+     * when replaying a scanner's backlog. Instructors with no history before
+     * then are absent from the map (treated as not in the room).
+     */
+    async lastEventsBefore(instructorIds, ageSec) {
+        if (!instructorIds.length) return new Map();
+        const [rows] = await pool.query(
+            `SELECT pl.instructor_id, pl.room_id, pl.event
+               FROM presence_logs pl
+               JOIN (SELECT instructor_id, MAX(id) AS id
+                       FROM presence_logs
+                      WHERE instructor_id IN (?)
+                        AND occurred_at < DATE_SUB(NOW(), INTERVAL ? SECOND)
+                      GROUP BY instructor_id) last ON last.id = pl.id`,
+            [instructorIds, ageSec]
+        );
+        return new Map(rows.map(r => [r.instructor_id, r]));
+    },
+
+    /**
+     * Whether this event is already on record within windowSec of when it
+     * happened — a scanner re-sending a backlog whose first POST did land but
+     * whose reply was lost.
+     */
+    async hasNearbyEvent(e, windowSec = 45) {
+        const age = Math.max(0, Math.round(Number(e.ageSec) || 0));
+        const [[row]] = await pool.execute(
+            `SELECT 1 AS found FROM presence_logs
+              WHERE instructor_id = ? AND room_id <=> ? AND event = ?
+                AND occurred_at BETWEEN DATE_SUB(NOW(), INTERVAL ? SECOND)
+                                    AND DATE_SUB(NOW(), INTERVAL ? SECOND)
+              LIMIT 1`,
+            [e.instructorId, e.roomId ?? null, e.event, age + windowSec, Math.max(0, age - windowSec)]
+        );
+        return !!row;
+    },
+
+    /**
+     * Instructors another room logged within the last ageSec seconds. Their
+     * whereabouts during the gap are already on record from a scanner that
+     * was online, and that account wins over a replay.
+     */
+    async loggedElsewhereSince(instructorIds, roomId, ageSec) {
+        if (!instructorIds.length) return new Set();
+        const [rows] = await pool.query(
+            `SELECT DISTINCT instructor_id
+               FROM presence_logs
+              WHERE instructor_id IN (?)
+                AND (room_id IS NULL OR room_id <> ?)
+                AND occurred_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                AND scanner_id IS NOT NULL`,
+            [instructorIds, roomId, ageSec]
+        );
+        return new Set(rows.map(r => r.instructor_id));
     },
 
     /* ── Admin: fleet health ── */

@@ -43,6 +43,23 @@ async function freeSlotIfNotClosed(conn, consultationHourId) {
     );
 }
 
+/**
+ * Retry a transaction InnoDB aborted for a deadlock — same reasoning as
+ * MakeupRequestModel's copy: createAppointment and assignConsultationRoom
+ * lock rows (consultation_hours, rooms) that concurrent bookings share, and a
+ * deadlock's loser rolled back cleanly, so simply replaying the whole
+ * transaction is what MySQL's own error text is telling the caller to do.
+ */
+async function withDeadlockRetry(fn, retries = 2) {
+    for (let attempt = 0; ; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            if (err.code !== 'ER_LOCK_DEADLOCK' || attempt >= retries) throw err;
+        }
+    }
+}
+
 const AppointmentModel = {
     async getCount() {
         const [[{ count }]] = await pool.execute('SELECT COUNT(*) AS count FROM appointments');
@@ -151,7 +168,11 @@ const AppointmentModel = {
         return rows;
     },
 
-    async createAppointment({
+    async createAppointment(args) {
+        return withDeadlockRetry(() => this._createAppointment(args));
+    },
+
+    async _createAppointment({
         consultationHourId, studentPublicId, instructorId, studentNumber,
         sectionGroupName, courseSubject, email, topic, mode, notes,
         departmentId, consultationDate, timeStart, timeEnd,

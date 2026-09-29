@@ -288,9 +288,11 @@ const PresenceController = {
                 }
             }
 
-            // The backstop for rooms whose scanner said nothing at all. Anyone
-            // evicted above is already absent, so this cannot double-announce.
-            const departed = await PresenceModel.expireStale(absentAfter);
+            // The backstop for tags that went quiet in rooms whose scanner is
+            // still reporting. A room whose scanner is silent keeps its people
+            // (see jobs/presence-sweep). Anyone evicted above is already absent,
+            // so this cannot double-announce.
+            const departed = await PresenceModel.expireStale(absentAfter, scannerStaleAfter);
             for (const row of departed) {
                 events.push({ instructorId: row.instructor_id, roomId: row.room_id, event: 'exited', scannerId });
             }
@@ -358,6 +360,168 @@ const PresenceController = {
         } catch (err) {
             console.error('[Presence.ingest]', err);
             res.status(500).json({ success: false, error: 'Could not record presence.' });
+        }
+    },
+
+    /**
+     * POST /api/presence/backfill
+     * Body: { room, scanner, buckets: [{ ageSec, durationSec, beacons: [{ id, rssi }] }] }
+     *
+     * What a scanner heard while it could not reach the server (Wi-Fi down),
+     * replayed once it can. Each bucket is one minute or so of listening,
+     * aged from the moment it is sent — the scanner has no reliable clock, so
+     * times are "this many seconds ago" and placed against the database's.
+     *
+     * This fills in history — the entered/exited rows the gap would otherwise
+     * be missing, which the hours and presence reports are built from. It
+     * never sends notifications or live "entered" alerts for things that
+     * happened minutes ago. The current state is brought in line with where
+     * the replay ends, quietly, so the next live report compares against the
+     * right starting point.
+     *
+     * Someone another room had on record during the gap is left alone: a
+     * scanner that was online at the time is the better witness.
+     */
+    async backfill(req, res) {
+        if (!keyMatches(req.get('X-Presence-Key'))) {
+            return res.status(401).json({ success: false, error: 'Unauthorized.' });
+        }
+
+        const roomNumber = String(req.body?.room || '').trim();
+        const scannerId = String(req.body?.scanner || '').trim().slice(0, 60) || null;
+        if (!roomNumber) {
+            return res.status(400).json({ success: false, error: 'A room is required.' });
+        }
+
+        // Oldest first, and only buckets that make sense. Two days is far past
+        // what the scanner's buffer holds; anything older is a bug, not data.
+        const buckets = (Array.isArray(req.body?.buckets) ? req.body.buckets : [])
+            .map(b => ({
+                ageSec: Math.round(Number(b?.ageSec)),
+                durationSec: Math.round(Number(b?.durationSec)) || 60,
+                beacons: parseBeacons(b?.beacons),
+            }))
+            .filter(b => Number.isFinite(b.ageSec) && b.ageSec >= 0 && b.ageSec <= 172800
+                      && b.durationSec > 0 && b.durationSec <= 600)
+            .sort((a, b) => b.ageSec - a.ageSec)
+            .slice(0, 500);
+
+        if (!buckets.length) return res.json({ success: true, accepted: 0, events: 0 });
+
+        try {
+            const room = await PresenceModel.getRoomByNumber(roomNumber);
+            if (!room) {
+                return res.status(404).json({
+                    success: false,
+                    error: `No room named "${roomNumber}". Check ROOM_CODE against Admin → Rooms.`,
+                });
+            }
+
+            const [defaultThreshold, exitMargin, logging] = await Promise.all([
+                appSettings.get('presence_rssi_threshold'),
+                appSettings.get('presence_rssi_exit_margin'),
+                appSettings.get('presence_logging_enabled'),
+            ]);
+            const threshold = room.rssi_threshold !== null && room.rssi_threshold !== undefined
+                ? room.rssi_threshold
+                : defaultThreshold;
+            const exitThreshold = threshold - exitMargin;
+
+            // Every assigned tag heard in the backlog, plus whoever this room is
+            // holding now — somebody never heard during the gap has left too.
+            const macs = [...new Set(buckets.flatMap(b => b.beacons.map(s => s.mac)))];
+            const tags = (await PresenceModel.getBeaconsByMac(macs))
+                .filter(b => b.instructor_id && b.is_active);
+            const instructorByMac = new Map(tags.map(t => [t.mac_address, t.instructor_id]));
+            const holding = await PresenceModel.getPresentInRoom(room.id);
+
+            const gapAge = buckets[0].ageSec;
+            let candidates = [...new Set([...tags.map(t => t.instructor_id), ...holding.map(h => h.instructor_id)])];
+            const elsewhere = await PresenceModel.loggedElsewhereSince(candidates, room.id, gapAge);
+            candidates = candidates.filter(id => !elsewhere.has(id));
+
+            // Starting point: where the history says each person was just
+            // before the first bucket.
+            const before = await PresenceModel.lastEventsBefore(candidates, gapAge);
+            const state = new Map(candidates.map(id => {
+                const last = before.get(id);
+                const here = !!last && last.room_id === room.id && (last.event === 'entered' || last.event === 'moved');
+                return [id, { here, rssi: null }];
+            }));
+
+            // Walk the minutes in order. Same two lines as the live ingest:
+            // the full threshold to come in, the weaker one to stay.
+            const events = [];
+            for (const bucket of buckets) {
+                const heard = new Map();
+                for (const s of bucket.beacons) {
+                    const id = instructorByMac.get(s.mac);
+                    if (id && state.has(id)) heard.set(id, Math.max(heard.get(id) ?? -127, s.rssi));
+                }
+                for (const [id, st] of state) {
+                    const rssi = heard.has(id) ? heard.get(id) : null;
+                    const inNow = rssi !== null && rssi >= (st.here ? exitThreshold : threshold);
+                    if (inNow !== st.here) {
+                        events.push({
+                            instructorId: id, roomId: room.id,
+                            event: inNow ? 'entered' : 'exited',
+                            rssi: inNow ? rssi : null,
+                            scannerId, ageSec: bucket.ageSec,
+                        });
+                        st.here = inNow;
+                    }
+                    if (inNow) st.rssi = rssi;
+                }
+            }
+
+            // A retried POST must not write the same history twice.
+            const fresh = [];
+            for (const e of events) {
+                if (!(await PresenceModel.hasNearbyEvent(e, 45))) fresh.push(e);
+            }
+            if (logging && fresh.length) await PresenceModel.log(fresh);
+
+            // Line the current state up with where the replay ended, without
+            // announcing it as news. The next live report takes it from there.
+            const heldHere = new Set(holding.map(h => h.instructor_id));
+            let reconciled = 0;
+            for (const [id, st] of state) {
+                if (st.here && !heldHere.has(id)) {
+                    await PresenceModel.markPresent(id, room.id, st.rssi);
+                    reconciled++;
+                } else if (!st.here && heldHere.has(id)) {
+                    reconciled += (await PresenceModel.markAbsent([id], room.id)).length;
+                }
+            }
+
+            if (fresh.length || reconciled) {
+                try {
+                    broadcast('presence:changed', {
+                        room: room.room_number, roomId: room.id, scannerId,
+                        at: new Date().toISOString(),
+                        // Past events: pages refresh, but nothing is announced
+                        // as happening now.
+                        events: [], backfilled: fresh.length,
+                    });
+                } catch (err) {
+                    console.error('[Presence] Broadcast failed:', err.message);
+                }
+            }
+
+            console.log(`[Presence.backfill] ${scannerId || room.room_number}: ${buckets.length} bucket(s), `
+                + `${fresh.length} event(s) written, ${reconciled} state change(s), ${elsewhere.size} left to another room.`);
+
+            res.json({
+                success: true,
+                accepted: buckets.length,
+                events: fresh.length,
+                duplicates: events.length - fresh.length,
+                reconciled,
+                skippedElsewhere: elsewhere.size,
+            });
+        } catch (err) {
+            console.error('[Presence.backfill]', err);
+            res.status(500).json({ success: false, error: 'Could not record the backlog.' });
         }
     },
 

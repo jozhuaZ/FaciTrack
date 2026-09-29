@@ -134,11 +134,14 @@
 
   <main class="instructor-main">
     <div class="main-container">
-      <%# Today's consultations sit in the banner beside the greeting (large
-          screens only), in start order, at most four. %>
+      <%# Today's remaining consultations sit in the banner beside the greeting
+          (large screens only), in start order, at most four. Ones that have
+          already ended are left out. %>
       <%- include('../../partials/greeting-banner', {
             name: instructor.name,
             today: {
+              label: 'Upcoming today',
+              empty: 'No more consultations today',
               items: todayAppointments.slice(0, 4).map(a => ({ time: a.time, name: a.studentName, status: a.status })),
               more: Math.max(0, todayAppointments.length - 4),
             },

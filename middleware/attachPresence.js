@@ -13,10 +13,15 @@ const PresenceModel = require('../models/PresenceModel');
  * Room" rather than breaking the page.
  */
 
-/** A faculty_presence row → what the sidebar shows. */
+/**
+ * A faculty_presence row → what the sidebar shows. signalLost means the room
+ * holding them has a scanner that stopped reporting: neither in nor out is
+ * known, so the sidebar says "No signal" instead of claiming either.
+ */
 function shapeOwnPresence(row) {
-    const inRoom = !!(row && row.is_present);
-    return { inRoom, room: inRoom ? (row.room_number || null) : null };
+    const signalLost = !!(row && row.is_present && row.signal_lost);
+    const inRoom = !!(row && row.is_present) && !signalLost;
+    return { inRoom, signalLost, room: inRoom ? (row.room_number || null) : null };
 }
 
 async function loadOwnPresence(publicId) {

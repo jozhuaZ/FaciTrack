@@ -177,6 +177,9 @@
 
 .mk-actions { display: flex; justify-content: flex-end; gap: .6rem; }
 .mk-actions .btn-cancel { display: inline-flex; align-items: center; text-decoration: none; }
+/* Cancel and Submit the same height, side by side; .btn-save-settings
+   otherwise carries a top margin that set Submit lower than Cancel */
+.mk-actions > * { margin-top: 0; min-height: 2.75rem; box-sizing: border-box; font-family: inherit; }
 
 /* ── Request lists (instructor + dean) ── */
 .mk-req {
@@ -184,17 +187,17 @@
     background: #fff; overflow: hidden; margin-bottom: 1rem;
     scroll-margin-top: 1.25rem;
 }
-/* Two requests per row; the grid gap replaces each card's bottom margin.
+/* Request lists: two requests per row (.mk-grid is the request form's column); the grid gap replaces each card's bottom margin.
    Cards stretch to the row's height with their actions pinned to the bottom. */
-.mk-grid {
+.mk-req-grid {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem; align-items: stretch;
 }
-.mk-grid > .mk-req { margin-bottom: 0; display: flex; flex-direction: column; min-width: 0; }
-.mk-grid > .mk-req[hidden] { display: none; }
-.mk-grid > .mk-req > .mk-req-body { flex: 1; }
+.mk-req-grid > .mk-req { margin-bottom: 0; display: flex; flex-direction: column; min-width: 0; }
+.mk-req-grid > .mk-req[hidden] { display: none; }
+.mk-req-grid > .mk-req > .mk-req-body { flex: 1; }
 @media (max-width: 900px) {
-    .mk-grid { grid-template-columns: minmax(0, 1fr); }
+    .mk-req-grid { grid-template-columns: minmax(0, 1fr); }
 }
 /* The request the dean dashboard's View button jumped to */
 .mk-req:target { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.22); }

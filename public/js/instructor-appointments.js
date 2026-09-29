@@ -557,8 +557,15 @@ function initPopover() {
 
     document.addEventListener('keydown', e => { if (e.key==='Escape') { closePopover(); closeDayPanel(); } });
 
+    // Only a change of width (rotation, a real resize) closes the day panel.
+    // On a phone, tapping a decline reason box opens the keyboard, which
+    // shrinks the window's height and fires resize — that used to close the
+    // panel the instructor was typing into.
+    let lastWidth = window.innerWidth;
     window.addEventListener('resize', () => {
         repositionPopover();
+        if (window.innerWidth === lastWidth) return;
+        lastWidth = window.innerWidth;
         if (dayPanelEl) closeDayPanel();
     });
 }

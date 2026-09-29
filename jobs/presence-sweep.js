@@ -35,12 +35,42 @@ async function sweepOnce() {
     running = true;
 
     try {
-        const [absentAfter, logging] = await Promise.all([
+        const [absentAfter, logging, scannerOfflineAfter] = await Promise.all([
             appSettings.get('presence_absent_after_sec'),
             appSettings.get('presence_logging_enabled'),
+            appSettings.get('presence_scanner_offline_after_sec'),
         ]);
 
-        const departed = await PresenceModel.expireStale(absentAfter);
+        // A scanner that has stopped reporting (Wi-Fi drop, power cut) is not
+        // evidence that anybody left. expireStale only times people out in a
+        // room whose scanner is alive; the people a silent scanner holds are
+        // flagged signal_lost instead, which every page shows as unknown.
+        const departed = await PresenceModel.expireStale(absentAfter, scannerOfflineAfter);
+        const signal = await PresenceModel.syncSignal(scannerOfflineAfter);
+
+        if (signal.lost.length || signal.restored.length) {
+            if (signal.lost.length) {
+                console.log('[PresenceSweep] Scanner silent: holding ' + signal.lost.length
+                    + ' as "no signal" instead of marking them out.');
+            }
+            try {
+                broadcast('presence:changed', {
+                    room: null,
+                    roomId: null,
+                    scannerId: null,
+                    at: new Date().toISOString(),
+                    // Not presence_logs events: nobody moved, the room just
+                    // stopped (or started) being watched.
+                    events: [
+                        ...signal.lost.map(r => ({ instructorId: r.instructor_id, event: 'signal-lost' })),
+                        ...signal.restored.map(r => ({ instructorId: r.instructor_id, event: 'signal-restored' })),
+                    ],
+                });
+            } catch (err) {
+                console.error('[PresenceSweep] Broadcast failed:', err.message);
+            }
+        }
+
         if (!departed.length) return 0;
 
         const events = departed.map(row => ({
@@ -77,7 +107,8 @@ async function sweepOnce() {
             console.error('[PresenceSweep] Broadcast failed:', err.message);
         }
 
-        console.log('[PresenceSweep] Marked ' + departed.length + ' absent after ' + absentAfter + 's.');
+        console.log('[PresenceSweep] Marked ' + departed.length + ' absent after ' + absentAfter
+            + 's (rooms with a live scanner only).');
         return departed.length;
     } catch (err) {
         // Never let a failed sweep take the process down; the next tick retries.

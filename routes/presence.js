@@ -10,5 +10,7 @@ const PresenceController = require('../controllers/PresenceController');
  */
 router.get('/health', PresenceController.health);
 router.post('/ingest', PresenceController.ingest);
+// What a scanner cached while its Wi-Fi was down, sent once it reconnects
+router.post('/backfill', PresenceController.backfill);
 
 module.exports = router;

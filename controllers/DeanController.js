@@ -47,6 +47,11 @@ function presenceOf(row) {
     if (row.is_present === null || row.is_present === undefined) {
         return { bleStatus: 'unknown', bleLastDetected: null };
     }
+    // Held by a scanner that has gone silent: the last reading is kept (for
+    // "last detected"), but neither In nor Out is known right now.
+    if (row.signal_lost) {
+        return { bleStatus: 'unknown', bleLastDetected: timeAgo(row.presence_updated_at) };
+    }
     return {
         bleStatus: row.is_present ? 'in-room' : 'out-of-room',
         bleLastDetected: timeAgo(row.presence_updated_at),

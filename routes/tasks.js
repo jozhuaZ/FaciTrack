@@ -91,6 +91,9 @@ schedule('/minute', {
     upcomingReminders: reminders.sendUpcomingReminders,
     expireUnanswered: reminders.expireUnansweredRequests,
     expireMakeups: reminders.expireUndecidedMakeups,
+    // On Vercel the 15-second sweep timer never runs (no long-lived process),
+    // so this is what flags people held by a silent scanner as "no signal".
+    presenceSweep: () => require('../jobs/presence-sweep').sweepOnce(),
 });
 
 /** Follow-ups and housekeeping. Each has its own throttle deciding who is due. */

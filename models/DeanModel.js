@@ -65,6 +65,7 @@ const DeanModel = {
                     office.room_type       AS office_room_type,
                     officeDept.building    AS office_building,
                     fp.is_present,
+                    fp.signal_lost,
                     fp.last_updated        AS presence_updated_at,
                     fp.room_id             AS detected_room_id,
                     detected.room_number   AS detected_room_number,
@@ -191,6 +192,7 @@ const DeanModel = {
         const [rows] = await pool.query(
             `SELECT CONCAT(u.first_name, ' ', u.last_name) AS facultyName,
                     fp.is_present,
+                    fp.signal_lost,
                     fp.detected_at,
                     fp.last_updated,
                     r.room_number,

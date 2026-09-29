@@ -37,7 +37,7 @@ const ROLES_SHOWN_ROOMS = new Set(['Dean', 'Admin']);
 function toEntry(row, coverage, { includeRoom = false } = {}) {
     const entry = {
         id: row.id,                    // public_id
-        presence: presenceStatus(row.is_present),
+        presence: presenceStatus(row.is_present, row.signal_lost),
         lounge: loungePresence(row, { covered: coverage.covered }),
         availability: row.availability_status || null,
         availabilityLabel: availabilityLabel(row.availability_status),

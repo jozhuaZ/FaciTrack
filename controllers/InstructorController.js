@@ -823,8 +823,11 @@ const InstructorController = {
                 appointments,
                 consultationSlots,
                 pendingCount: appointments.filter(a => a.status === 'pending').length,
-                // Everything booked for today, finished or not: the day at a glance.
-                todayAppointments: live.filter(a => a.date === todayKey),
+                // Today's bookings that have not ended yet, for the banner.
+                // Finished ones read as if they were still to come, so they
+                // drop off as the day goes on. One in progress still shows.
+                todayAppointments: live.filter(a =>
+                    a.date === todayKey && a.endsAt.slice(0, 16) > nowKey),
                 // Confirmed consultations that have not ended yet, soonest
                 // first. One in progress still counts; one that has ended is
                 // not upcoming. Pending requests have their own card.

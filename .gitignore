@@ -16,3 +16,6 @@ public/models/*.glb
 
 # Database dumps taken before migrations. Real data — never committed.
 backups/
+
+# Exclude jmeter metrics and statistics
+jmeter
