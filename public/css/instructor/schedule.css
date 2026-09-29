@@ -742,6 +742,21 @@
     transform: translateY(0);
 }
 
+/* "1 hour · 3 students → 20 minutes per student", under the stepper */
+.slot-split-preview {
+  margin: .55rem 0 0;
+  padding: .5rem .7rem;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+}
+.slot-split-preview:empty { display: none; }
+.slot-split-preview.warn { background: #fffbeb; color: #92400e; }
+
 /* Stepper control */
 .slot-stepper {
   display: flex;

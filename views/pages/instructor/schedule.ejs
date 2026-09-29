@@ -122,6 +122,10 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
+        <%# How the slot divides, worked out the same way the server splits it
+            (models/ConsultationModel.js generateSubSlots). Filled in by
+            updateSplitPreview(). %>
+        <p class="slot-split-preview" id="slotSplitPreview" aria-live="polite"></p>
       </div>
       <!-- Validation feedback -->
       <div id="timeValidationMsg" style="display:none;padding:.6rem .8rem;border-radius:8px;font-size:.78rem;margin-top:.5rem;"></div>
@@ -327,6 +331,51 @@ function isTimePast(hour, minute, period) {
   return checkMinutes < nowMinutes;
 }
 
+/** "30 minutes", "1 hour", "1 hr 15 min" */
+function formatMinutes(total) {
+  if (total < 60) return total + (total === 1 ? ' minute' : ' minutes');
+  const h = Math.floor(total / 60), m = total % 60;
+  if (!m) return h + (h === 1 ? ' hour' : ' hours');
+  return h + ' hr ' + m + ' min';
+}
+
+/**
+ * "3 students · 20 minutes each" under the stepper. Same arithmetic as the
+ * server's generateSubSlots: an equal whole-minute share each, with any
+ * leftover minutes going to the last student.
+ */
+function updateSplitPreview(cap) {
+  const el = document.getElementById('slotSplitPreview');
+  if (!el) return;
+  const start = toMins(formatTimeFromState('start'));
+  const end   = toMins(formatTimeFromState('end'));
+  const total = end - start;
+
+  el.classList.remove('warn');
+  if (!Number.isFinite(total) || total <= 0) {
+    el.textContent = 'Pick an end time after the start time to see each student’s share.';
+    return;
+  }
+
+  const share = Math.floor(total / cap);
+  const last  = total - share * (cap - 1);
+  const who   = cap === 1 ? '1 student' : cap + ' students';
+
+  if (share < 1) {
+    el.classList.add('warn');
+    el.textContent = formatMinutes(total) + ' is too short to divide among ' + who + '.';
+    return;
+  }
+
+  let text = formatMinutes(total) + ' · ' + who + ' → ';
+  text += cap === 1 ? 'the whole ' + formatMinutes(total) + ' for one student'
+                    : formatMinutes(share) + ' per student';
+  if (cap > 1 && last !== share) text += ' (the last gets ' + formatMinutes(last) + ')';
+  el.textContent = text;
+  // Under 10 minutes each is rarely enough for a consultation
+  if (share < 10) el.classList.add('warn');
+}
+
 function hasConflict(startMins, endMins) {
   if (!timePickerState.selectedDay) return false;
   const editIdx = parseInt(document.getElementById('slotEditIdx').value, 10);
@@ -342,6 +391,7 @@ function validateTimeSelection() {
 
   if (minusBtn) minusBtn.disabled = cap <= 1;
   if (plusBtn)  plusBtn.disabled  = cap >= 10;
+  updateSplitPreview(cap);
 
   if (saveBtn) {
     saveBtn.disabled = false;
