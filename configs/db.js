@@ -103,16 +103,42 @@ const pool = mysql.createPool({
   dateStrings: true
 });
 
-// Applied once per physical connection, before the pool hands it out. The mode
-// is a fixed allow-list of flags, never user input, so it is safe to inline.
+/**
+ * The clock every connection runs on.
+ *
+ * Consultation dates and times are stored as Manila wall-clock values, and
+ * dozens of queries compare them with NOW(). A laptop's MariaDB runs on the
+ * machine's zone (+08:00), so that worked locally — but Aiven runs on UTC,
+ * which put NOW() eight hours behind every slot. The visible symptom was a
+ * 409 when completing a consultation that had just ended: the page (browser
+ * clock) offered Complete, the database said it had not ended yet. Reminders,
+ * expiry and nudges were all eight hours late the same way.
+ *
+ * Manila has no daylight saving, so a fixed offset is exact and needs no
+ * timezone tables on the server. DB_TIME_ZONE overrides it.
+ */
+const SESSION_TIME_ZONE = process.env.DB_TIME_ZONE || '+08:00';
+
+// Applied once per physical connection, before the pool hands it out. Both
+// values are checked against a strict pattern, never user input, so they are
+// safe to inline.
+const sessionSettings = [];
 if (/^[A-Z_,]*$/.test(SESSION_SQL_MODE)) {
-    pool.on('connection', (conn) => {
-        conn.query(`SET SESSION sql_mode = '${SESSION_SQL_MODE}'`, (err) => {
-            if (err) console.error('[DB] Could not set session sql_mode:', err.message);
-        });
-    });
+    sessionSettings.push(`sql_mode = '${SESSION_SQL_MODE}'`);
 } else {
     console.error(`[DB] DB_SQL_MODE contains unexpected characters and was ignored: ${SESSION_SQL_MODE}`);
+}
+if (/^[+-]\d{2}:\d{2}$/.test(SESSION_TIME_ZONE)) {
+    sessionSettings.push(`time_zone = '${SESSION_TIME_ZONE}'`);
+} else {
+    console.error(`[DB] DB_TIME_ZONE must look like +08:00 and was ignored: ${SESSION_TIME_ZONE}`);
+}
+if (sessionSettings.length) {
+    pool.on('connection', (conn) => {
+        conn.query(`SET SESSION ${sessionSettings.join(', ')}`, (err) => {
+            if (err) console.error('[DB] Could not apply session settings:', err.message);
+        });
+    });
 }
 
 module.exports = pool;
