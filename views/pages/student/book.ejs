@@ -292,6 +292,19 @@
                 timerEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span id="holdCountdown"></span>`;
                 document.getElementById('slotReadonlyBox').insertAdjacentElement('afterend', timerEl);
 
+                // Set once Book or Cancel is submitted. The server then books (or
+                // cancels) and releases the hold — so from that moment a finished
+                // countdown or a "hold is gone" reply is expected, not a timeout.
+                // Without this, moving the mouse while a slow submit was in flight
+                // sent the student to "Session Expired" over a booking that had
+                // actually succeeded.
+                let submitting = false;
+
+                function goExpired() {
+                    if (submitting) return;
+                    window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+                }
+
                 const countdownEl = document.getElementById('holdCountdown');
                 const countdownInterval = setInterval(() => {
                     const remaining = Math.max(0, EXPIRES_AT - Date.now());
@@ -300,7 +313,7 @@
                     countdownEl.textContent = `Slot held for ${mins}:${secs.toString().padStart(2, '0')}`;
                     if (remaining <= 0) {
                         clearInterval(countdownInterval);
-                        window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+                        goExpired();
                     }
                 }, 1000);
 
@@ -310,6 +323,7 @@
                 const EXTEND_COOLDOWN_MS = 20 * 1000;
 
                 function scheduleExtend() {
+                    if (submitting) return;
                     const now = Date.now();
                     if (now - lastExtendAt < EXTEND_COOLDOWN_MS) return; // throttle
                     lastExtendAt = now;
@@ -320,9 +334,11 @@
                             if (data.success && data.expiresAt) {
                                 EXPIRES_AT = new Date(data.expiresAt).getTime();
                             } else {
-                                // Reservation already expired server-side — stop pretending it's alive
+                                // Reservation already expired server-side — stop pretending it's alive.
+                                // Ignored if the form went in meanwhile: the hold is gone
+                                // because the booking used it.
                                 clearInterval(countdownInterval);
-                                window.location.href = `/student/faculty/<%= faculty.id %>?expired=1`;
+                                goExpired();
                             }
                         })
                         .catch(() => { /* network hiccup — next activity will retry */ });
@@ -330,6 +346,21 @@
 
                 ['mousemove', 'keydown', 'input', 'scroll', 'touchstart'].forEach(evt => {
                     document.addEventListener(evt, scheduleExtend, { passive: true });
+                });
+
+                // Book or Cancel: stand the hold down. Capture phase, so this runs
+                // before anything else reacts to the submit. The browser only fires
+                // submit once the form's own checks pass, and nothing on this page
+                // cancels one, so every submit here really does navigate away.
+                document.addEventListener('submit', function (e) {
+                    submitting = true;
+                    clearInterval(countdownInterval);
+                    if (countdownEl) countdownEl.textContent = 'Sending…';
+                }, true);
+                // Coming back with the Back button restores this page from cache
+                // with the flag set; reload it so the hold state is real again.
+                window.addEventListener('pageshow', function (e) {
+                    if (e.persisted) window.location.reload();
                 });
 
                 const typeButtons = document.querySelectorAll('.consult-type-btn');
