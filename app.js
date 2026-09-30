@@ -1,5 +1,22 @@
 // Import required modules
 require('dotenv').config();
+
+/*
+ * One clock for the whole app: Manila time, in Node as well as in MySQL.
+ *
+ * The database session runs on +08:00 (configs/db.js), because consultation
+ * times are stored as Manila wall-clock values and compared with NOW(). Node
+ * has to agree with it: a JS Date handed to a query is written in the process
+ * time zone, and a DATETIME read back is parsed in it. On a laptop both are
+ * already Manila. On Vercel the process runs on UTC, so a slot hold created at
+ * 11:19 was saved as expiring at 03:21 — already eight hours "expired" to the
+ * database — and the first scroll on the booking page showed Session Expired.
+ *
+ * Vercel reserves the TZ variable, so it is set here, before anything creates
+ * a Date. Node picks up a change to process.env.TZ at runtime.
+ */
+process.env.TZ = process.env.APP_TIMEZONE || 'Asia/Manila';
+
 require('./configs/checkEnv')();
 const express = require('express');
 const session = require('express-session');

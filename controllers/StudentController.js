@@ -20,6 +20,16 @@ function statusBlocksSlot(availabilityStatus, slotDate) {
     return String(slotDate).slice(0, 10) === todayKey;
 }
 
+/**
+ * A Date → 'YYYY-MM-DD' by its local calendar day (the process runs on Manila
+ * time, see app.js). Not toISOString(): that gives the UTC date, which for a
+ * Manila midnight is the day before — the two-week window lost its last day
+ * and "today" read as yesterday until 8 AM.
+ */
+function localDateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function getTwoWeekWindow() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -50,7 +60,7 @@ function slotReason(sub, { isReservedByOther, roomAvailable, canDoOnline }) {
 
 function findNextAvailable(consultationSlots) {
     const now = new Date();
-    const todayKey = now.toISOString().split('T')[0];
+    const todayKey = localDateKey(now);
     const nowMins = now.getHours() * 60 + now.getMinutes();
 
     const openSlots = [];
@@ -203,7 +213,7 @@ const StudentController = {
             ]);
 
             const { windowStart, windowEnd } = getTwoWeekWindow();
-            const toKey = d => d.toISOString().split('T')[0];
+            const toKey = localDateKey;
             const startKey = toKey(windowStart);
             const endKey = toKey(windowEnd);
 
@@ -289,7 +299,7 @@ const StudentController = {
             const activeReservations = await SlotReservation.getActiveReservationsForInstructor(facultyPublicId);
             const unavailability = await ConsultationModel.getUnavailability(facultyPublicId);
 
-            const toKey = d => d.toISOString().split('T')[0];
+            const toKey = localDateKey;
             const startKey = toKey(windowStart);
             const endKey = toKey(windowEnd);
 
