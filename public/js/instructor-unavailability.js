@@ -22,6 +22,11 @@ const UnavailModal = (function () {
 
   const $ = id => document.getElementById(id);
 
+  /** A Date → 'YYYY-MM-DD' by the local calendar day (toISOString gives the UTC day). */
+  function localKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function fmtDate(key) {
     const d = new Date(key + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -87,7 +92,7 @@ const UnavailModal = (function () {
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const min = tomorrow.toISOString().split('T')[0];
+    const min = localKey(tomorrow);
 
     $('unavailStartDate').min = min;
     $('unavailEndDate').min = min;
@@ -130,7 +135,7 @@ const UnavailModal = (function () {
     if (onAffectedStep && remaining > 0) {
       showError('unavailAffectedError',
         remaining + ' appointment(s) still need a decision. Reschedule them, use ' +
-        '"Decline all remaining", or "Undo block" to unblock these dates.');
+        '"Reschedule all remaining", "Cancel all remaining", or "Undo block" to unblock these dates.');
       return;
     }
     close();
@@ -270,6 +275,17 @@ const UnavailModal = (function () {
       `${rangeLabel(data.startDate, data.endDate)} is now blocked. Students can no longer book these days.`;
 
     $('unavailAffectedList').innerHTML = data.affected.map(renderCard).join('');
+
+    // Reschedule-all panel starts closed, its date limited to the future and
+    // kept off the days that were just blocked
+    $('unavailBulkPanel').style.display = 'none';
+    $('unavailReschedAllBtn').style.display = '';
+    $('unavailCancelAllBtn').style.display = '';
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    $('unavailBulkDate').min = localKey(tomorrow);
+    // Same window as a single reschedule; the server says where it ends
+    $('unavailBulkDate').max = (data.rescheduleWindow && data.rescheduleWindow.maxDate) || '';
+    $('unavailBulkDate').value = '';
     toast('warning', 'Date Blocked', `${data.affectedCount} appointment(s) need your attention.`);
   }
 
@@ -366,11 +382,11 @@ const UnavailModal = (function () {
     }
   }
 
-  /** Decline everything still undecided in the blocked range. */
+  /** Cancel (decline) everything still undecided in the blocked range. */
   async function declineAll() {
     const btn = $('unavailCancelAllBtn');
     btn.disabled = true;
-    btn.textContent = 'Declining…';
+    btn.textContent = 'Cancelling…';
 
     try {
       const res = await fetch('/instructor/unavailability/cancel-affected', {
@@ -386,19 +402,92 @@ const UnavailModal = (function () {
 
       if (!data.success) {
         btn.disabled = false;
-        btn.textContent = 'Decline all remaining';
-        return showError('unavailAffectedError', data.error || 'Failed to decline appointments.');
+        btn.textContent = 'Cancel all remaining';
+        return showError('unavailAffectedError', data.error || 'Failed to cancel appointments.');
       }
 
       document.querySelectorAll('.unav-apt:not(.resolved)').forEach(el => {
-        markResolved(el.id.replace('unavApt', ''), 'Declined');
+        markResolved(el.id.replace('unavApt', ''), 'Cancelled');
       });
-      toast('success', 'Appointments Declined', `${data.cancelledCount} student(s) were notified.`);
-      btn.textContent = 'Decline all remaining';
+      toast('success', 'Appointments Cancelled', `${data.cancelledCount} student(s) were notified.`);
+      btn.textContent = 'Cancel all remaining';
       btn.disabled = false;
     } catch (err) {
       btn.disabled = false;
-      btn.textContent = 'Decline all remaining';
+      btn.textContent = 'Cancel all remaining';
+      showError('unavailAffectedError', 'Network error. Please try again.');
+    }
+  }
+
+  /** Show or hide the "move everything to one date" panel. */
+  function toggleRescheduleAll() {
+    const panel = $('unavailBulkPanel');
+    const opening = panel.style.display === 'none';
+    panel.style.display = opening ? '' : 'none';
+    $('unavailAffectedError').style.display = 'none';
+    if (opening) $('unavailBulkDate').focus();
+  }
+
+  /**
+   * Move every remaining appointment to the chosen date, each at its own time.
+   * The server opens or creates the slots and reschedules one by one; whatever
+   * it could not move stays on the list with the reason under it.
+   */
+  async function rescheduleAll() {
+    const target = $('unavailBulkDate').value;
+    if (!target) return showError('unavailAffectedError', 'Pick the date to move the appointments to.');
+    if (target >= blocked.startDate && target <= blocked.endDate) {
+      return showError('unavailAffectedError', 'That date is one of the days you just blocked. Pick another.');
+    }
+
+    const btn = $('unavailBulkConfirm');
+    btn.disabled = true;
+    btn.textContent = 'Rescheduling…';
+    $('unavailAffectedError').style.display = 'none';
+
+    try {
+      const res = await fetch('/instructor/unavailability/reschedule-affected', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: blocked.startDate,
+          endDate: blocked.endDate,
+          targetDate: target,
+          reason: blocked.reason || null,
+        }),
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.textContent = 'Reschedule';
+
+      if (!data.success) return showError('unavailAffectedError', data.error || 'Failed to reschedule.');
+
+      const when = fmtDate(target);
+      data.moved.forEach(m => markResolved(m.id, 'Rescheduled to ' + when));
+      data.skipped.forEach(s => {
+        const card = document.getElementById('unavApt' + s.id);
+        if (!card || card.classList.contains('resolved')) return;
+        let note = card.querySelector('.unav-apt-skip');
+        if (!note) {
+          note = document.createElement('p');
+          note.className = 'unav-apt-skip';
+          card.appendChild(note);
+        }
+        note.textContent = 'Not moved: ' + s.reason + '. Reschedule it to another slot or cancel it.';
+      });
+
+      if (data.moved.length) {
+        toast('success', 'Appointments Rescheduled',
+          `${data.moved.length} moved to ${when}. The student(s) were notified.`);
+      }
+      if (data.skipped.length) {
+        toast('warning', 'Some Not Moved', `${data.skipped.length} appointment(s) could not move — see the notes below.`);
+      } else {
+        $('unavailBulkPanel').style.display = 'none';
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Reschedule';
       showError('unavailAffectedError', 'Network error. Please try again.');
     }
   }
@@ -416,6 +505,8 @@ const UnavailModal = (function () {
     remaining--;
     if (remaining <= 0) {
       $('unavailCancelAllBtn').style.display = 'none';
+      $('unavailReschedAllBtn').style.display = 'none';
+      $('unavailBulkPanel').style.display = 'none';
       $('unavailAffectedError').style.display = 'none';
     }
   }
@@ -460,6 +551,6 @@ const UnavailModal = (function () {
 
   return {
     open, close, requestClose, submit, skip, pickSlot, confirmReschedule,
-    declineOne, declineAll, undoBlock,
+    declineOne, declineAll, undoBlock, toggleRescheduleAll, rescheduleAll,
   };
 })();

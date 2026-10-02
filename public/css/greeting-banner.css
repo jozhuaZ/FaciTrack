@@ -52,11 +52,14 @@
    (A clip-path on one copy did the same, but Chrome then painted a grey
    band over the page where it overhung.) */
 .greeting-banner-wrap {
-    --bld-overhang: 26px;
-    --bld-right: 1.5rem;
-    --bld-split: 54%;           /* where the far half's fade has finished */
+    /* How far the building breaks past the banner. The top is held to what
+       fits under the page header; most of the size comes from below. */
+    --bld-over-top: 26px;
+    --bld-over-bottom: 48px;
+    --bld-right: 1rem;
+    --bld-split: 42%;           /* where the far half's fade has finished */
     position: relative;
-    margin-bottom: 1.25rem;     /* room for the part hanging below the banner */
+    margin-bottom: 2.5rem;      /* room for the part hanging below the banner */
 }
 .greeting-banner-wrap > .greeting-banner { margin-bottom: 0; }
 
@@ -64,8 +67,8 @@
 .greeting-banner-building-back {
     position: absolute;
     right: var(--bld-right);
-    top: calc(var(--bld-overhang) * -1);
-    height: calc(100% + var(--bld-overhang) * 2);
+    top: calc(var(--bld-over-top) * -1);
+    height: calc(100% + var(--bld-over-top) + var(--bld-over-bottom));
 }
 .greeting-banner-building {
     z-index: 2;
@@ -89,8 +92,8 @@
 }
 .greeting-banner-building-back {
     z-index: -1;                /* over the seal (earlier in the DOM), under the text */
-    -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
-            mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
+    -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.18) 4%, rgba(0, 0, 0, 0.55) 18%, #000 40%, #000 var(--bld-split), transparent var(--bld-split));
+            mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.18) 4%, rgba(0, 0, 0, 0.55) 18%, #000 40%, #000 var(--bld-split), transparent var(--bld-split));
 }
 /* The (shadow-baked) image carries its own drop shadow; see ccs-building-mini.webp */
 
@@ -107,30 +110,51 @@
     outline-offset: 2px;
 }
 
-/* "View in 3D", inside the banner's lower-right corner */
+/* "View in 3D", inside the banner's lower-right corner. Built like the
+   banner's own pills (.greeting-banner-pill): a tinted fill, a border in the
+   same hue a little stronger, a coloured icon and white text — the same
+   amber as the pending pill (.greeting-banner-pill.pending).
+   The fill is denser than a pill's because this one can sit over the light
+   building rather than the dark banner. */
 .greeting-banner-building-tag {
     position: absolute;
     right: 0.25rem;
-    bottom: calc(var(--bld-overhang) + 0.7rem);
+    bottom: calc(var(--bld-over-bottom) + 0.7rem);
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.65rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
+    gap: 0.45rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    /* The pending pill's amber tint over a solid banner blue: the pill gets
+       its look from the dark banner behind it, and this one can sit over the
+       light building, where the tint alone washed out. */
+    background: linear-gradient(rgba(251, 191, 36, 0.2), rgba(251, 191, 36, 0.2)), #114c82;
+    border: 1px solid rgba(251, 191, 36, 0.35);
     color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-size: 0.75rem;
+    font-weight: 600;
     white-space: nowrap;
-    transition: background 0.2s ease, transform 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-.greeting-banner-building:hover .greeting-banner-building-tag {
-    background: rgba(255, 255, 255, 0.28);
-    transform: translateY(-1px);
+.greeting-banner-building-tag svg {
+    flex-shrink: 0;
+    color: #fbbf24;
+    transition: transform 0.25s ease, color 0.2s ease;
+}
+.greeting-banner-building:hover .greeting-banner-building-tag,
+.greeting-banner-building:focus-visible .greeting-banner-building-tag {
+    /* Only a little stronger than at rest, not a dark fill */
+    /* A gentle warm-up toward the amber: visible, not bright */
+    background: linear-gradient(rgba(251, 191, 36, 0.3), rgba(251, 191, 36, 0.3)), #114c82;
+    border-color: rgba(251, 191, 36, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(3, 20, 40, 0.3);
+}
+/* The cube turns a little, a hint that the building can be spun around */
+.greeting-banner-building:hover .greeting-banner-building-tag svg,
+.greeting-banner-building:focus-visible .greeting-banner-building-tag svg {
+    color: #fcd34d;
+    transform: rotate(-15deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -269,13 +293,21 @@
        name stay clear, and only hanging off the bottom: the banner is flush
        with the header above. */
     .greeting-banner-wrap {
-        --bld-overhang: 18px;
+        /* A phone banner has no spare room: the earlier, smaller size and
+           the stronger fade keep the building clear of the name and date */
+        --bld-over-bottom: 18px;
         --bld-right: 0.75rem;
+        --bld-split: 54%;
         margin-left: calc(50% - 50vw);
         margin-right: calc(50% - 50vw);
     }
     .greeting-banner-wrap > .greeting-banner { margin-left: 0; margin-right: 0; }
     .greeting-banner-building,
-    .greeting-banner-building-back { top: auto; bottom: calc(var(--bld-overhang) * -1); height: 132px; }
-    .greeting-banner-building-tag { font-size: 0.65rem; padding: 0.25rem 0.55rem; }
+    .greeting-banner-building-back { top: auto; bottom: calc(var(--bld-over-bottom) * -1); height: 132px; }
+    .greeting-banner-building-back {
+        -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
+                mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.35) 20%, #000 52%, #000 var(--bld-split), transparent var(--bld-split));
+    }
+    .greeting-banner-wrap { margin-bottom: 1.25rem; }
+    .greeting-banner-building-tag { font-size: 0.7rem; padding: 0.3rem 0.65rem; }
 }

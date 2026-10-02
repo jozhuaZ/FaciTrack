@@ -5,7 +5,15 @@
 /* globals THREE */
 var ccsScene, ccsRenderer, ccsClock;
 
-function ccsBoot() {
+/**
+ * Builds the renderer inside #ccs-canvas-wrap.
+ *
+ * opts.environment (default true) loads the clouds and trees. They are about
+ * 97 MB of decoration, so the admin's room picker, which only needs the
+ * building to click on, leaves them out.
+ */
+function ccsBoot(opts) {
+  opts = opts || {};
   var wrap = document.getElementById('ccs-canvas-wrap');
   ccsRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
   ccsRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -19,14 +27,30 @@ function ccsBoot() {
   _buildSky();
   _buildLights();
   _buildGround();
-  _loadEnvironment();
+  if (opts.environment !== false) _loadEnvironment();
   ccsClock = new THREE.Clock();
 
-  window.addEventListener('resize', function () {
-    var w = wrap.clientWidth, h = wrap.clientHeight;
-    ccsRenderer.setSize(w, h);
-    if (window.ccsCamera) { ccsCamera.aspect = w/h; ccsCamera.updateProjectionMatrix(); }
-  });
+  window.addEventListener('resize', ccsResize);
+  // Entering or leaving full screen does not always fire a window resize
+  document.addEventListener('fullscreenchange', ccsResize);
+  document.addEventListener('webkitfullscreenchange', ccsResize);
+  // And when it does, it can fire before the new layout is in place. Watching
+  // the wrapper itself catches every size change (full screen, a popup
+  // opening, the sidebar collapsing) once the box has its final size.
+  if (window.ResizeObserver) new ResizeObserver(ccsResize).observe(wrap);
+}
+
+/**
+ * Fit the canvas to its wrapper again. Also called by pages that show the
+ * wrapper after it was hidden, where it measured 0 × 0 at boot.
+ */
+function ccsResize() {
+  var wrap = document.getElementById('ccs-canvas-wrap');
+  if (!wrap || !ccsRenderer) return;
+  var w = wrap.clientWidth, h = wrap.clientHeight;
+  if (!w || !h) return;
+  ccsRenderer.setSize(w, h);
+  if (window.ccsCamera) { ccsCamera.aspect = w/h; ccsCamera.updateProjectionMatrix(); }
 }
 
 function _buildSky() {

@@ -24,7 +24,7 @@ const DEFINITIONS = {
     },
     pending_escalate_hours: {
         type: 'int', env: 'PENDING_ESCALATE_HOURS', fallback: 48, min: 1, max: 336,
-        label: 'Escalate unanswered requests to the dean after (hours)',
+        label: "Flag unanswered requests as overdue in the dean's report after (hours)",
     },
     makeup_max_weeks_ahead: {
         type: 'int', env: 'MAKEUP_MAX_WEEKS_AHEAD', fallback: 8, min: 1, max: 52,

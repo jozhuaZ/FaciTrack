@@ -79,9 +79,9 @@ async function sendCompletionNudges() {
  *
  * The student is told, because they are the one who was waiting and the one who
  * has to book again. The instructor is not sent a separate notice: they were
- * already nudged hourly while it was pending and escalated to the dean, and a
- * third message after the fact would be noise rather than news. It still shows
- * as expired in their own list and in the dean's report.
+ * already nudged while it was pending, and another message after the fact
+ * would be noise rather than news. It still shows as expired in their own
+ * list and in the dean's report.
  */
 async function expireUnansweredRequests() {
     const expired = await AppointmentModel.expireUnansweredRequests();
@@ -176,50 +176,6 @@ async function sendPendingRequestNudges() {
 }
 
 /**
- * Tell the dean about requests the instructor has left unanswered.
- *
- * The instructor nudges above repeat, but repeating at someone who is not
- * responding is the definition of the problem. Past the escalation threshold
- * the dean is told once — through notifyUser, so it reaches the bell, the
- * device as a push, and email if that is switched on — and the request then
- * shows in their Unanswered Requests report until it is answered.
- */
-async function escalateUnansweredToDean() {
-    const afterHours = await appSettings.get('pending_escalate_hours');
-    const overdue = await AppointmentModel.getPendingAppointmentsForEscalation(afterHours);
-
-    for (const apt of overdue) {
-        const dateLabel = formatFullDate(apt.consultation_date);
-        const timeLabel = to12Hour(apt.start_time);
-        const instructor = `${apt.instructor_first_name} ${apt.instructor_last_name}`;
-        const student = `${apt.student_first_name} ${apt.student_last_name}`;
-
-        await notifyUser(
-            apt.dean_id,
-            'alert',
-            `${instructor} has not answered ${student}'s consultation request for ${dateLabel} at ${timeLabel}. It has been waiting over ${afterHours} hours.`,
-            apt.id,
-            {
-                pushTitle: 'Consultation Request Unanswered',
-                email: {
-                    heading: 'Unanswered Consultation Request',
-                    status: 'reminder',
-                    message: `A booking request has been waiting more than <strong>${afterHours} hours</strong> without a response.`,
-                    details: [
-                        { label: 'Instructor', value: instructor },
-                        { label: 'Student', value: student },
-                        { label: 'Date', value: dateLabel },
-                        { label: 'Time', value: timeLabel },
-                    ],
-                },
-            }
-        );
-
-        await AppointmentModel.markDeanEscalated(apt.id);
-    }
-}
-
-/**
  * Chase instructors whose upcoming online consultations still have no meeting
  * link. The student sees "link coming soon" until this is resolved.
  */
@@ -280,11 +236,6 @@ function startReminderJob() {
             console.error('[ReminderJob] Pending-request nudges failed:', err);
         }
         try {
-            await escalateUnansweredToDean();
-        } catch (err) {
-            console.error('[ReminderJob] Dean escalation failed:', err);
-        }
-        try {
             await sendCompletionNudges();
         } catch (err) {
             console.error('[ReminderJob] Completion nudges failed:', err);
@@ -321,4 +272,3 @@ module.exports.sendMissingLinkNudges = sendMissingLinkNudges;
 module.exports.sendPendingRequestNudges = sendPendingRequestNudges;
 module.exports.expireUnansweredRequests = expireUnansweredRequests;
 module.exports.expireUndecidedMakeups = expireUndecidedMakeups;
-module.exports.escalateUnansweredToDean = escalateUnansweredToDean;

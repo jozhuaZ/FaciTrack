@@ -561,11 +561,94 @@ const ConsultationModel = {
             date: toDateKey(r.consultation_date),
             timeStart: to12Hour(r.start_time),
             timeEnd: to12Hour(r.end_time),
+            // Raw TIME values, for "Reschedule all" to find or open the same
+            // time on another date
+            startTime: r.start_time,
+            endTime: r.end_time,
             studentName: `${r.student_first_name} ${r.student_last_name}`,
             studentNumber: r.student_number,
             sectionGroup: r.section_group_name,
             courseSubject: r.course_subject,
         }));
+    },
+
+    /**
+     * A free slot for this instructor at exactly this date and time, for
+     * "Reschedule all" in the unavailability modal. Reuses the slot if there
+     * is one, reopens it if it was closed, and otherwise creates it.
+     *
+     * Refused rather than forced when the time is not free: a live booking on
+     * that slot, or another slot overlapping the time (creating this one
+     * would put two bookable slots on top of each other).
+     *
+     * @returns {{slotId, created: boolean}} or {{error: 'TAKEN'|'OVERLAP', detail?}}
+     */
+    async ensureSlotAt(publicId, date, startTime, endTime) {
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+
+            const [[user]] = await conn.execute('SELECT id FROM users WHERE public_id = ?', [publicId]);
+            if (!user) throw new Error('Instructor not found');
+
+            const [[exact]] = await conn.execute(
+                `SELECT ch.id, ch.status,
+                        (SELECT COUNT(*) FROM appointments a
+                          WHERE a.consultation_hour_id = ch.id
+                            AND a.status IN (${SLOT_HOLDING_SQL})) AS active
+                   FROM consultation_hours ch
+                  WHERE ch.instructor_id = ? AND ch.consultation_date = ?
+                    AND ch.start_time = ? AND ch.end_time = ?
+                  ORDER BY (LOWER(ch.status) <> 'closed') DESC, ch.id
+                  LIMIT 1
+                  FOR UPDATE`,
+                [user.id, date, startTime, endTime]
+            );
+
+            if (exact) {
+                if (Number(exact.active) > 0) { await conn.rollback(); return { error: 'TAKEN' }; }
+                // Closed, or left Booked by a booking that has since ended: open it
+                if (exact.status !== 'Available') {
+                    await conn.execute(
+                        "UPDATE consultation_hours SET status = 'Available', is_booked = 0 WHERE id = ?",
+                        [exact.id]
+                    );
+                }
+                await conn.commit();
+                return { slotId: exact.id, created: false };
+            }
+
+            // Same overlap rule as saveSlotBlock: each starts before the other ends
+            const [[overlap]] = await conn.execute(
+                `SELECT start_time, end_time FROM consultation_hours
+                  WHERE instructor_id = ? AND consultation_date = ?
+                    AND LOWER(status) <> 'closed'
+                    AND start_time < ? AND end_time > ?
+                  ORDER BY start_time LIMIT 1`,
+                [user.id, date, endTime, startTime]
+            );
+            if (overlap) {
+                await conn.rollback();
+                return { error: 'OVERLAP', detail: `${to12Hour(overlap.start_time)} – ${to12Hour(overlap.end_time)}` };
+            }
+
+            const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+                new Date(date + 'T00:00:00').getDay()
+            ];
+            const [ins] = await conn.execute(
+                `INSERT INTO consultation_hours
+                    (instructor_id, day_of_the_week, consultation_date, start_time, end_time, status)
+                 VALUES (?, ?, ?, ?, ?, 'Available')`,
+                [user.id, dayName, date, startTime, endTime]
+            );
+            await conn.commit();
+            return { slotId: ins.insertId, created: true };
+        } catch (err) {
+            await conn.rollback();
+            throw err;
+        } finally {
+            conn.release();
+        }
     },
 
     async removeUnavailability(publicId, date, endDate = null) {

@@ -99,7 +99,6 @@ schedule('/minute', {
 /** Follow-ups and housekeeping. Each has its own throttle deciding who is due. */
 schedule('/hourly', {
     pendingRequestNudges: reminders.sendPendingRequestNudges,
-    deanEscalation: reminders.escalateUnansweredToDean,
     completionNudges: reminders.sendCompletionNudges,
     missingLinkNudges: reminders.sendMissingLinkNudges,
     // Unclaimed tags only. An assigned tag is never pruned however long it has

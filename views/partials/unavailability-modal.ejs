@@ -83,6 +83,21 @@
         above are already blocked, so use <strong>Undo block</strong> if you did not mean to.
       </p>
 
+      <%# "Reschedule all remaining": one new date, every appointment keeps its time %>
+      <div id="unavailBulkPanel" class="unav-bulk" style="display:none;">
+        <label class="modal-label" for="unavailBulkDate">Move every remaining appointment to</label>
+        <div class="unav-bulk-row">
+          <input type="date" id="unavailBulkDate" class="unav-input">
+          <button type="button" class="btn-modal btn-skip" id="unavailBulkConfirm"
+                  onclick="UnavailModal.rescheduleAll()">Reschedule</button>
+        </div>
+        <p class="unav-bulk-note">
+          Each keeps its original time on the new date. Your slot at that time is used — or
+          opened for you if there isn't one — and each student is notified. Anything that
+          can't move is left below for you to handle.
+        </p>
+      </div>
+
       <div id="unavailAffectedList" class="unav-affected-list"></div>
       <p id="unavailAffectedError" class="unav-error" style="display:none;"></p>
     </div>
@@ -91,8 +106,10 @@
       <button class="btn-modal btn-cancel unav-undo" type="button" id="unavailUndoBtn"
               onclick="UnavailModal.undoBlock()">Undo block</button>
       <span class="unav-footer-spacer"></span>
+      <button class="btn-modal btn-skip" type="button" id="unavailReschedAllBtn"
+              onclick="UnavailModal.toggleRescheduleAll()">Reschedule all remaining</button>
       <button class="btn-modal btn-cancel" type="button" id="unavailCancelAllBtn"
-              onclick="UnavailModal.declineAll()">Decline all remaining</button>
+              onclick="UnavailModal.declineAll()">Cancel all remaining</button>
       <button class="btn-modal btn-confirm" type="button" onclick="UnavailModal.requestClose()">Done</button>
     </div>
 
@@ -143,6 +160,16 @@
     background:#f8fbff; color:#1d4ed8; font-size:.8rem; line-height:1.55;
   }
   .unav-error { font-size:.78rem; color:#dc2626; margin:.75rem 0 0; }
+  .unav-bulk {
+    margin-bottom:.9rem; padding:.85rem .95rem; border:1px solid #bfdbfe; border-radius:10px;
+    background:#f8fbff;
+  }
+  .unav-bulk-row { display:flex; gap:.5rem; align-items:stretch; }
+  .unav-bulk-row .unav-input { flex:1; min-width:0; }
+  .unav-bulk-row .btn-modal { flex-shrink:0; }
+  .unav-bulk-note { margin:.55rem 0 0; font-size:.75rem; color:var(--gray-500); line-height:1.5; }
+  /* Why "Reschedule all" left this one behind */
+  .unav-apt-skip { margin-top:.5rem; font-size:.74rem; color:#b45309; line-height:1.45; }
   .unav-footer-affected { flex-wrap:wrap; gap:.5rem; }
   .unav-footer-spacer { flex:1; }
   .unav-undo { color:#b45309; border-color:#fcd34d; }

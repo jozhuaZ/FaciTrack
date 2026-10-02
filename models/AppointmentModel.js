@@ -946,18 +946,6 @@ const AppointmentModel = {
     },
 
     /**
-     * Unanswered requests old enough that the dean should know.
-     *
-     * The dean is found through the instructor's department rather than
-     * departments.dean_id, matching how DeanModel scopes every other query —
-     * and departments.dean_id is not always filled in.
-     *
-     * Escalated once per booking, not repeatedly: the dean has a report
-     * listing every one of these, so a second push adds noise rather than
-     * information. Requests whose consultation time has already passed are
-     * skipped — nobody can approve those now.
-     */
-    /**
      * Requests whose consultation has been and gone while still pending.
      *
      * The end time, not the start: a consultation whose window has completely
@@ -1005,37 +993,6 @@ const AppointmentModel = {
         } finally {
             conn.release();
         }
-    },
-
-    async getPendingAppointmentsForEscalation(afterHours = 48) {
-        const [rows] = await pool.execute(
-            `SELECT a.id, a.created_at,
-                    ch.consultation_date, ch.start_time,
-                    dean.id AS dean_id,
-                    s.first_name AS student_first_name, s.last_name AS student_last_name,
-                    i.first_name AS instructor_first_name, i.last_name AS instructor_last_name
-               FROM appointments a
-               JOIN consultation_hours ch ON a.consultation_hour_id = ch.id
-               JOIN users i ON a.instructor_id = i.id
-               JOIN users s ON a.student_id    = s.id
-               JOIN users dean ON dean.role = 'Dean'
-                              AND dean.status = 'Active'
-                              AND dean.department_id <=> i.department_id
-              WHERE a.status = 'pending'
-                AND a.dean_escalated_at IS NULL
-                AND TIMESTAMP(ch.consultation_date, ch.start_time) > NOW()
-                AND a.created_at < DATE_SUB(NOW(), INTERVAL ? HOUR)
-              ORDER BY a.created_at ASC`,
-            [afterHours]
-        );
-        return rows;
-    },
-
-    async markDeanEscalated(appointmentId) {
-        await pool.execute(
-            'UPDATE appointments SET dean_escalated_at = NOW() WHERE id = ?',
-            [appointmentId]
-        );
     },
 
     async markPendingNudged(appointmentId) {

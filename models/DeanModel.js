@@ -218,10 +218,14 @@ const DeanModel = {
         const [rows] = await pool.execute(
             `SELECT r.id,
                     r.room_number,
+                    r.floor_number,
                     r.room_type,
                     r.capacity,
                     r.status,
                     r.is_ble_scanner_installed,
+                    r.model_x,
+                    r.model_y,
+                    r.model_z,
                     CONCAT(f.first_name, ' ', f.last_name) AS assigned_faculty_name
                FROM rooms r
                JOIN users dean ON dean.public_id = ?

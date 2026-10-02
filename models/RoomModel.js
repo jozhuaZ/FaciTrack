@@ -97,6 +97,20 @@ const RoomModel = {
         return result.affectedRows;
     },
 
+    /**
+     * Where the room sits on the 3D building, or null to take its pin off.
+     * Kept apart from updateRoom so an edit that never touched the location
+     * cannot wipe one placed earlier.
+     */
+    async setModelPosition(roomId, position) {
+        const { x = null, y = null, z = null } = position || {};
+        const [result] = await pool.execute(
+            'UPDATE rooms SET model_x = ?, model_y = ?, model_z = ? WHERE id = ?',
+            [x, y, z, roomId]
+        );
+        return result.affectedRows;
+    },
+
     async deleteRoom(id) {
         const query = `DELETE FROM rooms WHERE id = ?`;
 

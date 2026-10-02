@@ -25,11 +25,13 @@
             colour and the text always said Out of Room. %>
         <% const _presence = locals.ownPresence || { inRoom: false, signalLost: false, room: null }; %>
         <div class="ble-status-mini" id="sidebarPresence">
-            <span class="ble-indicator-mini <%= _presence.signalLost ? 'no-signal' : (_presence.inRoom ? 'in-room' : 'out-of-room') %>">
+            <%# A room whose scanner went silent reads as Out of Room here too:
+                attachPresence never reports inRoom for it (signalLost). %>
+            <span class="ble-indicator-mini <%= _presence.inRoom ? 'in-room' : 'out-of-room' %>">
                 <span class="ble-pulse-mini"></span>
                 <span class="ble-dot-mini"></span>
             </span>
-            <span class="ble-text-mini"><%= _presence.signalLost ? 'No signal' : (_presence.inRoom ? (_presence.room || 'In Room') : 'Out of Room') %></span>
+            <span class="ble-text-mini"><%= _presence.inRoom ? (_presence.room || 'In Room') : 'Out of Room' %></span>
         </div>
         <!-- Mobile hamburger toggle -->
         <button class="sidebar-mobile-toggle" id="sidebarToggle" aria-label="Toggle navigation" aria-expanded="false">
@@ -466,11 +468,9 @@
                 if (!p || !p.success) return;
                 var ind = box.querySelector('.ble-indicator-mini');
                 var txt = box.querySelector('.ble-text-mini');
-                ind.classList.toggle('no-signal', !!p.signalLost);
-                ind.classList.toggle('in-room', !p.signalLost && !!p.inRoom);
-                ind.classList.toggle('out-of-room', !p.signalLost && !p.inRoom);
-                txt.textContent = p.signalLost ? 'No signal'
-                    : (p.inRoom ? (p.room || 'In Room') : 'Out of Room');
+                ind.classList.toggle('in-room', !!p.inRoom);
+                ind.classList.toggle('out-of-room', !p.inRoom);
+                txt.textContent = p.inRoom ? (p.room || 'In Room') : 'Out of Room';
             })
             .catch(function () { /* keep what is shown */ });
     }

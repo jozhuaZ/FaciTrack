@@ -308,6 +308,30 @@ const PresenceModel = {
             [scannerId, roomId, uptimeSec ?? null, beaconCount ?? null, ip ?? null]
         );
 
+        // Online history, for the Class Attendance report: extend this
+        // scanner's current run if the last report was under 90s ago (reports
+        // come every 5s), otherwise start a new run. Never fatal — a failed
+        // history write must not cost the room its presence update.
+        try {
+            const [ext] = await pool.execute(
+                `UPDATE scanner_online_runs
+                    SET last_seen_at = NOW(), room_id = ?
+                  WHERE scanner_id = ?
+                    AND last_seen_at >= DATE_SUB(NOW(), INTERVAL 90 SECOND)
+                  ORDER BY id DESC LIMIT 1`,
+                [roomId, scannerId]
+            );
+            if (!ext.affectedRows) {
+                await pool.execute(
+                    `INSERT INTO scanner_online_runs (scanner_id, room_id, started_at, last_seen_at)
+                     VALUES (?, ?, NOW(), NOW())`,
+                    [scannerId, roomId]
+                );
+            }
+        } catch (err) {
+            console.error('[Presence] Could not record scanner online run:', err.message);
+        }
+
         return { wasStale, isNew };
     },
 
@@ -529,6 +553,20 @@ const PresenceModel = {
             `INSERT INTO presence_logs (instructor_id, room_id, event, rssi, scanner_id, occurred_at)
              VALUES ${values.map(() => '(?, ?, ?, ?, ?, DATE_SUB(NOW(), INTERVAL ? SECOND))').join(', ')}`,
             values.flat()
+        );
+    },
+
+    /**
+     * A stretch the scanner was listening while offline (its backlog covered
+     * it), recorded as an online run from startAgeSec to endAgeSec ago. A
+     * resent backlog adds a duplicate run, which only overlaps an existing one
+     * — the attendance report merges overlapping runs, so it counts once.
+     */
+    async recordOfflineRun(scannerId, roomId, startAgeSec, endAgeSec) {
+        await pool.execute(
+            `INSERT INTO scanner_online_runs (scanner_id, room_id, started_at, last_seen_at)
+             VALUES (?, ?, DATE_SUB(NOW(), INTERVAL ? SECOND), DATE_SUB(NOW(), INTERVAL ? SECOND))`,
+            [scannerId, roomId, Math.round(startAgeSec), Math.round(endAgeSec)]
         );
     },
 

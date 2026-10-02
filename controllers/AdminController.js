@@ -76,6 +76,32 @@ async function resolveAssignedFaculty(publicId) {
     return { id: user.internal_id };
 }
 
+// Outer bound for a point on the 3D building. The model is 56 units wide and
+// about 17 tall; anything past this is a broken request, not a room.
+const MODEL_BOUND = 200;
+
+/**
+ * The room's spot on the 3D building, from the form's location field.
+ *
+ * Three answers, because an edit may not touch the location at all:
+ *   undefined → field absent, leave whatever is stored alone
+ *   null      → the admin removed the pin
+ *   {x,y,z}   → the new spot, rounded to the column's two decimals
+ *
+ * @returns {{ position?: object|null, error?: string }}
+ */
+function parseModelPosition(raw) {
+    if (raw === undefined) return {};
+    if (raw === null) return { position: null };
+
+    const axes = ['x', 'y', 'z'].map(k => Number(raw && raw[k]));
+    if (axes.some(v => !Number.isFinite(v) || Math.abs(v) > MODEL_BOUND)) {
+        return { error: 'That spot on the building could not be read. Place the room again.' };
+    }
+    const [x, y, z] = axes.map(v => Math.round(v * 100) / 100);
+    return { position: { x, y, z } };
+}
+
 const DisplayDeviceModel = require('../models/DisplayDeviceModel');
 const tagDiscovery = require('../services/tag-discovery');
 const { describeAddress } = require('../utils/bleAddress');
@@ -819,6 +845,9 @@ const AdminController = {
                         CONCAT(u.last_name, ', ', u.first_name) AS assigned_faculty_name,
                         u.public_id AS assigned_faculty_id,
                         r.is_ble_scanner_installed,
+                        r.model_x,
+                        r.model_y,
+                        r.model_z,
                         r.status`
             })
         ]);
@@ -834,7 +863,7 @@ const AdminController = {
 
     async createRoom(req, res) {
         try {
-            const { roomNumber, floorNumber, department, roomType, bleStatus, assignedFaculty, status, capacity } = req.body;
+            const { roomNumber, floorNumber, department, roomType, bleStatus, assignedFaculty, status, capacity, location } = req.body;
 
             const errors = {};
 
@@ -850,13 +879,16 @@ const AdminController = {
             const faculty = await resolveAssignedFaculty(assignedFaculty);
             if (faculty.error) errors.assignedFaculty = faculty.error;
 
+            const placement = parseModelPosition(location);
+            if (placement.error) errors.location = placement.error;
+
             // return early if at least one error is present
             if (Object.keys(errors).length > 0) {
                 return res.status(422).json({ success: false, errors })
             }
 
             // await for the room model to finish inserting new room
-            await RoomModel.insertRoomByAdmin({
+            const roomId = await RoomModel.insertRoomByAdmin({
                 roomNumber,
                 floorNumber: Number(floorNumber),
                 department,
@@ -866,6 +898,7 @@ const AdminController = {
                 status,
                 capacity
             });
+            if (placement.position) await RoomModel.setModelPosition(roomId, placement.position);
 
             try {
                 const user = await UserModel.getUserByPublicId(req.session.userId);
@@ -890,7 +923,7 @@ const AdminController = {
     async updateRoom(req, res) {
         try {
             const { roomId } = req.params;
-            const { roomNumber, floorNumber, department, roomType, bleStatus, assignedFaculty, status, capacity } = req.body;
+            const { roomNumber, floorNumber, department, roomType, bleStatus, assignedFaculty, status, capacity, location } = req.body;
 
             const errors = {};
 
@@ -902,6 +935,9 @@ const AdminController = {
 
             const faculty = await resolveAssignedFaculty(assignedFaculty);
             if (faculty.error) errors.assignedFaculty = faculty.error;
+
+            const placement = parseModelPosition(location);
+            if (placement.error) errors.location = placement.error;
 
             // return early if at least one error is present
             if (Object.keys(errors).length > 0) {
@@ -919,6 +955,7 @@ const AdminController = {
                 status,
                 capacity
             });
+            if (placement.position !== undefined) await RoomModel.setModelPosition(roomId, placement.position);
 
             try {
                 const user = await UserModel.getUserByPublicId(req.session.userId);

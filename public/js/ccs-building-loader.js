@@ -1,68 +1,32 @@
 ﻿/**
  * ccs-building-loader.js — Three.js r128
- * Loads GLB. Interactive rooms on 2nd and 3rd floor only.
+ * Shows a procedural stand-in at once, then swaps in the GLB when it arrives.
  */
 /* globals THREE, ccsScene */
 
-// ── Room definitions — 2nd + 3rd floor, left to right ─────────────────────────
-var CCS_ROOMS = [
-  // 2nd floor (floorIndex:1) — 5 rooms left → right
-  { id:'2F-1', name:'Faculty Lounge',    floor:'2nd Floor', floorIndex:1, bay:0 },
-  { id:'2F-2', name:"Dean's Office",     floor:'2nd Floor', floorIndex:1, bay:2 },
-  { id:'2F-3', name:'Consultation Room', floor:'2nd Floor', floorIndex:1, bay:4 },
-  { id:'2F-4', name:'Mac Lab',           floor:'2nd Floor', floorIndex:1, bay:6 },
-  { id:'2F-5', name:'Open Lab',          floor:'2nd Floor', floorIndex:1, bay:8 },
-  // 3rd floor (floorIndex:2) — 4 rooms left → right
-  { id:'3F-1', name:'IT Lab 1',          floor:'3rd Floor', floorIndex:2, bay:1 },
-  { id:'3F-2', name:'IT Lab 2',          floor:'3rd Floor', floorIndex:2, bay:3 },
-  { id:'3F-3', name:'ERP Lab',           floor:'3rd Floor', floorIndex:2, bay:6 },
-  { id:'3F-4', name:'CS Lab',            floor:'3rd Floor', floorIndex:2, bay:9 },
-];
+// Rooms are no longer defined here. Each room's spot on the building comes
+// from the rooms table (placed by the admin), and ccs-building-pins.js draws it.
 
-// ── Highlight helpers ──────────────────────────────────────────────────────────
-function ccsHighlightRoom(mesh, on) {
-  if (!mesh || !mesh.material) return;
-  mesh.material.color.setHex(0x1abc9c);
-  mesh.material.opacity = on ? 0.45 : 0.0;
+// Bump when public/models/ccs-building.glb is replaced. It used to be
+// Date.now(), which made every visit download the 12 MB model again.
+var CCS_MODEL_VERSION = '1';
+
+/**
+ * Settles once the real model has replaced the stand-in, or failed to. The
+ * room picker waits on this, so a pin is placed on the building the dean will
+ * see rather than on the placeholder shown while the model downloads.
+ */
+var ccsBuildingSettled = null;
+
+/** The building currently in the scene: the fallback, or the GLB once loaded. */
+function ccsBuildingObject() {
+  return ccsScene ? ccsScene.getObjectByName('CCSBuilding') : null;
 }
 
-function ccsResetAllRooms(group) {
-  if (!group) return;
-  group.traverse(function (o) {
-    if (o.userData.isRoom) ccsHighlightRoom(o, false);
-  });
-}
-
-// ── Add invisible room hit-boxes ───────────────────────────────────────────────
-function _addRoomVolumes(group) {
-  var BW  = 56, BD = 13, GH = 4.6, FH = 3.52;
-  var NC  = 12, CW = 0.88;
-  var BAY = (BW - CW) / (NC - 1); // ≈ 5.01
-  var ZR  = -BD / 2;
-  var rH  = FH - 0.6;
-  var roomW = BAY * 1.85 - 0.2;
-  var roomD = 2.2;
-  var roomZ = ZR + roomD / 2 + 0.3;
-
-  CCS_ROOMS.forEach(function (rd) {
-    var floorY = GH + FH * (rd.floorIndex - 1);
-    var cx     = -BW / 2 + CW / 2 + (rd.bay + 1.0) * BAY;
-    var cy     = floorY + rH / 2 + 0.3;
-
-    var mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(roomW, rH, roomD),
-      new THREE.MeshStandardMaterial({
-        color: 0x1abc9c, transparent: true, opacity: 0.0, depthWrite: false
-      })
-    );
-    mesh.name              = 'Room_' + rd.id;
-    mesh.position.set(cx, cy, roomZ);
-    mesh.userData.isRoom   = true;
-    mesh.userData.roomData = rd;
-    mesh.castShadow        = false;
-    mesh.receiveShadow     = false;
-    group.add(mesh);
-  });
+// Announced whenever the building in the scene changes, so anything measured
+// against it (the height pins rise to, what a click can land on) is redone.
+function _announceBuilding(group) {
+  try { window.dispatchEvent(new CustomEvent('ccs:building', { detail: group })); } catch (e) {}
 }
 
 // ── Main entry ────────────────────────────────────────────────────────────────
@@ -74,9 +38,11 @@ function ccsBuildingCreate() {
     resolve(fallbackGroup);
 
     // Also try loading the GLB in background — replace fallback if it loads
+    var settle;
+    ccsBuildingSettled = new Promise(function (res) { settle = res; });
     var loader = new THREE.GLTFLoader();
     loader.load(
-      '/models/ccs-building.glb?v=' + Date.now(),
+      '/models/ccs-building.glb?v=' + CCS_MODEL_VERSION,
 
       function (gltf) {
         // GLB loaded — remove fallback and add real model
@@ -111,9 +77,9 @@ function ccsBuildingCreate() {
 
         if (ccsScene) {
           ccsScene.add(group);
-          _addRoomVolumes(group);
-          console.log('[CCS] GLB swapped in');
+          _announceBuilding(group);
         }
+        settle(true);
       },
 
       function (xhr) {
@@ -126,6 +92,7 @@ function ccsBuildingCreate() {
 
       function (err) {
         console.warn('[CCS] GLB failed (using fallback already shown):', err);
+        settle(false);
       }
     );
   });
@@ -228,6 +195,6 @@ function _fallback() {
   });
 
   ccsScene.add(g);
-  _addRoomVolumes(g);
+  _announceBuilding(g);
   return g;
 }

@@ -2,61 +2,183 @@
 <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
 <link rel="stylesheet" href="/css/ccs-building-style.css?v=<%= assetVersion %>">
 
+<%
+  // Rooms with a spot on the model, and the ones still waiting for one
+  const placedCount = rooms.filter(r => r.model_x !== null && r.model_x !== undefined).length;
+%>
+
 <style>
-.building-3d-page { padding: 2rem; }
-@media (max-width:768px){ .building-3d-page{ padding:1rem; } }
+/* ── The board card ── */
+/* A card that lifts on hover is fine for a list; under a mouse dragging the
+   building around it just makes the whole view bob. */
+#ccs-board:hover { transform:none; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+.ccs-board-head { gap:1rem; flex-wrap:wrap; }
+.ccs-board-title { display:flex; align-items:center; gap:.625rem; min-width:0; }
+.ccs-board-sub { margin:.15rem 0 0; font-size:.78rem; font-weight:600; color:var(--gray-500); }
+.ccs-board-tools { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+
+/* "Live": the in-room pill from the faculty cards, in the board's blue */
+.ccs-live-pill {
+  display:inline-flex; align-items:center; gap:.35rem; flex-shrink:0;
+  padding:.22rem .65rem; border-radius:999px;
+  background:rgba(37,99,235,.1); color:#1d4ed8;
+  font-size:.68rem; font-weight:700; letter-spacing:.02em; text-transform:uppercase;
+}
+.ccs-live-pill .dot { width:6px; height:6px; border-radius:50%; background:#2563eb; animation:ccsBlink 1.5s infinite; }
+@keyframes ccsBlink { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+.ccs-legend { display:flex; align-items:center; gap:.875rem; }
+.ccs-legend-item { display:flex; align-items:center; gap:.4rem; font-size:.75rem; font-weight:600; color:var(--gray-600); white-space:nowrap; }
+.ccs-legend-dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; }
+.ccs-legend-dot.in { background:#2563eb; box-shadow:0 0 0 2px #fff, 0 0 0 3px #bfdbfe; }
+.ccs-legend-dot.empty { background:#fff; border:3px solid var(--gray-400); }
+
+/* Clock and exit only exist in full screen, as on Faculty Monitoring */
+.ccs-clock { display:none; font-size:1.35rem; font-weight:800; color:var(--gray-900); font-variant-numeric:tabular-nums; line-height:1; }
+.ccs-clock small { font-size:.75rem; font-weight:700; color:var(--gray-500); margin-left:.2rem; }
+.ccs-exit {
+  display:none; width:34px; height:34px; flex-shrink:0;
+  border:1px solid var(--gray-200); border-radius:50%; background:#fff;
+  color:var(--gray-500); cursor:pointer; align-items:center; justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.08); transition:background .15s, color .15s;
+}
+.ccs-exit:hover { background:var(--gray-100); color:var(--gray-900); }
+.is-fs .ccs-clock { display:block; }
+.is-fs .ccs-exit { display:flex; }
+
+/* ── Full screen: the whole card, the real API where there is one and a
+   fixed overlay where there is not (iPhone Safari only full-screens video) ── */
+#ccs-board:fullscreen { width:100vw; height:100vh; border-radius:0; border:0; display:flex; flex-direction:column; }
+#ccs-board:-webkit-full-screen { width:100vw; height:100vh; border-radius:0; border:0; display:flex; flex-direction:column; }
+#ccs-board.is-pseudo-fs { position:fixed; inset:0; z-index:3000; border-radius:0; border:0; display:flex; flex-direction:column; }
+#ccs-board.is-fs #ccs-canvas-wrap { flex:1; height:auto; }
+#ccs-board.is-fs .ccs-board-head { background:#fff; padding:.75rem 1.25rem; }
+body.ccs-fs-lock { overflow:hidden; }
+
+/* Nothing placed yet: say so over the model instead of showing a bare building */
+#ccs-empty {
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:9;
+  display:flex; flex-direction:column; align-items:center; gap:.5rem;
+  max-width:360px; width:calc(100% - 32px); text-align:center;
+  padding:1.25rem 1.25rem 1.1rem; border-radius:var(--radius-lg);
+  background:#fff; border:1px solid var(--gray-200); box-shadow:var(--shadow-lg);
+}
+.ccs-empty-icon { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#dbeafe; color:#1d4ed8; }
+#ccs-empty strong { font-family:var(--font-heading); font-size:.9rem; color:var(--gray-900); }
+#ccs-empty p { margin:0; font-size:.8rem; line-height:1.5; color:var(--gray-500); }
+
+/* Rooms table: whether each room has its pin yet */
+.placed-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.22rem .65rem; border-radius:999px; font-size:.68rem; font-weight:700; white-space:nowrap; border:0; font-family:inherit; }
+.placed-pill.yes { background:rgba(37,99,235,.1); color:#1d4ed8; cursor:pointer; transition:background .15s; }
+.placed-pill.yes:hover { background:rgba(37,99,235,.18); }
+.placed-pill.no  { background:var(--gray-100); color:var(--gray-500); }
+
+@media (max-width:640px) {
+  #ccs-canvas-wrap { height:440px; }
+  .ccs-board-head { padding:1rem; }
+  .ccs-board-tools { width:100%; justify-content:space-between; }
+  .page-header .header-actions { width:100%; }
+  .page-header .header-actions .btn-header-action { flex:1; justify-content:center; }
+}
 </style>
 
 <div class="instructor-layout">
   <%- include('../../partials/dean-sidebar', { activePage: 'building' }) %>
 
   <main class="instructor-main">
-    <div class="main-container building-3d-page">
+    <div class="main-container">
 
-      <div style="margin-bottom:1.25rem">
-        <h1 class="page-title">3D Building Viewer</h1>
-        <p class="page-subtitle">CSPC Academic Building IV</p>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">3D Building View</h1>
+          <p class="page-subtitle">CSPC Academic Building IV — <%= placedCount %> of <%= rooms.length %> room<%= rooms.length === 1 ? '' : 's' %> placed</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-header-action primary" id="ccs-btn-fullscreen" type="button" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Full Screen
+          </button>
+        </div>
       </div>
 
-      <div class="content-card" style="padding:1.25rem 1.25rem 1rem">
+      <div class="content-card" id="ccs-board">
+        <div class="card-header ccs-board-head">
+          <div class="ccs-board-title">
+            <span class="ccs-live-pill"><span class="dot"></span>Live</span>
+            <div style="min-width:0">
+              <h3 class="card-title">Who is in which room</h3>
+              <p class="ccs-board-sub" id="ccs-live-text">Checking presence…</p>
+            </div>
+          </div>
+          <div class="ccs-board-tools">
+            <div class="ccs-legend">
+              <span class="ccs-legend-item"><span class="ccs-legend-dot in"></span>Someone inside</span>
+              <span class="ccs-legend-item"><span class="ccs-legend-dot empty"></span>No one detected</span>
+            </div>
+            <span class="ccs-clock" id="ccs-live-clock"></span>
+            <button class="ccs-exit" id="ccs-btn-exit-fs" type="button" title="Exit full screen (Esc)" aria-label="Exit full screen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
 
         <!-- 3D Canvas -->
         <div id="ccs-canvas-wrap">
 
-          <!-- Loading overlay -->
           <div id="ccs-loading">
             <div class="ccs-spinner"></div>
             <p class="ccs-loading-text">Loading building…</p>
           </div>
 
-          <!-- Toolbar: search + view buttons + reset -->
+          <!-- Search, preset views, reset -->
           <div id="ccs-toolbar">
             <div class="ccs-search-wrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
               </svg>
-              <input id="ccs-search-input" type="text" placeholder="Search room (e.g. Mac Lab)" autocomplete="off" spellcheck="false"/>
+              <input id="ccs-search-input" type="text" placeholder="Search room or instructor" autocomplete="off" spellcheck="false"/>
             </div>
-            <button class="ccs-floor-btn" id="ccs-btn-front">Front View</button>
-            <button class="ccs-floor-btn" id="ccs-btn-top">Top View</button>
-            <button class="ccs-floor-btn" id="ccs-btn-left">Left-Side View</button>
-            <button class="ccs-floor-btn" id="ccs-btn-right">Right-Side View</button>
-            <button id="ccs-btn-reset-overlay">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px">
-                <polyline points="1 4 1 10 7 10"/>
-                <path d="M3.51 15a9 9 0 1 0 .49-4.9"/>
+            <div class="ccs-seg" role="group" aria-label="Camera view">
+              <button class="ccs-floor-btn" id="ccs-btn-front" type="button">Front</button>
+              <button class="ccs-floor-btn" id="ccs-btn-top" type="button">Top</button>
+              <button class="ccs-floor-btn" id="ccs-btn-left" type="button">Left</button>
+              <button class="ccs-floor-btn" id="ccs-btn-right" type="button">Right</button>
+            </div>
+            <button id="ccs-btn-reset-overlay" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.9"/>
               </svg>
               Reset View
             </button>
           </div>
 
-          <!-- Zoom buttons -->
           <div id="ccs-zoom-cluster">
-            <button class="ccs-zoom-btn" id="ccs-btn-zoom-in">+</button>
-            <button class="ccs-zoom-btn" id="ccs-btn-zoom-out">−</button>
+            <button class="ccs-zoom-btn" id="ccs-btn-zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button class="ccs-zoom-btn" id="ccs-btn-zoom-out" type="button" aria-label="Zoom out">&minus;</button>
           </div>
 
-          <!-- Hints bar -->
+          <% if (!placedCount) { %>
+          <div id="ccs-empty">
+            <span class="ccs-empty-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <strong>No rooms are placed on the building yet</strong>
+            <p>An admin places each room from Rooms → Edit → Set location. Once a room has its spot, whoever is detected inside appears above it here.</p>
+          </div>
+          <% } %>
+
+          <!-- Who is inside the room under the pointer -->
+          <div id="ccs-room-panel" class="rp-hidden" aria-live="polite">
+            <div class="rp-header">
+              <div>
+                <p class="rp-title" id="rp-title">—</p>
+                <p class="rp-sub" id="rp-sub">—</p>
+              </div>
+              <button class="rp-close" id="room-panel-close" type="button" aria-label="Close">&#x2715;</button>
+            </div>
+            <div class="rp-body" id="rp-body"></div>
+          </div>
+
           <div id="ccs-hints">
             <span><span class="ccs-hint-key">Drag</span> rotate</span>
             <span class="ccs-hint-sep">·</span>
@@ -64,42 +186,17 @@
             <span class="ccs-hint-sep">·</span>
             <span><span class="ccs-hint-key">Right-drag</span> pan</span>
             <span class="ccs-hint-sep">·</span>
-            <span><span class="ccs-hint-key">Hover room</span> info</span>
-          </div>
-
-          <!-- Room info panel (2nd + 3rd floor rooms) -->
-          <div id="ccs-room-panel" class="rp-hidden">
-            <div class="rp-header">
-              <span class="rp-badge" id="rp-id">—</span>
-              <button class="rp-close" id="room-panel-close" aria-label="Close">&#x2715;</button>
-            </div>
-            <div class="rp-body">
-              <div class="rp-field">
-                <span class="rp-label">Room</span>
-                <span class="rp-value" id="rp-name">—</span>
-              </div>
-              <div class="rp-divider"></div>
-              <div class="rp-field">
-                <span class="rp-label">Floor</span>
-                <span class="rp-value" id="rp-floor">—</span>
-              </div>
-              <div class="rp-divider"></div>
-              <div class="rp-field">
-                <span class="rp-label">College</span>
-                <span class="rp-value">College of Computer Studies</span>
-              </div>
-            </div>
+            <span><span class="ccs-hint-key">Hover a pin</span> who is inside</span>
           </div>
 
         </div><!-- /#ccs-canvas-wrap -->
-
-      </div><!-- /.content-card -->
+      </div><!-- /#ccs-board -->
 
       <!-- Room register table -->
-      <div class="content-card" style="margin-top:1.5rem">
+      <div class="content-card">
         <div class="card-header">
           <h3 class="card-title">Rooms in <%= dean.department %></h3>
-          <span style="font-size:.78rem;color:var(--gray-500);font-weight:600"><%= rooms.length %> room<%= rooms.length===1?'':'s' %></span>
+          <span style="font-size:.78rem;color:var(--gray-500);font-weight:600"><%= rooms.length %> room<%= rooms.length===1?"":"s" %></span>
         </div>
         <div class="card-body" style="padding:0">
           <% if(!rooms.length){ %>
@@ -109,15 +206,22 @@
           <% } else { %>
           <div style="overflow-x:auto">
             <table class="data-table">
-              <thead><tr><th>Room</th><th>Type</th><th>Capacity</th><th>Faculty</th><th>Scanner</th><th>Status</th></tr></thead>
+              <thead><tr><th>Room</th><th>Type</th><th>Capacity</th><th>Faculty</th><th>Scanner</th><th>On building</th><th>Status</th></tr></thead>
               <tbody>
-                <% rooms.forEach(r=>{ %>
+                <% rooms.forEach(r=>{ const placed = r.model_x !== null && r.model_x !== undefined; %>
                 <tr>
-                  <td style="font-weight:600;font-size:.875rem;color:var(--gray-900)"><%= r.room_number %></td>
+                  <td style="font-weight:600;font-size:.875rem;color:var(--gray-900)"><%= r.room_number %><span style="display:block;font-size:.72rem;font-weight:500;color:var(--gray-500)">Floor <%= r.floor_number %></span></td>
                   <td style="font-size:.8125rem;color:var(--gray-600)"><%= r.room_type %></td>
                   <td style="font-size:.8125rem"><%= r.capacity||'—' %></td>
                   <td style="font-size:.8125rem"><%= r.assigned_faculty_name||'—' %></td>
                   <td><span class="table-badge <%= r.is_ble_scanner_installed?'confirmed':'' %>"><%= r.is_ble_scanner_installed?'Installed':'Not installed' %></span></td>
+                  <td>
+                    <% if (placed) { %>
+                    <button type="button" class="placed-pill yes" data-focus-room="<%= r.id %>" title="Show on the building">Placed</button>
+                    <% } else { %>
+                    <span class="placed-pill no">Not placed</span>
+                    <% } %>
+                  </td>
                   <td><span class="table-badge <%= r.status==='Active'?'confirmed':'declined' %>"><%= r.status %></span></td>
                 </tr>
                 <% }) %>
@@ -132,8 +236,31 @@
   </main>
 </div>
 
+<%
+  // Only what the board draws. `<` is escaped so a room or person named with
+  // "</script>" cannot close this block early.
+  const boardRooms = rooms.map(r => ({
+    id: r.id,
+    number: r.room_number,
+    floor: r.floor_number,
+    type: r.room_type,
+    status: r.status,
+    assigned: r.assigned_faculty_name || null,
+    pos: r.model_x === null || r.model_x === undefined ? null
+      : { x: Number(r.model_x), y: Number(r.model_y), z: Number(r.model_z) },
+  }));
+  const boardFaculty = faculty.map(f => ({
+    id: f.id, name: f.name, photo: f.photo, position: f.position,
+    presence: f.bleStatus, roomId: f.detectedRoomId, seen: f.bleLastDetected,
+  }));
+%>
+<script>
+  window.CCS_BOARD = <%- JSON.stringify({ rooms: boardRooms, faculty: boardFaculty }).replace(/</g, '\\u003c') %>;
+</script>
+
 <%- include('../../partials/footer') %>
 <%- include('../../partials/script') %>
+<script src="/js/presence-live.js?v=<%= assetVersion %>"></script>
 
 <!-- Three.js r128 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -145,63 +272,5 @@
 <script src="/js/ccs-building-camera.js?v=<%= assetVersion %>"></script>
 <script src="/js/ccs-building-loader.js?v=<%= assetVersion %>"></script>
 <script src="/js/ccs-building-interactions.js?v=<%= assetVersion %>"></script>
-
-<script>
-(function(){
-  'use strict';
-
-  function hide(){
-    var el = document.getElementById('ccs-loading');
-    if (!el) return;
-    // Force hide immediately — no transition delay
-    el.style.transition = 'none';
-    el.style.opacity    = '0';
-    el.style.display    = 'none';
-    el.style.visibility = 'hidden';
-    el.style.pointerEvents = 'none';
-  }
-
-  // Boot — wrapped in try/catch so errors don't silently prevent loading
-  try { ccsBoot(); } catch(e) { console.error('ccsBoot failed:', e); }
-  try { ccsCameraInit(); } catch(e) { console.error('ccsCameraInit failed:', e); }
-
-  var _b = null, _pulse = 0;
-
-  function loop() {
-    requestAnimationFrame(loop);
-    try {
-      _pulse += ccsClock.getDelta();
-      if (typeof ccsCameraUpdateTransition === 'function') ccsCameraUpdateTransition();
-      if (ccsControls) ccsControls.update();
-      if (ccsRenderer && ccsScene && ccsCamera) ccsRenderer.render(ccsScene, ccsCamera);
-    } catch(e) { /* keep running */ }
-  }
-  loop();
-
-  // Load building
-  ccsBuildingCreate().then(function(b){
-    _b = b;
-    try { ccsInteractionsInit(b); } catch(e) { console.warn('[interactions]', e); }
-    hide();
-  }).catch(function(e){
-    console.error('[build]', e);
-    hide();
-  });
-
-  // Hard hide after 3 seconds — show whatever is rendered
-  setTimeout(hide, 3000);
-
-  // Zoom buttons
-  document.getElementById('ccs-btn-zoom-in').addEventListener('click',function(){
-    var d=new THREE.Vector3().subVectors(ccsControls.target,ccsCamera.position).normalize();
-    ccsCamera.position.addScaledVector(d,5);
-    ccsControls.update();
-  });
-  document.getElementById('ccs-btn-zoom-out').addEventListener('click',function(){
-    var d=new THREE.Vector3().subVectors(ccsControls.target,ccsCamera.position).normalize();
-    ccsCamera.position.addScaledVector(d,-5);
-    ccsControls.update();
-  });
-
-})();
-</script>
+<script src="/js/ccs-building-pins.js?v=<%= assetVersion %>"></script>
+<script src="/js/ccs-building-monitor.js?v=<%= assetVersion %>"></script>

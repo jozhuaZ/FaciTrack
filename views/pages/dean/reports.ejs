@@ -81,6 +81,9 @@
         <button type="button" class="report-pick" data-show="presence" role="tab" aria-selected="false">
           Presence History <span class="report-pick-count"><%= presenceLogs.length %></span>
         </button>
+        <button type="button" class="report-pick" data-show="attendance" role="tab" aria-selected="false">
+          Class Attendance <span class="report-pick-count"><%= classAttendance.length %></span>
+        </button>
         <%# The one report that can demand action, so its count is coloured when
             anything is overdue rather than sitting in the same grey as the rest. %>
         <button type="button" class="report-pick<%= unansweredStaleCount ? ' alert' : '' %>"
@@ -304,6 +307,85 @@
         </div>
       </div>
 
+      <!-- ── Class Attendance ──
+           Each class meeting from the imported workload (and approved make-ups),
+           with how long the instructor was detected in the assigned room during
+           it. Built by models/ClassAttendanceModel.js. -->
+      <div class="table-toolbar" data-toolbar-for="attendance" hidden>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Search</span>
+            <input type="search" class="table-search" data-role="search" placeholder="Instructor, subject, section or room…">
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Status</span>
+            <select class="table-select" data-role="filter" data-field="status">
+              <option value="all">All</option>
+              <option value="present">Present</option>
+              <option value="partial">Partial</option>
+              <option value="absent">Not detected</option>
+              <option value="no-signal">No signal</option>
+              <option value="no-room">No room assigned</option>
+              <option value="in-progress">In progress</option>
+            </select>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Period</span>
+            <select class="table-select" id="attendancePeriod">
+              <option value="week">This week</option>
+              <option value="month" selected>This month</option>
+              <option value="all">Last 60 days</option>
+            </select>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <button class="btn-header-action export-btn" data-role="export" <%= classAttendance.length ? '' : 'disabled' %>>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+        </div>
+      <div class="content-card report-table" data-table="attendance" data-subtitle="<%= dean.department %>" hidden>
+        <div class="card-header">
+          <h3 class="card-title">Class Attendance</h3>
+          <span class="result-count" data-role="count">—</span>
+        </div>
+        <%# Totals for whatever the filters show, per instructor %>
+        <div class="att-summary" id="attendanceSummary"></div>
+        <div class="card-body" style="padding:0">
+          <div class="table-scroll">
+            <table class="data-table" id="attendanceTable">
+              <thead>
+                <tr>
+                  <th>Class</th>
+                  <th>Instructor</th>
+                  <th>Room</th>
+                  <th>Time in room</th>
+                  <th>First seen</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody data-role="body"></tbody>
+            </table>
+          </div>
+          <div class="no-results" data-role="empty" style="display:none">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <p><%= classAttendance.length
+                  ? 'No class matches your filters.'
+                  : 'No classes to report yet. Attendance appears once instructors import their workload and their classes take place.' %></p>
+          </div>
+          <div class="pagination-bar">
+            <span class="page-info" data-role="pageinfo">—</span>
+            <div class="pagination-controls">
+              <button class="btn-page" data-role="prev" disabled>Prev</button>
+              <button class="btn-page" data-role="next" disabled>Next</button>
+            </div>
+          </div>
+        </div>
+        <p class="att-footnote">
+          Time in room counts only the part of the class the instructor was detected in the assigned room.
+          <strong>No signal</strong> means that room's scanner was offline for the whole class, so attendance could not be measured.
+          Classes are counted from the day the workload was imported; days marked unavailable are skipped.
+        </p>
+      </div>
+
       <!-- ── Unanswered Requests ── -->
       <div class="table-toolbar" data-toolbar-for="unanswered" hidden>
           <div class="toolbar-group">
@@ -373,6 +455,7 @@
     makeupRequests: <%- JSON.stringify(makeupRequests) %>,
     presenceLogs: <%- JSON.stringify(presenceLogs) %>,
     unansweredRequests: <%- JSON.stringify(unansweredRequests) %>,
+    classAttendance: <%- JSON.stringify(classAttendance).replace(/</g, '\\u003c') %>,
   };
 </script>
 <script src="/js/report-table.js?v=<%= assetVersion %>"></script>

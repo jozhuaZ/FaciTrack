@@ -1,5 +1,6 @@
 const DeanModel = require('../models/DeanModel');
 const MakeupRequestModel = require('../models/MakeupRequestModel');
+const ClassAttendanceModel = require('../models/ClassAttendanceModel');
 const { expireUndecidedMakeups } = require('../jobs/reminder');
 const NotificationModel = require('../models/NotificationModel');
 const InstructorSettingsModel = require('../models/InstructorSettingsModel');
@@ -150,7 +151,7 @@ function unansweredRow(row) {
         waitingLabel: hours < 24
             ? `${hours}h`
             : `${Math.floor(hours / 24)}d ${hours % 24}h`,
-        // Past the escalation threshold — the row the dean is meant to notice.
+        // Past the overdue threshold — the row the dean is meant to notice.
         stale: Boolean(Number(row.is_stale)),
     };
 }
@@ -336,9 +337,19 @@ const DeanController = {
 
     async renderReports(req, res) {
         try {
+            // Class Attendance (workload × presence) is only needed here, and
+            // is the heaviest of the reports, so it is not part of loadDepartment.
+            const [department, classAttendance] = await Promise.all([
+                loadDepartment(req.session.userId),
+                ClassAttendanceModel.getForDean(req.session.userId).catch(err => {
+                    console.error('[Dean] Could not build class attendance:', err);
+                    return [];
+                }),
+            ]);
             res.render('pages/dean/reports', {
                 title: 'FaciTrack - Reports',
-                ...(await loadDepartment(req.session.userId)),
+                ...department,
+                classAttendance,
             });
         } catch (err) {
             console.error('[DeanController.renderReports]', err);
@@ -366,9 +377,10 @@ const DeanController = {
     },
 
     /**
-     * The 3D viewer still draws a synthetic building; only the chrome around it
-     * is real for now. Rooms are passed through so the scene can be pointed at
-     * them without another round trip once the model is wired up.
+     * The building as a live board: every room the admin has placed on the
+     * model, and a line with the faces of whoever is detected inside. The
+     * faculty list carries where each instructor was last seen; the page keeps
+     * it current from /presence/faculty.json.
      */
     async renderBuilding(req, res) {
         try {

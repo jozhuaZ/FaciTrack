@@ -447,6 +447,7 @@ router.get('/unavailability/list',         InstructorController.getUnavailabilit
 router.get('/unavailability/check/:date',  InstructorController.checkUnavailability);
 router.post('/unavailability/set',         InstructorController.setUnavailability);
 router.post('/unavailability/cancel-affected', InstructorController.cancelAffectedAppointments);
+router.post('/unavailability/reschedule-affected', InstructorController.rescheduleAffectedAppointments);
 router.delete('/unavailability/range',     InstructorController.removeUnavailabilityRange);
 router.delete('/unavailability/:date',     InstructorController.removeUnavailability);
 

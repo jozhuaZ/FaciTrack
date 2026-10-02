@@ -43,6 +43,11 @@ CREATE TABLE rooms (
     -- to be tuned until it actually needs tuning.
     rssi_threshold           SMALLINT NULL,
     capacity                 TINYINT UNSIGNED DEFAULT NULL,
+    -- Where the room sits on the 3D building, in the model's coordinates.
+    -- Placed by the admin by clicking the model; NULL until then.
+    model_x                  DECIMAL(7,2) NULL,
+    model_y                  DECIMAL(7,2) NULL,
+    model_z                  DECIMAL(7,2) NULL,
     status                   ENUM('Active', 'Inactive') DEFAULT 'Active',
     created_at               DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at               DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -278,6 +283,20 @@ CREATE TABLE ble_scanners (
     PRIMARY KEY (id),
     UNIQUE KEY uq_scanner (scanner_id),
     CONSTRAINT fk_scanner_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL
+);
+
+-- When each scanner was actually watching: one row per unbroken stretch of
+-- reports. Lets the Class Attendance report tell "not in the room" from
+-- "scanner off". See migrations/2026-09-30-scanner-online-runs.sql.
+CREATE TABLE scanner_online_runs (
+    id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    scanner_id    VARCHAR(60)  NOT NULL,
+    room_id       INT UNSIGNED NULL,
+    started_at    DATETIME     NOT NULL,
+    last_seen_at  DATETIME     NOT NULL,
+    KEY idx_sor_scanner (scanner_id, last_seen_at),
+    KEY idx_sor_room_time (room_id, started_at, last_seen_at),
+    CONSTRAINT fk_sor_room FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL
 );
 
 -- The tags themselves. A tag is bound to at most one instructor, and an

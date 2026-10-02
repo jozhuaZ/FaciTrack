@@ -141,6 +141,124 @@
         });
     }
 
+    // ── Class attendance ─────────────────────────────────────────────────────
+    // One row per class meeting (workload + approved make-ups) with the time
+    // the instructor was detected in the assigned room. See ClassAttendanceModel.
+    (function () {
+        var card = document.querySelector('[data-table="attendance"]');
+        if (!card) return;
+
+        var STATUS = {
+            'present':     { label: 'Present',          cls: 'att-present' },
+            'partial':     { label: 'Partial',          cls: 'att-partial' },
+            'absent':      { label: 'Not detected',     cls: 'att-absent' },
+            'no-signal':   { label: 'No signal',        cls: 'att-no-signal' },
+            'no-room':     { label: 'No room assigned', cls: 'att-no-room' },
+            'in-progress': { label: 'In progress',      cls: 'att-in-progress' },
+        };
+        var period = document.getElementById('attendancePeriod');
+
+        function key(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+        function inPeriod(row) {
+            var mode = period ? period.value : 'all';
+            if (mode === 'all') return true;
+            var now = new Date();
+            if (mode === 'month') return row.date.slice(0, 7) === key(now).slice(0, 7);
+            var monday = new Date(now);
+            monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));   // Monday-start week
+            return row.date >= key(monday);
+        }
+        function hm(min) {
+            if (min === null || min === undefined) return '—';
+            var h = Math.floor(min / 60), m = min % 60;
+            return h ? (h + 'h' + (m ? ' ' + m + 'm' : '')) : (m + 'm');
+        }
+
+        var table = createTable(card, {
+            rows: window.DEAN_REPORTS.classAttendance || [],
+            noun: 'class meeting',
+            title: 'Class Attendance',
+            predicate: inPeriod,
+            searchText: function (r) {
+                return r.instructorName + ' ' + r.subjectCode + ' ' + r.subjectName + ' ' + r.section + ' ' + r.room;
+            },
+            render: function (r) {
+                var st = STATUS[r.status] || { label: r.status, cls: '' };
+                var time;
+                if (r.presentMin === null) {
+                    time = '<span class="att-sub">—</span>';
+                } else {
+                    var pct = Math.max(0, Math.min(100, r.percent || 0));
+                    time = '<div class="att-time-figure">' + hm(r.presentMin) + ' <span>of ' + hm(r.scheduledMin) +
+                           ' · ' + pct + '%</span></div>' +
+                           '<div class="att-bar' + (r.status === 'partial' ? ' partial' : '') + '"><i style="width:' + pct + '%"></i></div>';
+                }
+                var seen = r.firstIn
+                    ? esc(r.firstIn) + (r.lastOut ? ' – ' + esc(r.lastOut) : '') +
+                      (r.lateMin > 5 ? '<span class="att-late">' + r.lateMin + ' min after start</span>' : '')
+                    : '<span class="att-sub">—</span>';
+                return '<td class="att-class"><strong>' + esc(r.subjectCode) +
+                        (r.kind === 'makeup' ? '<span class="att-makeup">Make-up</span>' : '') + '</strong>' +
+                        '<span class="att-sub">' + esc(r.section) + (r.classType ? ' · ' + esc(r.classType) : '') + '</span>' +
+                        '<span class="att-sub">' + esc(r.dateLabel) + ' · ' + esc(r.timeLabel) + '</span></td>' +
+                    '<td><strong>' + esc(r.instructorName) + '</strong></td>' +
+                    '<td>' + esc(r.room) + '</td>' +
+                    '<td class="att-time">' + time + '</td>' +
+                    '<td style="white-space:nowrap">' + seen + '</td>' +
+                    '<td><span class="table-badge ' + st.cls + '">' + esc(st.label) + '</span></td>';
+            },
+            // Every matching class, not just the page on screen
+            onExport: function (rows) {
+                if (!window.ExportSystem) return;
+                window.ExportSystem.openPreview({
+                    title: 'Class Attendance Report',
+                    subtitle: card.dataset.subtitle || '',
+                    columns: ['Date', 'Time', 'Instructor', 'Subject', 'Section', 'Room', 'Scheduled', 'In room', '%', 'First seen', 'Status'],
+                    rows: rows.map(function (r) {
+                        var st = STATUS[r.status] || { label: r.status };
+                        return [r.dateLabel, r.timeLabel, r.instructorName, r.subjectCode + (r.kind === 'makeup' ? ' (make-up)' : ''),
+                                r.section, r.room, hm(r.scheduledMin), hm(r.presentMin),
+                                r.percent === null ? '—' : r.percent + '%', r.firstIn || '—', st.label];
+                    }),
+                });
+            },
+        });
+
+        // Per-instructor totals for what the filters currently show. Only
+        // classes that could be measured (a room, a working scanner, finished)
+        // count toward the share, so "No signal" never drags anyone down.
+        var summary = document.getElementById('attendanceSummary');
+        function summarize() {
+            if (!table || !summary) return;
+            var by = {};
+            table.visibleRows().forEach(function (r) {
+                var s = by[r.instructorName] || (by[r.instructorName] = { sched: 0, present: 0, classes: 0 });
+                if (r.status === 'present' || r.status === 'partial' || r.status === 'absent') {
+                    s.sched += r.scheduledMin;
+                    s.present += r.presentMin || 0;
+                    s.classes++;
+                }
+            });
+            summary.innerHTML = Object.keys(by).sort().map(function (name) {
+                var s = by[name];
+                if (!s.classes) return '';
+                return '<span class="att-chip"><strong>' + esc(name) + '</strong>' +
+                    hm(s.present) + ' of ' + hm(s.sched) + ' · ' + Math.round(s.present / s.sched * 100) + '% in room' +
+                    ' · ' + s.classes + ' class' + (s.classes === 1 ? '' : 'es') + '</span>';
+            }).join('');
+        }
+
+        if (period) period.addEventListener('change', function () { table.reset(); summarize(); });
+        var toolbar = document.querySelector('[data-toolbar-for="attendance"]');
+        if (toolbar) {
+            toolbar.addEventListener('input', summarize);
+            toolbar.addEventListener('change', summarize);
+        }
+        summarize();
+    })();
+
     // ── Report picker ──
     // Every table is built above regardless of which is on screen, so switching
     // is instant and a search typed in one report survives a trip to another.

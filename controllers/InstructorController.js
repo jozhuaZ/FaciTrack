@@ -300,6 +300,8 @@ const InstructorController = {
                 reason: reason || null,
                 affected,
                 affectedCount: affected.length,
+                // The dates "Reschedule all remaining" may move them to
+                rescheduleWindow: getRescheduleWindow(),
             });
         } catch (err) {
             console.error('[InstructorController.setUnavailability]', err);
@@ -336,6 +338,101 @@ const InstructorController = {
         } catch (err) {
             console.error('[InstructorController.cancelAffectedAppointments]', err);
             res.status(500).json({ success: false, error: 'Failed to cancel appointments.' });
+        }
+    },
+
+    /**
+     * "Reschedule all remaining": move every appointment still live in a
+     * blocked range to one new date, each at its own original time.
+     *
+     * For each appointment the slot at that time is reused, reopened or
+     * created (ConsultationModel.ensureSlotAt), then the appointment moves
+     * through the same rescheduleAppointment as a single reschedule — so the
+     * student is notified, a room or Meet link is found for the new time, and
+     * the old slot is freed exactly as usual.
+     *
+     * One that cannot move (its time is taken or overlaps another slot on the
+     * new date, no room is free…) is left where it is and reported, so the
+     * instructor can reschedule or cancel it by hand. A slot created for an
+     * appointment that then failed to move is removed again.
+     */
+    async rescheduleAffectedAppointments(req, res) {
+        try {
+            const { startDate, targetDate, reason } = req.body;
+            const endDate = req.body.endDate || startDate;
+            const isKey = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+            if (!isKey(startDate) || !isKey(endDate) || !isKey(targetDate)) {
+                return res.status(400).json({ success: false, error: 'Pick the date to move the appointments to.' });
+            }
+
+            const { minDate, maxDate } = getRescheduleWindow();
+            if (targetDate <= minDate) {
+                return res.status(422).json({ success: false, error: 'Pick a date from tomorrow onwards.' });
+            }
+            if (targetDate > maxDate) {
+                const last = new Date(maxDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+                return res.status(422).json({ success: false, error: `Pick a date up to ${last} (the reschedule window).` });
+            }
+            if (targetDate >= startDate && targetDate <= endDate) {
+                return res.status(422).json({ success: false, error: 'That date is one of the days you just blocked.' });
+            }
+            const blocked = await ConsultationModel.getUnavailability(req.session.userId);
+            if (blocked.some(b => b.date === targetDate)) {
+                return res.status(422).json({ success: false, error: 'You are marked unavailable on that date too.' });
+            }
+
+            const affected = await ConsultationModel.getAffectedAppointments(req.session.userId, startDate, endDate);
+            const why = reason || 'Instructor unavailable on the original date';
+            const failMessages = {
+                SLOT_UNAVAILABLE: 'that time is no longer free',
+                NO_ROOM_AVAILABLE: 'every consultation room is taken at that time',
+                NOT_FOUND_OR_RESOLVED: 'it was already resolved',
+                MEETING_LINK_REQUIRED: 'an online consultation needs your meeting link (Settings)',
+            };
+            const moved = [];
+            const skipped = [];
+
+            // One at a time: two appointments at the same time on different
+            // blocked days would otherwise both claim the one slot on the new date.
+            for (const apt of affected) {
+                const slot = await ConsultationModel.ensureSlotAt(
+                    req.session.userId, targetDate, apt.startTime, apt.endTime
+                );
+                if (slot.error) {
+                    skipped.push({
+                        id: apt.id,
+                        reason: slot.error === 'TAKEN'
+                            ? `${apt.timeStart} is already booked on the new date`
+                            : `${apt.timeStart} – ${apt.timeEnd} overlaps your ${slot.detail} slot on the new date`,
+                    });
+                    continue;
+                }
+
+                const result = await AppointmentModel.rescheduleAppointment(
+                    apt.id, slot.slotId, req.session.userId, why
+                );
+                if (result.success) {
+                    moved.push({ id: apt.id, newAppointmentId: result.newAppointmentId });
+                } else {
+                    if (slot.created) {
+                        try { await ConsultationModel.deleteSlot(req.session.userId, slot.slotId); }
+                        catch (err) { console.error('[rescheduleAffected] Could not remove unused slot:', err.message); }
+                    }
+                    skipped.push({ id: apt.id, reason: failMessages[result.reason] || 'it could not be moved' });
+                }
+            }
+
+            try {
+                const instructor = await UserModel.getUserByPublicId(req.session.userId);
+                await AuditLogModel.log(instructor.internal_id, instructor.role, 'Rescheduled appointments from blocked date', 'appointment');
+            } catch (err) {
+                console.error('[AuditLog] Failed to log bulk reschedule:', err);
+            }
+
+            res.json({ success: true, targetDate, moved, skipped });
+        } catch (err) {
+            console.error('[InstructorController.rescheduleAffectedAppointments]', err);
+            res.status(500).json({ success: false, error: 'Failed to reschedule the appointments.' });
         }
     },
 

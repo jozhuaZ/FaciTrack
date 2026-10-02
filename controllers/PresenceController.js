@@ -60,6 +60,24 @@ function keyMatches(supplied) {
     return crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * A signal strength in dBm, or null when the value is not one.
+ *
+ * Number() alone was not enough: it turns null, "", false and [] into 0, and 0
+ * is a valid reading — the strongest one there is — so a blank or missing
+ * value was taken as somebody standing right beside the scanner and marked
+ * them present. Only an actual number, or a string that spells one, counts.
+ */
+function parseRssi(value) {
+    let rssi;
+    if (typeof value === 'number') rssi = value;
+    else if (typeof value === 'string' && value.trim() !== '') rssi = Number(value);
+    else return null;
+
+    if (!Number.isFinite(rssi) || rssi > 0 || rssi < -127) return null;
+    return rssi;
+}
+
 /** Pull the usable sightings out of whatever the scanner sent. */
 function parseBeacons(raw) {
     if (!Array.isArray(raw)) return [];
@@ -72,8 +90,8 @@ function parseBeacons(raw) {
         const mac = String(entry.id || '').trim().toLowerCase();
         if (!MAC_RE.test(mac) || seen.has(mac)) continue;
 
-        const rssi = Number(entry.rssi);
-        if (!Number.isFinite(rssi) || rssi > 0 || rssi < -127) continue;
+        const rssi = parseRssi(entry.rssi);
+        if (rssi === null) continue;
 
         const major = Number.isInteger(Number(entry.major)) ? Number(entry.major) : null;
         const minor = Number.isInteger(Number(entry.minor)) ? Number(entry.minor) : null;
@@ -471,6 +489,20 @@ const PresenceController = {
                         st.here = inNow;
                     }
                     if (inNow) st.rssi = rssi;
+                }
+            }
+
+            // The backlog proves the scanner was listening through the gap even
+            // though nothing reached the server, so the gap counts as online
+            // for the Class Attendance report rather than as "No signal".
+            if (scannerId) {
+                try {
+                    const oldest = buckets[0];
+                    const newest = buckets[buckets.length - 1];
+                    const endAge = Math.max(0, newest.ageSec - newest.durationSec);
+                    await PresenceModel.recordOfflineRun(scannerId, room.id, oldest.ageSec, endAge);
+                } catch (err) {
+                    console.error('[Presence.backfill] Could not record the offline run:', err.message);
                 }
             }
 

@@ -254,13 +254,6 @@
     background: #6b7280;
 }
 
-/* The room's scanner stopped reporting: a hollow dot, not a claim either way */
-.ble-indicator-mini.no-signal .ble-pulse-mini { animation: none; background: transparent; }
-.ble-indicator-mini.no-signal .ble-dot-mini {
-    background: transparent;
-    box-shadow: inset 0 0 0 2px #9ca3af;
-}
-
 @keyframes pulse {
 
     0%,
