@@ -19,3 +19,4 @@ backups/
 
 # Exclude jmeter metrics and statistics
 jmeter
+postman
