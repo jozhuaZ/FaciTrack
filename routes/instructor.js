@@ -412,6 +412,8 @@ router.post('/appointments/complete-all', InstructorController.completeAllAppoin
 router.post('/appointments/:id/approve', InstructorController.approveAppointment);
 router.post('/appointments/:id/decline', InstructorController.declineAppointment);
 router.post('/appointments/:id/complete', InstructorController.completeAppointment);
+// The CCS consultation log form for a completed consultation, as a PDF
+router.get('/appointments/:id/consultation-form', InstructorController.getConsultationForm);
 router.patch('/appointments/:id/mode', InstructorController.updateAppointmentMode);
 
 // Personal meeting room used for online consultations

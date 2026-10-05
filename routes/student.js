@@ -354,6 +354,8 @@ router.post('/faculty/consultation/:slotId/cancel', StudentController.updateStat
 
 router.get('/appointments', StudentController.renderAppointmentsPage);
 router.post('/appointments/:appointmentId/cancel', StudentController.cancelAppointment);
+// The CCS consultation log form of the student's own completed consultation
+router.get('/appointments/:appointmentId/consultation-form', StudentController.getConsultationForm);
 // Kept below the cancel route so ':instructorId' cannot swallow a POST path
 router.get('/appointments/:instructorId', StudentController.renderInstructorHistoryPage);
 

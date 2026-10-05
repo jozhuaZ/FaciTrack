@@ -431,6 +431,11 @@
     background: #f0fdfa; color: #115e59; border-color: #5eead4;
 }
 .apt-lv-btn.complete:hover { background: #ccfbf1; border-color: #0d9488; box-shadow: 0 2px 6px rgba(13,148,136,.18); }
+/* The consultation log form of a completed consultation */
+.apt-lv-btn.form {
+    background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;
+}
+.apt-lv-btn.form:hover { background: #dbeafe; border-color: #3b82f6; box-shadow: 0 2px 6px rgba(59,130,246,.18); }
 .apt-lv-btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 
 /* Inline decline form — expands below the card row */
@@ -614,6 +619,8 @@
 /* Teal, matching the Complete buttons in the list and day panel */
 .pop-btn-complete { background: #f0fdfa; color: #115e59; border: 1.5px solid #5eead4; }
 .pop-btn-complete:hover { background: #ccfbf1; border-color: #0d9488; }
+.pop-btn-form { background: #eff6ff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+.pop-btn-form:hover { background: #dbeafe; border-color: #3b82f6; }
 .pop-btn:disabled { opacity: .6; cursor: not-allowed; }
 
 /* ── Inline decline panel (inside popover) ── */
@@ -827,6 +834,8 @@
 .day-panel-btn.approve:hover { background:#d1fae5; border-color:#059669; }
 .day-panel-btn.decline { background:#fef2f2; color:#991b1b; border-color:#fca5a5; }
 .day-panel-btn.decline:hover { background:#fee2e2; border-color:#ef4444; }
+.day-panel-btn.form    { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.day-panel-btn.form:hover { background:#dbeafe; border-color:#3b82f6; }
 .day-panel-btn:disabled { opacity:.45; cursor:not-allowed; }
 
 /* ── Per-row inline decline form ── */

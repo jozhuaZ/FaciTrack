@@ -92,7 +92,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ── Auto-dismiss alerts ──
-    document.querySelectorAll('.alert').forEach(alert => {
+    // Opt-in only. Matching the bare .alert class removed anything that used
+    // "alert" as a style: the Unanswered Requests tab on the dean's Reports
+    // page (red while requests are overdue) vanished five seconds after load,
+    // and so did the icon of every alert-type notification in the bell panel.
+    document.querySelectorAll('[data-auto-dismiss]').forEach(alert => {
         setTimeout(() => {
             alert.style.opacity = '0';
             setTimeout(() => alert.remove(), 300);

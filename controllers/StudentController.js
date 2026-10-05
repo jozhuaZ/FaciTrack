@@ -794,6 +794,42 @@ const StudentController = {
         }
     },
 
+    /**
+     * GET /student/appointments/:appointmentId/consultation-form
+     * The CCS consultation log form of the student's own completed
+     * consultation — the same PDF the instructor sees.
+     */
+    async getConsultationForm(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.appointmentId, 10);
+            if (!Number.isInteger(appointmentId)) return res.status(404).send('Not found.');
+
+            const row = await AppointmentModel.getConsultationFormData(appointmentId, {
+                studentPublicId: req.session.userId,
+            });
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'A consultation form is available once the consultation is completed.',
+                });
+            }
+
+            const { buildConsultationFormPdf, consultationFormFields } = require('../services/consultation-form');
+            const { fileName, ...form } = consultationFormFields(row);
+            const pdf = await buildConsultationFormPdf(form);
+
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="${fileName}"`,
+                'Cache-Control': 'private, no-store',
+            });
+            res.send(pdf);
+        } catch (err) {
+            console.error('[StudentController.getConsultationForm]', err);
+            res.status(500).json({ success: false, error: 'Could not build the consultation form.' });
+        }
+    },
+
     async cancelAppointment(req, res) {
         try {
             const appointmentId = parseInt(req.params.appointmentId, 10);

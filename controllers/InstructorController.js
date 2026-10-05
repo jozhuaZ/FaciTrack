@@ -831,6 +831,41 @@ const InstructorController = {
     },
 
     /** Close out a consultation. Refused until the slot has actually ended. */
+    /**
+     * GET /instructor/appointments/:id/consultation-form
+     * The CCS consultation log form for one completed consultation, as a PDF.
+     * Sent inline: the page previews it, and its Download button saves it.
+     */
+    async getConsultationForm(req, res) {
+        try {
+            const appointmentId = parseInt(req.params.id, 10);
+            if (!Number.isInteger(appointmentId)) return res.status(404).send('Not found.');
+
+            const row = await AppointmentModel.getConsultationFormData(appointmentId, { instructorPublicId: req.session.userId });
+            if (!row) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'A consultation form is available once the consultation is completed.',
+                });
+            }
+
+            const { buildConsultationFormPdf, consultationFormFields } = require('../services/consultation-form');
+            const { fileName, ...form } = consultationFormFields(row);
+            const pdf = await buildConsultationFormPdf(form);
+
+            res.set({
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="${fileName}"`,
+                // Holds a student's name and topic; never cached on a shared machine
+                'Cache-Control': 'private, no-store',
+            });
+            res.send(pdf);
+        } catch (err) {
+            console.error('[InstructorController.getConsultationForm]', err);
+            res.status(500).json({ success: false, error: 'Could not build the consultation form.' });
+        }
+    },
+
     async completeAppointment(req, res) {
         try {
             const appointmentId = parseInt(req.params.id, 10);

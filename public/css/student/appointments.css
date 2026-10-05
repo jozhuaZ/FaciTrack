@@ -39,6 +39,10 @@
 .btn-decline-apt { display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;background:#fff;color:#dc2626;border:1.5px solid #fecaca;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body); }
 .btn-decline-apt:hover { border-color:#dc2626;background:#fef2f2; }
 .btn-decline-apt:disabled { opacity:.5;cursor:not-allowed; }
+/* A completed consultation's log form — the same blue as the instructor's Form button */
+.btn-form-apt { display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:var(--radius-md);font-size:.875rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--font-body); }
+.btn-form-apt:hover { border-color:#3b82f6;background:#dbeafe; }
+@media (max-width:640px) { .btn-form-apt { width:100%;justify-content:center; } }
 
 /* Calendar View Styles */
 .calendar-container { display:none; }

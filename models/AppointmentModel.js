@@ -341,6 +341,42 @@ const AppointmentModel = {
         return rows;
     },
 
+    /**
+     * Everything the consultation log form prints, for one completed
+     * consultation — and only to the two people it belongs to: the instructor
+     * who held it or the student who booked it. Anyone else, or a consultation
+     * not yet completed, gets null.
+     *
+     * @param {{ instructorPublicId?: string, studentPublicId?: string }} viewer
+     */
+    async getConsultationFormData(appointmentId, viewer = {}) {
+        let owner;
+        let ownerId;
+        if (viewer.instructorPublicId) { owner = 'i.public_id'; ownerId = viewer.instructorPublicId; }
+        else if (viewer.studentPublicId) { owner = 's.public_id'; ownerId = viewer.studentPublicId; }
+        else return null;
+
+        const [rows] = await pool.execute(
+            `SELECT ap.id, ap.mode, ap.topic, ap.notes, ap.course_subject, ap.section_group_name,
+                    ap.student_number, ap.completed_at,
+                    COALESCE(ap.meeting_link, i.default_meeting_link) AS meeting_link,
+                    ch.consultation_date, ch.start_time, ch.end_time,
+                    s.first_name AS student_first_name, s.middle_name AS student_middle_name,
+                    s.last_name AS student_last_name,
+                    i.first_name AS instructor_first_name, i.middle_name AS instructor_middle_name,
+                    i.last_name AS instructor_last_name,
+                    r.room_number
+               FROM appointments ap
+               JOIN consultation_hours ch ON ap.consultation_hour_id = ch.id
+               JOIN users s ON ap.student_id = s.id
+               JOIN users i ON ap.instructor_id = i.id
+               LEFT JOIN rooms r ON ap.room_id = r.id
+              WHERE ap.id = ? AND ${owner} = ? AND ap.status = 'completed'`,
+            [appointmentId, ownerId]
+        );
+        return rows[0] || null;
+    },
+
     async cancelAppointment(appointmentId, studentPublicId) {
         const conn = await pool.getConnection();
         try {

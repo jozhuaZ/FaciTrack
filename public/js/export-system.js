@@ -30,6 +30,13 @@
       '#docPreviewArea{background:#fff;width:210mm;min-height:297mm;padding:18mm;box-shadow:0 0 20px rgba(0,0,0,.1);font-family:Arial,Helvetica,sans-serif;color:#000;flex-shrink:0}' +
       '#docPreviewArea.is-frame{padding:0}' +
       '#docPreviewArea iframe{display:block;width:100%;min-height:297mm;border:0}' +
+      // A server-made PDF, drawn page by page at its own proportions
+      '#docPreviewArea.is-pdf{width:min(100%,8.5in);min-height:0;padding:0;background:transparent;box-shadow:none}' +
+      '#docPreviewArea.is-pdf canvas{display:block;width:100%;height:auto;background:#fff;box-shadow:0 0 20px rgba(0,0,0,.12)}' +
+      '#docPreviewArea.is-pdf canvas+canvas{margin-top:1rem}' +
+      '#docPreviewArea.is-pdf iframe{min-height:70vh}' +
+      '.dp-status{background:#fff;border-radius:12px;padding:2rem 1.5rem;text-align:center;color:#6b7280;font-size:.85rem;font-family:inherit;box-shadow:0 0 20px rgba(0,0,0,.08)}' +
+      '.dp-status.is-error{color:#b91c1c}' +
       '@media (max-width:640px){' +
       '  #docPreviewModal{padding:0}' +
       '  .dp-dialog{height:100%;border-radius:0}' +
@@ -197,7 +204,97 @@
 
   // html: the body shown and printed. doc: set when the caller supplied its own
   // full document (the workload form), which is previewed in an iframe.
-  var state = { payload: null, html: '', doc: '' };
+  var state = { payload: null, html: '', doc: '', pdf: null };
+
+  /* ── PDF mode ──
+     For a document the server already lays out as a PDF (the consultation
+     form), the preview is that very file, drawn with pdf.js — so what is shown
+     is exactly what is saved, on a phone as much as a desktop, where an inline
+     PDF viewer is often missing. */
+  var PDFJS = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/build/';
+  var pdfjsReady = null;
+
+  function loadPdfJs() {
+    if (pdfjsReady) return pdfjsReady;
+    pdfjsReady = import(PDFJS + 'pdf.min.mjs').then(function (lib) {
+      // A worker cannot be started straight from another origin; a same-origin
+      // stub that imports it can
+      var stub = new Blob(['import "' + PDFJS + 'pdf.worker.min.mjs";'], { type: 'text/javascript' });
+      lib.GlobalWorkerOptions.workerPort = new Worker(URL.createObjectURL(stub), { type: 'module' });
+      return lib;
+    });
+    pdfjsReady.catch(function () { pdfjsReady = null; });   // let the next preview retry
+    return pdfjsReady;
+  }
+
+  function showStatus(area, text, isError) {
+    area.innerHTML = '<div class="dp-status' + (isError ? ' is-error' : '') + '">' + esc(text) + '</div>';
+  }
+
+  async function renderPdf(area, blob, token) {
+    try {
+      var lib = await loadPdfJs();
+      var doc = await lib.getDocument({ data: await blob.arrayBuffer() }).promise;
+      if (state.pdf !== token) return;
+      area.innerHTML = '';
+      // Sharp on a high-density screen without drawing a poster-sized bitmap
+      var targetWidth = Math.min(area.clientWidth || 816, 1100) * Math.min(window.devicePixelRatio || 1, 2);
+      for (var n = 1; n <= doc.numPages; n++) {
+        var page = await doc.getPage(n);
+        var base = page.getViewport({ scale: 1 });
+        var viewport = page.getViewport({ scale: Math.max(targetWidth / base.width, 1.5) });
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        canvas.setAttribute('aria-label', 'Page ' + n + ' of the document');
+        area.appendChild(canvas);
+        await page.render({ canvas: canvas, viewport: viewport }).promise;
+      }
+    } catch (err) {
+      // pdf.js could not load (offline, blocked): fall back to the browser's viewer
+      if (state.pdf !== token) return;
+      area.innerHTML = '';
+      var frame = document.createElement('iframe');
+      frame.title = 'Document preview';
+      frame.src = URL.createObjectURL(blob);
+      area.appendChild(frame);
+    }
+  }
+
+  async function openPdfPreview(opts) {
+    var area = document.getElementById('docPreviewArea');
+    var token = { url: opts.pdf.url, filename: opts.pdf.filename || 'document.pdf', blob: null };
+    state.pdf = token;
+    showStatus(area, 'Preparing the document…');
+    try {
+      var res = await fetch(opts.pdf.url, { credentials: 'same-origin' });
+      if (!res.ok) {
+        var msg = 'The document could not be prepared.';
+        try { msg = (await res.json()).error || msg; } catch (e) {}
+        throw new Error(msg);
+      }
+      var dispo = res.headers.get('content-disposition') || '';
+      var match = dispo.match(/filename="([^"]+)"/);
+      if (match) token.filename = match[1];
+      token.blob = await res.blob();
+      if (state.pdf !== token) return;
+      document.getElementById('docPreviewPdf').disabled = false;
+      await renderPdf(area, token.blob, token);
+    } catch (err) {
+      if (state.pdf === token) showStatus(area, err.message || 'The document could not be prepared.', true);
+    }
+  }
+
+  function saveBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2500);
+  }
 
   function openPreview(opts) {
     ensurePreviewModal();
@@ -218,7 +315,29 @@
     state.html = state.doc ? '' : buildDocumentHtml(state.payload);
 
     titleEl.textContent = opts.title || 'Document Preview';
-    subEl.textContent = 'Preview → choose save format or print';
+    subEl.textContent = opts.subtitle || 'Preview → choose save format or print';
+
+    var pdfBtn = document.getElementById('docPreviewPdf');
+    if (opts.pdf && opts.pdf.url) {
+      // One document, one format: Download PDF and Close
+      area.classList.remove('is-frame');
+      area.classList.add('is-pdf');
+      ['docPreviewPrint', 'docPreviewDocx', 'docPreviewXlsx'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
+      pdfBtn.textContent = 'Download PDF';
+      pdfBtn.style.display = '';
+      modal.style.display = 'flex';
+      setBusy(false);
+      pdfBtn.disabled = true;        // until the file has arrived
+      openPdfPreview(opts);
+      return;
+    }
+    state.pdf = null;
+    area.classList.remove('is-pdf');
+    pdfBtn.textContent = 'Save as PDF';
+    document.getElementById('docPreviewPrint').style.display = '';
 
     area.classList.toggle('is-frame', !!state.doc);
     if (state.doc) {
@@ -249,6 +368,7 @@
   function closePreview() {
     var modal = document.getElementById('docPreviewModal');
     if (modal) modal.style.display = 'none';
+    state.pdf = null;
     setBusy(false);
   }
 
@@ -294,6 +414,10 @@
     if (pdf && !pdf.__wired) {
       pdf.__wired = true;
       pdf.addEventListener('click', async function () {
+        if (state.pdf) {
+          if (state.pdf.blob) saveBlob(state.pdf.blob, state.pdf.filename);
+          return;
+        }
         try {
           setBusy(true);
           await postExport('pdf', state.payload);

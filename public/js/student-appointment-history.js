@@ -106,6 +106,20 @@
         }
     }
 
+    /* ── The consultation log form ──
+       Only completed consultations carry the button. Opens the same preview
+       as the instructor's, with its Download PDF button; the server checks the
+       booking is this student's and is completed. */
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-consultation-form]');
+        if (!btn || !window.ExportSystem) return;
+        window.ExportSystem.openPreview({
+            title: 'Consultation Log Form',
+            subtitle: btn.getAttribute('data-form-subtitle') || '',
+            pdf: { url: '/student/appointments/' + encodeURIComponent(btn.getAttribute('data-consultation-form')) + '/consultation-form' },
+        });
+    });
+
     /* ── Copying a meeting link ──
        Joining from the phone you booked on is one tap, but the common case is
        booking on a phone and joining from a laptop, and that needs the link

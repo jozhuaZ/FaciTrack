@@ -36,6 +36,22 @@ const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
 
 function aptsByDate(d) { return appointments.filter(a => a.date === d); }
+
+/**
+ * The CCS consultation log form of a completed consultation, previewed in the
+ * same modal as the reports, with its Download PDF button. The server fills it
+ * in from the appointment and only ever serves it for a completed one.
+ */
+function openConsultationForm(apt) {
+    if (!window.ExportSystem) return;
+    window.ExportSystem.openPreview({
+        title: 'Consultation Log Form',
+        subtitle: `${apt.studentName} · ${formatFullDate(apt.date)}`,
+        pdf: { url: `/instructor/appointments/${encodeURIComponent(apt.id)}/consultation-form` },
+    });
+}
+
+const FORM_ICON = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
 function filteredApts() {
     return appointments.filter(a => {
         if (filterStatus !== 'all' && a.status !== filterStatus) return false;
@@ -332,6 +348,8 @@ function openPopover(aptId, anchor) {
         completeRow.style.display = apt.status === 'confirmed' && hasEnded(apt) ? 'flex' : 'none';
         $('popComplete').disabled = false;
     }
+    const formRow = $('popFormActions');
+    if (formRow) formRow.style.display = apt.status === 'completed' ? 'flex' : 'none';
     $('popDeclinePanel').classList.remove('open');
     $('popDeclineReason').value = '';
     $('popResolved').classList.remove('open','approved','declined');
@@ -461,6 +479,14 @@ function initPopover() {
     }
 
     $('popClose').addEventListener('click', () => closePopover());
+
+    const popForm = $('popForm');
+    if (popForm) popForm.addEventListener('click', () => {
+        const apt = appointments.find(a => a.id === activePopAptId);
+        if (!apt) return;
+        closePopover();
+        openConsultationForm(apt);
+    });
 
     const popComplete = $('popComplete');
     if (popComplete) popComplete.addEventListener('click', () => {
@@ -642,6 +668,16 @@ function openDayPanel(dateStr, apts, anchor) {
         viewBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View`;
         viewBtn.addEventListener('click', e => { e.stopPropagation(); closeDayPanel(); openPopover(apt.id, anchor); });
         actions.appendChild(viewBtn);
+
+        /* Completed consultations: their consultation log form */
+        if (apt.status === 'completed') {
+            const formBtn = document.createElement('button');
+            formBtn.className = 'day-panel-btn form';
+            formBtn.title = 'View the consultation log form';
+            formBtn.innerHTML = FORM_ICON.replace(/width="11" height="11"/, 'width="12" height="12"') + 'Form';
+            formBtn.addEventListener('click', e => { e.stopPropagation(); closeDayPanel(); openConsultationForm(apt); });
+            actions.appendChild(formBtn);
+        }
 
         /* Confirmed consultations: switch mode, and close out once the slot has ended */
         if (apt.status === 'confirmed') {
@@ -1062,6 +1098,15 @@ function buildCard(apt) {
             );
         });
         actions.appendChild(completeBtn);
+    }
+
+    if (apt.status === 'completed') {
+        const formBtn = document.createElement('button');
+        formBtn.className = 'apt-lv-btn form';
+        formBtn.title = 'View the consultation log form';
+        formBtn.innerHTML = FORM_ICON + 'Form';
+        formBtn.addEventListener('click', (e) => { e.stopPropagation(); openConsultationForm(apt); });
+        actions.appendChild(formBtn);
     }
 
     // Declined reason display
