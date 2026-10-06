@@ -481,7 +481,7 @@
         }
         if (list.querySelector('.mk-session.has-conflict')) {
             e.preventDefault();
-            showToast('error', 'Clash detected', 'Resolve the highlighted clashes first.');
+            showToast('error', 'Class conflict detected', 'Resolve the highlighted class conflicts first.');
             return;
         }
 

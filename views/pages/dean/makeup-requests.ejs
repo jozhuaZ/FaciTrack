@@ -47,6 +47,18 @@
         <div class="mk-flash <%= flash.type %>"><%= flash.message %></div>
       <% } %>
 
+      <%# Nothing filed yet: say so, rather than a search bar over an empty page %>
+      <% if (!allRequests.length) { %>
+        <div class="content-card">
+          <div class="card-body">
+            <p class="mk-empty">
+              No make-up class requests yet. When an instructor in your department
+              files one, it appears here for your decision.
+            </p>
+          </div>
+        </div>
+      <% } else { %>
+
       <div class="mk-filter-bar">
         <div class="mk-search-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -145,6 +157,7 @@
         </div>
       <% }); %>
       </div>
+      <% } %>
     </div>
   </main>
 </div>
@@ -217,7 +230,7 @@
     current = { id: id, approve: approve };
     title.textContent = approve ? 'Approve request' : 'Decline request';
     body.textContent = approve
-      ? 'The sessions are re-checked for clashes before this is recorded. The instructor is notified.'
+      ? 'The sessions are re-checked for class conflicts before this is recorded. The instructor is notified.'
       : 'The instructor is notified along with your reason.';
     label.textContent = approve ? 'Note to the instructor (optional)' : 'Reason for declining (required)';
     confirm.textContent = approve ? 'Approve' : 'Decline';
