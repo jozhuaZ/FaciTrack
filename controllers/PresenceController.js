@@ -323,7 +323,9 @@ const PresenceController = {
             // A scanner coming back after going quiet is news for the health
             // page even when nobody is in the room, and nothing else would
             // ever announce it — going silent produces no report at all.
-            if (events.length || scanner.wasStale) {
+            // So is a tag heard for the first time during a discovery window:
+            // the admin is standing at the scanner waiting for it to appear.
+            if (events.length || scanner.wasStale || recorded.discovered) {
                 try {
                     broadcast('presence:changed', {
                         room: room.room_number,
