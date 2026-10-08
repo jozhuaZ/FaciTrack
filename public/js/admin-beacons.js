@@ -480,10 +480,19 @@
     var discoveryCard = document.getElementById('discoveryCard');
     var discoveryUntil = 0;
 
+    // While listening, the page checks every few seconds on its own. The
+    // server's "new tag" message is enough on one server, but on Vercel the
+    // report and this page can land on different instances and the message
+    // never arrives — and the admin is standing at the scanner, waiting.
+    var LISTEN_POLL_MS = 3000;
+    var listenTimer = null;
+
     function paintDiscovery(state) {
         if (!discoveryCard) return;
 
         var open = Boolean(state && state.open);
+        if (open && !listenTimer) listenTimer = setInterval(refresh, LISTEN_POLL_MS);
+        if (!open && listenTimer) { clearInterval(listenTimer); listenTimer = null; }
         discoveryUntil = open ? Date.now() + (state.secondsLeft * 1000) : 0;
 
         discoveryCard.classList.toggle('listening', open);
@@ -604,4 +613,7 @@
 
     paint();
     setInterval(paint, 5000);
+    // Once on load, so a page opened (or reloaded) mid-listening picks up the
+    // window — and its quick checks — straight away instead of at the backstop.
+    refresh();
 })();
