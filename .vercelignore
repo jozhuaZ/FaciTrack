@@ -5,10 +5,11 @@
 # leaves headroom for the dependencies that are genuinely needed.
 
 # Raw 3D source assets — nothing in the app references them, and they are
-# already out of git. The .glb files the app does load are handled separately;
-# see the note in .gitignore.
+# already out of git. public/models/*.glb is NOT listed: those are the
+# compressed models the 3D building view loads, served straight from Vercel's
+# CDN like the rest of public/ (not through the function, so they do not count
+# against its size limit).
 Meshy_AI_*/
-public/models/
 
 # A standalone prototype with its own package.json, not mounted by app.js.
 ccs-building-explorer/

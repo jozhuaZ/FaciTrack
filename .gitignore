@@ -6,13 +6,12 @@ firmware/**/*.ino
 .claude
 .playwright
 .playwright-cli
-# 3D assets — kept out of git because they blow past GitHub's limits.
-# Meshy_AI_*/ are the raw Meshy exports the .glb files were built from; nothing
-# in the app references them. public/models/*.glb ARE loaded at runtime by
-# public/js/ccs-building-loader.js, so they must be copied onto any new clone
-# by hand or the 3D building view will fail to load.
+# 3D assets. Meshy_AI_*/ are the raw Meshy exports the models were built from;
+# nothing in the app references them, and they are far too big for GitHub.
+# public/models/*.glb ARE committed: they are the compressed copies the 3D
+# building view loads (about 12 MB in all). The uncompressed originals are kept
+# in backups/models-original/, which is ignored below.
 Meshy_AI_*/
-public/models/*.glb
 
 # Database dumps taken before migrations. Real data — never committed.
 backups/
