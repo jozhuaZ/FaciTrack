@@ -223,8 +223,9 @@
 
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Add/Edit User Modal -->
-<div class="modal-overlay" id="userModal">
+<!-- Add/Edit User Modal. Closes only from its own buttons: a tap outside it
+     would throw away a half-filled form. -->
+<div class="modal-overlay" id="userModal" data-backdrop-close="off">
     <div class="modal-content">
         <div class="modal-header">
             <h3 class="modal-title" id="userModalTitle">Add User</h3>
@@ -325,7 +326,7 @@
 </div>
 
 <!-- Delete User Modal -->
-<div class="modal-overlay" id="deleteUserModal">
+<div class="modal-overlay" id="deleteUserModal" data-backdrop-close="off">
     <div class="modal-content" style="max-width:420px;">
         <div class="modal-header">
             <h3 class="modal-title">Remove Faculty Account</h3>

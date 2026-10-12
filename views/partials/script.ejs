@@ -2,6 +2,8 @@
     progress bar and per-button spinners for anything that takes a moment. %>
 <script src="/js/loading.js?v=<%= assetVersion %>"></script>
 <script src="/js/main.js?v=<%= assetVersion %>"></script>
+<%# The app's own confirmation modal, for choices that cannot be undone %>
+<script src="/js/confirm-dialog.js?v=<%= assetVersion %>"></script>
 <script src="/js/connection-status.js?v=<%= assetVersion %>"></script>
 <%# One live connection for the whole page, and the one place that knows
     whether this host can hold a stream open or has to poll instead. Loaded

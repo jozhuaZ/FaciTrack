@@ -309,8 +309,16 @@ const _tabs = [
 
     // ── Clear read ──
     if (clearRead) {
-        clearRead.addEventListener('click', function () {
-            if (!confirm('Remove all read notifications? This cannot be undone.')) return;
+        clearRead.addEventListener('click', async function () {
+            const ok = window.ConfirmDialog
+                ? await window.ConfirmDialog.ask({
+                    title: 'Clear read notifications?',
+                    message: 'Every notification you have already read will be removed. Unread ones stay. This cannot be undone.',
+                    confirmText: 'Clear read',
+                    danger: true,
+                })
+                : window.confirm('Remove all read notifications? This cannot be undone.');
+            if (!ok) return;
 
             fetch('/notifications/read', { method: 'DELETE' })
                 .catch(function (err) { console.error('[Notifications] Failed to clear read:', err); });
