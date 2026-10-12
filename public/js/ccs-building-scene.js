@@ -121,6 +121,19 @@ function _buildGround() {
 function _loadEnvironment() {
   var loader = new THREE.GLTFLoader();
 
+  // Each model file is fetched once and copied for every placement. The 20
+  // clouds use only two files, and calling load() per cloud started twenty
+  // downloads at once — the browser does not reliably merge them.
+  var loaded = {};
+  function loadOnce(url) {
+    if (!loaded[url]) {
+      loaded[url] = new Promise(function (resolve, reject) {
+        loader.load(url, resolve, undefined, reject);
+      });
+    }
+    return loaded[url].then(function (gltf) { return gltf.scene.clone(true); });
+  }
+
   // 20 clouds spread in all directions — big gaps between each
   var clouds = [
     ['/models/env-cloud1.glb',   20,  52, -75,  60, 0.0],
@@ -146,8 +159,7 @@ function _loadEnvironment() {
   ];
 
   clouds.forEach(function(c, i) {
-    loader.load(c[0], function(gltf) {
-      var cloud = gltf.scene;
+    loadOnce(c[0]).then(function(cloud) {
       var bbox  = new THREE.Box3().setFromObject(cloud);
       var size  = new THREE.Vector3(); bbox.getSize(size);
       var maxD  = Math.max(size.x, size.y, size.z);
@@ -161,7 +173,7 @@ function _loadEnvironment() {
         ms.forEach(function(m) { if(m.map){m.map.encoding=THREE.sRGBEncoding;} m.needsUpdate=true; });
       });
       ccsScene.add(cloud);
-    }, undefined, function(){});
+    }).catch(function(){});
   });
 
   // Exactly 2 trees in front of building
@@ -170,8 +182,7 @@ function _loadEnvironment() {
     ['/models/env-tree2.glb',  22, 22, 5.4, 0.3],
   ];
   trees.forEach(function(t, i) {
-    loader.load(t[0], function(gltf) {
-      var tree = gltf.scene;
+    loadOnce(t[0]).then(function(tree) {
       var bbox = new THREE.Box3().setFromObject(tree);
       var size = new THREE.Vector3(); bbox.getSize(size);
       if (size.y > 0.01) tree.scale.setScalar(t[3] / size.y);
@@ -185,6 +196,6 @@ function _loadEnvironment() {
         ms.forEach(function(m) { if(m.map){m.map.encoding=THREE.sRGBEncoding;} m.needsUpdate=true; });
       });
       ccsScene.add(tree);
-    }, undefined, function(e){ console.warn('Tree',i,'fail',e); });
+    }).catch(function(e){ console.warn('Tree',i,'fail',e); });
   });
 }

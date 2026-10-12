@@ -9,7 +9,7 @@
 
 // Bump when public/models/ccs-building.glb is replaced. It used to be
 // Date.now(), which made every visit download the 12 MB model again.
-var CCS_MODEL_VERSION = '1';
+var CCS_MODEL_VERSION = '2';
 
 /**
  * Settles once the real model has replaced the stand-in, or failed to. The
