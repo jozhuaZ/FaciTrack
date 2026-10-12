@@ -93,7 +93,7 @@
                         <div class="sidebar-divider"></div>
                         <div style="padding:0.75rem;background:var(--gray-50);border-radius:var(--radius-md);border:1px solid var(--gray-200);width:100%;">
                             <p style="font-size:0.75rem;color:var(--gray-500);margin-bottom:0.25rem;">Next Available</p>
-                            <p style="font-size:0.875rem;font-weight:600;color:var(--primary-blue);"><%= faculty.nextAvailable ?? 'No upcoming available slot' %></p>
+                            <p id="nextAvailableText" style="font-size:0.875rem;font-weight:600;color:var(--primary-blue);"><%= faculty.nextAvailable ?? 'No upcoming available slot' %></p>
                         </div>
                     </aside>
 
@@ -187,7 +187,7 @@ const SLOT_REASON_HELP = {
     'Instructor away': 'The instructor has marked this whole day unavailable.',
     'Instructor unavailable today': 'The instructor has set their status to unavailable for today.',
     'Already booked': 'Another student has this slot.',
-    'Being booked': 'Another student is completing a booking for this slot right now.',
+    'Another student is booking': 'Another student is filling in the booking form for this slot right now. It frees up again if they leave without booking.',
     'Instructor busy': 'The instructor has something else on their calendar at this time.',
     'Too soon to book': 'Slots must be booked at least ' + LEAD_TIME_HOURS + ' hours ahead.',
     'No room or link': 'Every consultation room is full for this time and the instructor has no online meeting link.',
@@ -267,6 +267,8 @@ const today = new Date();
 let selectedSlotId = null;
 let selectedSlotText = null;
 let selectedDate = null;
+let selectedDateKey = null;   // the day whose slot list is open
+let openDay = null;           // { dayName, dayNum } of that list, for redrawing it
 
 function renderCalendar() {
     document.getElementById('calMonthLabel').textContent = monthNames[viewMonth] + ' ' + viewYear;
@@ -345,6 +347,8 @@ function renderCalendar() {
         if (dayGroup) {
             const dayIsOpen = Boolean(availableByDate[dateKey]);
             cell.classList.add(dayIsOpen ? 'available' : 'full');
+            cell.dataset.date = dateKey;
+            if (dateKey === selectedDateKey) cell.classList.add('selected');
             const tooltipText = dayIsOpen
                 ? 'Available for consultation'
                 : 'Scheduled, but nothing is bookable — tap to see why';
@@ -369,6 +373,8 @@ function renderCalendar() {
                 document.querySelectorAll('.cal-cell.available, .cal-cell.full').forEach(c => c.classList.remove('selected'));
                 this.classList.add('selected');
                 selectedDate = `${dayName}, ${monthNames[viewMonth]} ${d}, ${viewYear}`;
+                selectedDateKey = dateKey;
+                openDay = { dayName: dayName, dayNum: d };
                 selectedSlotId = null;
                 selectedSlotText = null;
                 updateBookButton();
@@ -431,7 +437,8 @@ function showSlotDetail(dayName, dayNum, dayGroups) {
             const blocked = Boolean(reason);
 
             const btn = document.createElement('button');
-            btn.className = 'slot-select-btn' + (blocked ? ' full' : '');
+            btn.className = 'slot-select-btn' + (blocked ? ' full' : '') +
+                (!blocked && sub.id === selectedSlotId ? ' selected' : '');
             btn.disabled = blocked;
             btn.innerHTML = `
                 <span class="slot-num-badge">${slotIndex}</span>
@@ -580,4 +587,100 @@ function hideTooltip() {
 })();
 
 renderCalendar();
+
+/* ── Live slot status ──
+   A slot another student starts booking — or books — while this page is open
+   used to look free until a reload, and one they left looked taken. The page
+   asks every few seconds and redraws only when something actually changed.
+   Only while the tab is visible: a hidden tab catches up when it is shown. */
+(function liveSlotStatus() {
+    const POLL_MS = 8000;
+    const STATUS_URL = '/student/faculty/' + encodeURIComponent(facultyId) + '/slot-status';
+    // Reasons that outrank "booked" and "being booked", as slotReason() orders them
+    const OUTRANKS = new Set(['Instructor away', 'Instructor unavailable today']);
+    let busy = false;
+
+    function liveReason(sub, held, booked) {
+        if (OUTRANKS.has(sub.baseReason)) return sub.baseReason;
+        if (booked.has(sub.id)) return 'Already booked';
+        if (held.has(sub.id)) return 'Another student is booking';
+        return sub.baseReason || null;
+    }
+
+    function apply(held, booked) {
+        let changed = false;
+        let lostSelection = false;
+        slots.forEach(group => group.subSlots.forEach(sub => {
+            const next = liveReason(sub, held, booked);
+            if (next === (sub.unavailableReason || null)) return;
+            sub.unavailableReason = next;
+            sub.isBooked = booked.has(sub.id);
+            sub.isReservedByOther = held.has(sub.id);
+            changed = true;
+            if (next && sub.id === selectedSlotId) lostSelection = next;
+        }));
+        if (!changed) return;
+
+        // Which days still have something bookable
+        Object.keys(availableByDate).forEach(k => delete availableByDate[k]);
+        slots.forEach(group => {
+            if (unavailableDates.has(group.date)) return;
+            if (group.subSlots.some(s => !s.unavailableReason)) availableByDate[group.date] = group;
+        });
+
+        if (lostSelection) {
+            selectedSlotId = null;
+            selectedSlotText = null;
+            updateBookButton();
+            showToast('error', 'Slot just taken',
+                lostSelection === 'Already booked'
+                    ? 'Another student has just booked the slot you picked. Please choose another time.'
+                    : 'Another student has just started booking the slot you picked. Please choose another time.');
+        }
+
+        renderNextAvailable();
+        renderCalendar();
+        const panel = document.getElementById('slotDetailPanel');
+        if (openDay && selectedDateKey && panel && panel.classList.contains('show') && slotsByDate[selectedDateKey]) {
+            showSlotDetail(openDay.dayName, openDay.dayNum, [slotsByDate[selectedDateKey]]);
+        }
+    }
+
+    // The sidebar's "Next available", in the same words the server uses, so a
+    // slot that just went to someone else stops being advertised
+    function renderNextAvailable() {
+        const el = document.getElementById('nextAvailableText');
+        if (!el) return;
+        const now = new Date();
+        const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const open = [];
+        slots.forEach(group => group.subSlots.forEach(sub => {
+            if (sub.unavailableReason) return;
+            const mins = parseTime(sub.timeStart);
+            if (group.date < todayKey || (group.date === todayKey && mins <= nowMins)) return;
+            open.push({ group, sub, mins });
+        }));
+        open.sort((a, b) => (a.group.date !== b.group.date ? (a.group.date < b.group.date ? -1 : 1) : a.mins - b.mins));
+        if (!open.length) { el.textContent = 'No upcoming available slot'; return; }
+        const next = open[0];
+        const [, m, d] = next.group.date.split('-').map(Number);
+        el.textContent = `${next.group.day}, ${monthNames[m - 1]} ${d} — ${next.sub.timeStart}`;
+    }
+
+    function check() {
+        if (busy || document.hidden) return;
+        busy = true;
+        fetch(STATUS_URL, { cache: 'no-store', credentials: 'same-origin' })
+            .then(res => (res.ok ? res.json() : null))
+            .then(data => {
+                if (data && data.success) apply(new Set(data.held), new Set(data.booked));
+            })
+            .catch(() => { /* the next check will try again */ })
+            .then(() => { busy = false; });
+    }
+
+    setInterval(check, POLL_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+}());
 </script>

@@ -255,6 +255,24 @@ const ConsultationModel = {
      * because half the reasons removed a slot and half greyed it. Here every
      * reason is a flag, so the page can show one consistent list.
      */
+    /**
+     * Ids of this instructor's slots between two dates that an appointment is
+     * holding (pending, confirmed or completed). Light on purpose: the
+     * student profile asks for it every few seconds while it is open.
+     */
+    async getBookedSlotIds(instructorPublicId, startKey, endKey) {
+        const [rows] = await pool.execute(
+            `SELECT DISTINCT ch.id
+               FROM consultation_hours ch
+               JOIN users u ON u.id = ch.instructor_id
+               JOIN appointments a ON a.consultation_hour_id = ch.id
+                                   AND a.status IN (${SLOT_HOLDING_SQL})
+              WHERE u.public_id = ? AND ch.consultation_date BETWEEN ? AND ?`,
+            [instructorPublicId, startKey, endKey]
+        );
+        return rows.map(r => r.id);
+    },
+
     async getSlotsForStudentView(publicId) {
         const [rows] = await pool.execute(
             `SELECT

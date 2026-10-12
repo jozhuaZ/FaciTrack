@@ -343,6 +343,8 @@ function getDisplayStatus(faculty) {
 // Routes
 router.get('/dashboard', StudentController.renderDashboardPage);
 router.get('/faculty/:id', StudentController.renderFacultyConsultationPage);
+// Live: which of this instructor's slots another student is booking right now
+router.get('/faculty/:id/slot-status', StudentController.getSlotStatus);
 
 router.post('/schedule/reserve/:slotId', StudentController.createSlotReservation);
 router.post('/schedule/reserve/:slotId/extend', StudentController.extendSlotReservation);

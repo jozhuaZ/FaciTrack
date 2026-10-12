@@ -51,7 +51,7 @@ function slotReason(sub, { isReservedByOther, roomAvailable, canDoOnline }) {
     if (sub.dateBlocked) return 'Instructor away';
     if (sub.statusBlocked) return 'Instructor unavailable today';
     if (sub.isBooked) return 'Already booked';
-    if (isReservedByOther) return 'Being booked';
+    if (isReservedByOther) return 'Another student is booking';
     if (sub.calendarBlocked) return 'Instructor busy';
     if (sub.tooSoon) return 'Too soon to book';
     if (!roomAvailable && !canDoOnline) return 'No room or link';
@@ -303,8 +303,11 @@ const StudentController = {
             const startKey = toKey(windowStart);
             const endKey = toKey(windowEnd);
 
+            // Holds store the internal user id; the session carries the public
+            // one, so compare against the internal id or a student's own hold
+            // reads back to them as somebody else's.
             const reservedByOther = new Set(
-                activeReservations.filter(r => r.student_id !== studentId).map(r => r.slot_id)
+                activeReservations.filter(r => r.student_id !== user.internal_id).map(r => r.slot_id)
             );
 
             // Online is offerable once the instructor has somewhere to host it:
@@ -333,6 +336,12 @@ const StudentController = {
                             // guess why something is closed
                             unavailableReason: slotReason(sub, {
                                 isReservedByOther, roomAvailable, canDoOnline,
+                            }),
+                            // The reason with "booked" and "being booked" set
+                            // aside. Those two change by the second; the page
+                            // re-applies them from /slot-status on top of this.
+                            baseReason: slotReason({ ...sub, isBooked: false }, {
+                                isReservedByOther: false, roomAvailable, canDoOnline,
                             }),
                         };
                     }),
@@ -630,6 +639,38 @@ const StudentController = {
             console.error('[StudentController.renderInstructorHistoryPage]', err);
             // Rendered by the error page rather than written as bare text.
             throw err;
+        }
+    },
+
+    /**
+     * GET /student/faculty/:id/slot-status
+     * Which of this instructor's slots are taken right now: held by another
+     * student who is filling in the booking form, or booked outright. The
+     * profile page polls it, so a slot someone starts booking shows as such
+     * without a reload — and frees up again when they leave.
+     */
+    async getSlotStatus(req, res) {
+        try {
+            const facultyPublicId = req.params.id;
+            const me = await UserModel.getUserByPublicId(req.session.userId);
+            if (!me) return res.status(401).json({ success: false });
+
+            const { windowStart, windowEnd } = getTwoWeekWindow();
+            const [holds, booked] = await Promise.all([
+                SlotReservation.getActiveReservationsForInstructor(facultyPublicId),
+                ConsultationModel.getBookedSlotIds(facultyPublicId, localDateKey(windowStart), localDateKey(windowEnd)),
+            ]);
+
+            res.set('Cache-Control', 'no-store');
+            res.json({
+                success: true,
+                // Never the student's own hold, and never who holds it
+                held: holds.filter(h => h.student_id !== me.internal_id).map(h => h.slot_id),
+                booked,
+            });
+        } catch (err) {
+            console.error('[StudentController.getSlotStatus]', err);
+            res.status(500).json({ success: false });
         }
     },
 
