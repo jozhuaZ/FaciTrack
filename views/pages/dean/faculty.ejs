@@ -199,38 +199,33 @@
 .fs-bottom-dot.travel{background:#ea580c}
 .fs-bottom-dot.leave {background:#dc2626}
 .fs-bottom-empty{font-size:.8rem;color:#94a3b8;margin:0}
-.fs-bottom-grid{display:flex;flex-wrap:wrap;gap:.5rem}
-/* mini card inside bottom panels */
-.fs-mini-card{
-  display:flex;align-items:center;gap:.5rem;
-  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
-  padding:.35rem .6rem;
+/* Away lists: names only, two to a line. A long list scrolls inside its
+   panel once expanded, so it can never push the board itself off screen. */
+.fs-bottom-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:.3rem 1rem;align-content:start;
 }
-.fs-mini-card.travel{border-left:3px solid #ea580c}
-.fs-mini-card.leave {border-left:3px solid #dc2626}
-.fs-mini-photo{
-  width:32px;height:32px;border-radius:50%;overflow:hidden;
-  background:#f1f5f9;border:2px solid #e2e8f0;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+.fs-bottom-grid.is-expanded{max-height:32vh;overflow-y:auto;padding-right:.25rem}
+.fs-away-name{
+  display:flex;align-items:baseline;gap:.45rem;margin:0;
+  font-size:.85rem;font-weight:600;color:#1e293b;line-height:1.35;
+  overflow-wrap:anywhere;   /* never cut a name short; wrap it instead */
 }
-.fs-mini-photo svg{width:55%;height:55%;color:#94a3b8}
-.fs-mini-photo img{width:100%;height:100%;object-fit:cover}
-.fs-mini-initials{
-  font-size:.8rem;font-weight:800;color:#475569;letter-spacing:.02em;
+.fs-away-name::before{
+  content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  transform:translateY(-1px);
 }
-.fs-mini-name{font-size:.8rem;font-weight:700;color:#1e293b;margin:0;white-space:nowrap}
-.fs-mini-sub {font-size:.7rem;color:#475569;margin:0;white-space:nowrap}
-
-/* Shown once a panel holds more than it can display at a glance. Sized like a
-   mini card so the row keeps its rhythm rather than ending on a stray button. */
-.fs-mini-more{
-  display:flex;align-items:center;gap:.35rem;
-  background:#fff;border:1px dashed #cbd5e1;border-radius:8px;
-  padding:.35rem .7rem;cursor:pointer;
-  font-family:var(--font-body);font-size:.78rem;font-weight:700;color:#475569;
+.fs-away-name.travel::before{background:#ea580c}
+.fs-away-name.leave::before{background:#dc2626}
+.fs-bottom-empty{grid-column:1/-1}
+/* The expand / collapse control, under the names it reveals */
+.fs-away-more{
+  grid-column:1/-1;justify-self:start;margin-top:.15rem;
+  padding:.15rem 0;border:0;background:none;cursor:pointer;
+  font-family:var(--font-body);font-size:.78rem;font-weight:700;color:#2563eb;
 }
-.fs-mini-more:hover{border-color:#94a3b8;color:#1e293b;background:#f8fafc}
-.fs-mini-more:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.fs-away-more:hover{text-decoration:underline}
+.fs-away-more:focus-visible{outline:2px solid #2563eb;outline-offset:2px;border-radius:4px}
 
 .fs-no-results{text-align:center;padding:2rem;color:#94a3b8;font-size:.875rem}
 /* ── Modal ── */
@@ -1026,49 +1021,27 @@
      board is up appears without a reload — the live feed already merges
      availability into facultyData, and renderBoard() calls this.
 
-     Each panel shows a handful and then offers the rest, so a department with
-     a dozen people away does not push the main grid off the screen. The
-     expanded state is per panel and survives a re-render, because a dean who
-     opened one to read it should not have it close under them when somebody
-     across campus walks into a room. */
+     Names only, two to a line. Each panel shows its first two lines and then
+     offers the rest in place — no modal — so a department with a dozen people
+     away does not push the main grid off the screen. The expanded state is per
+     panel and survives a re-render, because a dean who opened one to read it
+     should not have it close under them when somebody walks into a room. */
 
-  var PANEL_VISIBLE = 6;
+  var PANEL_VISIBLE = 4;   // two lines of two
   var panelExpanded = { travel: false, leave: false };
 
-  function miniCard(f, kind) {
-    var card = document.createElement('div');
-    card.className = 'fs-mini-card ' + kind;
-
-    var face = f.photo
-      ? '<img src="' + esc(f.photo) + '" alt="" loading="lazy">'
-      : '<span class="fs-mini-initials">' + esc(initials(f.name)) + '</span>';
-
-    card.innerHTML =
-      '<div class="fs-mini-photo">' + face + '</div>' +
-      '<div><p class="fs-mini-name">' + esc(f.name) + '</p>' +
-      '<p class="fs-mini-sub">' + esc(f.position) + '</p></div>';
-
-    // Same fallback as the main board: a missing file must not leave a hole.
-    var img = card.querySelector('.fs-mini-photo img');
-    if (img) {
-      img.addEventListener('error', function () {
-        img.remove();
-        var holder = card.querySelector('.fs-mini-photo');
-        if (holder && !holder.querySelector('.fs-mini-initials')) {
-          var span = document.createElement('span');
-          span.className = 'fs-mini-initials';
-          span.textContent = initials(f.name);
-          holder.appendChild(span);
-        }
-      });
-    }
-    return card;
+  function nameItem(f, kind) {
+    var item = document.createElement('p');
+    item.className = 'fs-away-name ' + kind;
+    item.textContent = f.name;
+    return item;
   }
 
   function fillPanel(gridId, kind, list, emptyText) {
     var grid = document.getElementById(gridId);
     if (!grid) return;
     grid.innerHTML = '';
+    grid.classList.remove('is-expanded');
 
     if (!list.length) {
       var none = document.createElement('p');
@@ -1078,15 +1051,16 @@
       return;
     }
 
-    var expanded = panelExpanded[kind];
+    var expanded = panelExpanded[kind] && list.length > PANEL_VISIBLE;
+    grid.classList.toggle('is-expanded', expanded);
     var shown = expanded ? list : list.slice(0, PANEL_VISIBLE);
-    shown.forEach(function (f) { grid.appendChild(miniCard(f, kind)); });
+    shown.forEach(function (f) { grid.appendChild(nameItem(f, kind)); });
 
     var hidden = list.length - shown.length;
     if (hidden > 0 || expanded) {
       var more = document.createElement('button');
       more.type = 'button';
-      more.className = 'fs-mini-more';
+      more.className = 'fs-away-more';
       more.textContent = expanded ? 'Show fewer' : '+' + hidden + ' more';
       more.setAttribute('aria-expanded', String(expanded));
       more.addEventListener('click', function () {
