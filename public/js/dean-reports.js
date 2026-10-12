@@ -1,9 +1,9 @@
 /**
  * Dean Reports.
  *
- * Three plain tables — faculty roster, make-up requests, presence history —
- * each with search, filters and pagination. They share one small controller
- * rather than three near-identical copies, so a fix to paging or filtering
+ * Plain tables — make-up requests, presence history, class attendance and
+ * unanswered requests — each with search, filters and pagination. They share one small controller
+ * rather than near-identical copies, so a fix to paging or filtering
  * lands on all of them at once.
  *
  * Rows are rendered from data the server already put on the page; nothing here
@@ -15,35 +15,6 @@
 
     var createTable = window.ReportTable.create;
     var esc = window.ReportTable.escapeHtml;
-
-    // ── Faculty roster ───────────────────────────────────────────────────────
-    var PRESENCE_BADGE = {
-        'in-room': '<span class="table-badge confirmed">In Room</span>',
-        'out-of-room': '<span class="table-badge declined">Out of Room</span>',
-        'unknown': '<span class="table-badge">No data</span>',
-    };
-
-    function availPill(row) {
-        return '<span class="avail-pill ' + esc(row.availability || 'none') + '">' +
-            esc(row.availabilityLabel || 'Not set') + '</span>';
-    }
-
-    var facultyTable = createTable(document.querySelector('[data-table="faculty"]'), {
-        rows: window.DEAN_REPORTS.faculty,
-        noun: 'instructor',
-        title: 'Faculty Roster',
-        searchText: function (r) { return r.name + ' ' + r.position + ' ' + r.officeRoom; },
-        render: function (r) {
-            return '<td><strong>' + esc(r.name) + '</strong></td>' +
-                '<td>' + esc(r.position) + '</td>' +
-                '<td>' + esc(r.officeRoom) + '</td>' +
-                '<td>' + availPill(r) + '</td>' +
-                '<td>' + (PRESENCE_BADGE[r.bleStatus] || PRESENCE_BADGE.unknown) + '</td>' +
-                '<td style="text-align:center">' + esc(r.hoursThisMonth) + 'h</td>' +
-                '<td style="text-align:center">' + esc(r.consultationsThisMonth) + '</td>' +
-                '<td style="text-align:center">' + esc(r.avgDuration || '—') + '</td>';
-        },
-    });
 
     // ── Make-up requests ─────────────────────────────────────────────────────
     var STATUS_BADGE = {
@@ -112,34 +83,6 @@
                 '<td style="white-space:nowrap">' + esc(r.requestedAt) + '</td>';
         },
     });
-
-    /* ── Live presence ──
-       The roster carries an In Room column, and this is a page a dean leaves
-       open. Merging into the same array the table renders from means a search
-       or a page position is kept — the rows redraw, the view does not jump. */
-    if (window.PresenceLive) {
-        window.PresenceLive.onUpdate(function (live) {
-            var byId = {};
-            live.forEach(function (f) { byId[f.id] = f; });
-
-            var changed = false;
-            window.DEAN_REPORTS.faculty.forEach(function (row) {
-                var entry = byId[row.id];
-                if (!entry) return;
-                if (row.bleStatus !== entry.presence) { row.bleStatus = entry.presence; changed = true; }
-                if (row.availability !== entry.availability) {
-                    row.availability = entry.availability;
-                    row.availabilityLabel = entry.availabilityLabel;
-                    changed = true;
-                }
-            });
-
-            // draw() re-reads the same array it was handed, so mutating in
-            // place and redrawing keeps the current page and any search the
-            // dean has typed. Rebuilding the table would throw both away.
-            if (changed && facultyTable) facultyTable.draw();
-        });
-    }
 
     // ── Class attendance ─────────────────────────────────────────────────────
     // One row per class meeting (workload + approved make-ups) with the time
