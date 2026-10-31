@@ -340,14 +340,27 @@ const PresenceModel = {
      * id. For the instructor's sidebar; is_present is null when no scanner has
      * ever reported on them.
      */
-    async getOwn(publicId) {
+    async getOwn(publicId, scannerOfflineAfterSeconds = 60) {
         const [[row]] = await pool.execute(
-            `SELECT fp.is_present, fp.signal_lost, r.room_number
+            `SELECT fp.is_present,
+                    -- Read-time liveness, so the sidebar does not keep saying
+                    -- "in room" while waiting for the sweep to notice a dead
+                    -- scanner. Same rule as the dean's faculty queries.
+                    CASE
+                        WHEN fp.is_present = 1
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM ble_scanners s
+                                  WHERE s.room_id = fp.room_id
+                                    AND s.last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                             ) THEN 1
+                        ELSE 0
+                    END AS signal_lost,
+                    r.room_number
                FROM users u
                LEFT JOIN faculty_presence fp ON fp.instructor_id = u.id
                LEFT JOIN rooms r             ON fp.room_id       = r.id
               WHERE u.public_id = ?`,
-            [publicId]
+            [scannerOfflineAfterSeconds, publicId]
         );
         return row || null;
     },

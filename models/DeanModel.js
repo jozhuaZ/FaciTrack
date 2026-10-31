@@ -51,7 +51,7 @@ const DeanModel = {
      * Consultation totals cover the given window and count only work that
      * actually happened or is committed to happen.
      */
-    async getFaculty(deanPublicId, { since, until } = {}) {
+    async getFaculty(deanPublicId, { since, until, scannerOfflineAfterSeconds = 60 } = {}) {
         const [rows] = await pool.execute(
             `SELECT u.public_id            AS id,
                     CONCAT(u.first_name, ' ', u.last_name) AS name,
@@ -65,7 +65,19 @@ const DeanModel = {
                     office.room_type       AS office_room_type,
                     officeDept.building    AS office_building,
                     fp.is_present,
-                    fp.signal_lost,
+                    -- Same read-time rule as UserModel.getFacultyPresence: a
+                    -- silent scanner is "no signal" as soon as its last report
+                    -- is older than the threshold, without waiting for the
+                    -- absence sweep to write signal_lost.
+                    CASE
+                        WHEN fp.is_present = 1
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM ble_scanners s
+                                  WHERE s.room_id = fp.room_id
+                                    AND s.last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                             ) THEN 1
+                        ELSE 0
+                    END                    AS signal_lost,
                     fp.last_updated        AS presence_updated_at,
                     fp.room_id             AS detected_room_id,
                     detected.room_number   AS detected_room_number,
@@ -92,7 +104,7 @@ const DeanModel = {
               WHERE u.role = 'Instructor'
                 AND u.department_id <=> dean.department_id
               ORDER BY u.last_name ASC, u.first_name ASC`,
-            [deanPublicId, since, until]
+            [scannerOfflineAfterSeconds, deanPublicId, since, until]
         );
         return rows;
     },
