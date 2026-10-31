@@ -255,6 +255,35 @@ const PresenceModel = {
         };
     },
 
+    /**
+     * A cheap fingerprint of "what presence looks like right now".
+     *
+     * A host that cannot hold an SSE stream open (Vercel answers the stream
+     * with 204) has no way to deliver `presence:changed`, so pages that show
+     * In/Out would only catch up on their own slow backstop. The notification
+     * poll already runs every 15s on those hosts; this lets it say whether the
+     * presence tables moved since the last poll, without shipping the whole
+     * roster.
+     *
+     * Two things change what a page should draw: a presence row being written
+     * (arrive, leave, move — `last_updated` is bumped by all three), and the
+     * set of scanners that are currently live, which decides whether a held
+     * row means "in" or "no signal". The scanner set is included because the
+     * sweep is not guaranteed to have run, and its membership changes without
+     * touching `faculty_presence`.
+     */
+    async getPresenceVersion(scannerOfflineAfterSeconds = 60) {
+        const [[row]] = await pool.execute(
+            `SELECT COALESCE(UNIX_TIMESTAMP(MAX(last_updated)), 0) AS last_change,
+                    (SELECT COALESCE(GROUP_CONCAT(id ORDER BY id), '')
+                       FROM ble_scanners
+                      WHERE last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)) AS live_scanners
+               FROM faculty_presence`,
+            [scannerOfflineAfterSeconds]
+        );
+        return `${row.last_change}:${row.live_scanners}`;
+    },
+
     /** Each room's own threshold, so a reading can be judged against the line
      *  that was actually applied to it. NULL means the room is on the default. */
     async getRoomThresholds(roomIds) {

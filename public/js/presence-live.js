@@ -25,7 +25,8 @@
     var ENDPOINT = '/presence/faculty.json';
 
     // A scanner going quiet sends nothing at all, so only elapsed time reveals
-    // that somebody's tag stopped reporting. The stream covers the rest.
+    // that somebody's tag stopped reporting. The stream — or, where the host
+    // cannot hold one, Realtime's poll fingerprint — covers the rest.
     var BACKSTOP_MS = 60000;
 
     var PRESENCE_CLASSES = ['in-room', 'out-of-room', 'unknown'];

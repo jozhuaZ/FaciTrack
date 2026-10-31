@@ -24,6 +24,7 @@
     var connected = false;
     var pollTimer = null;
     var lastSeenId = 0;
+    var lastPresenceVersion = null;
 
     // Often enough to feel live, rarely enough that a tab left open all day is
     // not thousands of requests. Only used where the stream cannot be held.
@@ -40,8 +41,14 @@
      *
      * Each notification is emitted exactly as the stream would have sent it,
      * so nothing subscribing through Realtime.on() can tell the difference.
-     * presence:changed is not replayed: it is a statement about right now, and
-     * a stale one is worse than none.
+     *
+     * presence:changed is different: on a stream it carries the change that
+     * just happened, but a poll only ever sees "what is true now". Replaying a
+     * stale event would be worse than none, so the poll carries a fingerprint
+     * of the presence tables instead and emits presence:changed when it moves.
+     * Subscribers re-read the roster themselves; nothing is inferred from the
+     * event. That is what keeps the dean's boards current on a host that
+     * answers the stream with 204.
      */
     function pollOnce() {
         return fetch('/notifications/poll?after=' + lastSeenId, { credentials: 'same-origin' })
@@ -55,6 +62,11 @@
                     if (n.id > lastSeenId) lastSeenId = n.id;
                     emit('notification:new', n);
                 });
+
+                if (data.presenceVersion && data.presenceVersion !== lastPresenceVersion) {
+                    lastPresenceVersion = data.presenceVersion;
+                    emit('presence:changed', null);
+                }
             })
             .catch(function () {
                 if (connected) { connected = false; emit('connection:error'); }
@@ -67,13 +79,16 @@
 
         // Learn the current high-water mark before emitting anything, so the
         // first poll does not replay every notification the user already has
-        // as though it just arrived.
+        // as though it just arrived. The presence fingerprint is seeded the
+        // same way: the page has just been rendered, so nothing has changed
+        // yet, and the first real change is what should trigger a re-read.
         fetch('/notifications/poll?after=0', { credentials: 'same-origin' })
             .then(function (res) { return res.ok ? res.json() : { notifications: [] }; })
             .then(function (data) {
                 (data.notifications || []).forEach(function (n) {
                     if (n.id > lastSeenId) lastSeenId = n.id;
                 });
+                lastPresenceVersion = data.presenceVersion || null;
                 connected = true;
                 emit('connection:open');
             })

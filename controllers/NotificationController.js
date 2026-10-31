@@ -2,6 +2,8 @@
 const NotificationModel = require('../models/NotificationModel');
 const UserModel = require('../models/UserModel');
 const PushSubscriptionModel = require('../models/PushSubscriptionModel');
+const PresenceModel = require('../models/PresenceModel');
+const appSettings = require('../services/app-settings');
 const push = require('../services/push');
 const { addClient, removeClient } = require('../realtime/sseRegistry');
 
@@ -61,13 +63,19 @@ const NotificationController = {
 
         try {
             const after = parseInt(req.query.after, 10) || 0;
-            const [notifications, unreadCount] = await Promise.all([
+            const staleAfter = await appSettings.get('presence_scanner_offline_after_sec');
+            const [notifications, unreadCount, presenceVersion] = await Promise.all([
                 NotificationModel.getSince(req.session.userId, after),
                 NotificationModel.getUnreadCount(req.session.userId),
+                // Polling is the transport on hosts that cannot hold a stream
+                // open, so it is also the only way those pages hear that
+                // somebody moved. A fingerprint is enough: the page re-reads
+                // the roster through /presence/faculty.json when it changes.
+                PresenceModel.getPresenceVersion(staleAfter),
             ]);
 
             res.set('Cache-Control', 'no-store');
-            res.json({ notifications, unreadCount });
+            res.json({ notifications, unreadCount, presenceVersion });
         } catch (err) {
             console.error('[NotificationController.pollNotifications]', err);
             res.status(500).json({ error: 'Could not load notifications.' });
