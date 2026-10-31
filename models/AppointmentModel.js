@@ -73,6 +73,26 @@ const AppointmentModel = {
         return count;
     },
 
+    /**
+     * The student ID and section/group used on this student's most recent
+     * booking. The booking form fills these in from here so a student only
+     * types them on their first booking; null when they have never booked.
+     *
+     * @param {number} studentId  users.id
+     */
+    async getLastBookingDetails(studentId) {
+        const [rows] = await pool.execute(
+            `SELECT student_number, section_group_name
+               FROM appointments
+              WHERE student_id = ?
+              ORDER BY created_at DESC, id DESC
+              LIMIT 1`,
+            [studentId]
+        );
+
+        return rows[0] || null;
+    },
+
     async getConsultationHourId(appointmentId) {
         try {
             const [rows] = await pool.execute(

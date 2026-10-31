@@ -2,6 +2,10 @@
     <link rel="stylesheet" href="/css/instructor/dashboard.css?v=<%= assetVersion %>">
     <link rel="stylesheet" href="/css/student/profile.css?v=<%= assetVersion %>">
 
+    <%# Details from the student's most recent booking, if any. Guarded so the
+        page still renders when the controller does not pass it. %>
+    <% const lastBooking = (typeof previousBooking !== 'undefined' && previousBooking) ? previousBooking : {}; %>
+
     <style>
   .consult-type-btn.is-disabled {
     opacity: .45; cursor: not-allowed; filter: grayscale(1);
@@ -141,7 +145,9 @@
                                         <label class="form-label">Student ID <span
                                                 style="color:#e53e3e;">*</span></label>
                                         <input type="text" class="form-input" id="studentNumber" name="studentNumber"
-                                            placeholder="e.g. 23100xxxx" required>
+                                            placeholder="e.g. 23100xxxx"
+                                            value="<%= lastBooking.student_number || '' %>"
+                                            required>
                                     </div>
                                 </div>
 
@@ -150,7 +156,9 @@
                                         <label class="form-label">Section/Group Name <span
                                                 style="color:#e53e3e;">*</span></label>
                                         <input type="text" class="form-input" id="sectionGroup" name="sectionGroup"
-                                            placeholder="e.g. BSIT-3E" required>
+                                            placeholder="e.g. BSIT-3E"
+                                            value="<%= lastBooking.section_group_name || '' %>"
+                                            required>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Course/Subject <span

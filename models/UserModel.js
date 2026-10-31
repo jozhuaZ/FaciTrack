@@ -368,7 +368,7 @@ const UserModel = {
      * same query starts returning real values the moment scanners are
      * installed — no change needed here or in the view.
      */
-    async getFacultyPresence({ departmentId = null } = {}) {
+    async getFacultyPresence({ departmentId = null, scannerOfflineAfterSeconds = 60 } = {}) {
         const [rows] = await pool.execute(
             `SELECT u.public_id            AS id,
                     CONCAT(u.first_name, ' ', u.last_name) AS name,
@@ -380,7 +380,21 @@ const UserModel = {
                     office.room_number     AS office_room_number,
                     officeDept.building    AS office_building,
                     fp.is_present,
-                    fp.signal_lost,
+                    -- Liveness is decided here, not only by the sweep job: a
+                    -- scanner that stopped reporting leaves signal_lost at 0
+                    -- until the sweep next runs, and on a serverless host that
+                    -- is the external scheduler's call. Deriving it from the
+                    -- scanner's own last_seen_at means a dead room reads as
+                    -- "no data" immediately, however long the sweep is away.
+                    CASE
+                        WHEN fp.is_present = 1
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM ble_scanners s
+                                  WHERE s.room_id = fp.room_id
+                                    AND s.last_seen_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
+                             ) THEN 1
+                        ELSE 0
+                    END                    AS signal_lost,
                     fp.last_updated        AS presence_updated_at,
                     fp.room_id             AS detected_room_id,
                     detected.room_number   AS detected_room_number,
@@ -395,7 +409,7 @@ const UserModel = {
                 AND u.status = 'Active'
                 AND (? IS NULL OR u.department_id = ?)
               ORDER BY u.last_name ASC, u.first_name ASC`,
-            [departmentId, departmentId]
+            [scannerOfflineAfterSeconds, departmentId, departmentId]
         );
         return rows;
     },

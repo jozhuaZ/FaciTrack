@@ -412,7 +412,10 @@ const StudentController = {
                 return res.redirect(`/student/faculty/${slotDetails.faculty.id}?reserveFailed=1`);
             }
 
-            const appointmentCount = await AppointmentModel.getStudentCount(user.internal_id);
+            const [appointmentCount, previousBooking] = await Promise.all([
+                AppointmentModel.getStudentCount(user.internal_id),
+                AppointmentModel.getLastBookingDetails(user.internal_id),
+            ]);
 
             res.render('pages/student/book', {
                 // Disable modes the instructor cannot actually honour
@@ -431,6 +434,8 @@ const StudentController = {
                 },
                 expiresAt: result.expiresAt.toISOString(),
                 appointmentCount,
+                // Prefills student ID and section/group from their last booking
+                previousBooking,
             });
         } catch (err) {
             console.error('[StudentController.renderFacultyFormConsultationPage]', err);
@@ -521,7 +526,7 @@ const StudentController = {
             // watching the lounge before it is entitled to answer at all.
             const staleAfter = await appSettings.get('presence_scanner_offline_after_sec');
             const [rows, coverage] = await Promise.all([
-                UserModel.getFacultyPresence(),
+                UserModel.getFacultyPresence({ scannerOfflineAfterSeconds: staleAfter }),
                 PresenceModel.loungeCoverage(staleAfter),
             ]);
 
