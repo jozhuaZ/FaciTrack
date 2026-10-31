@@ -1,4 +1,5 @@
 const PresenceModel = require('../models/PresenceModel');
+const appSettings = require('../services/app-settings');
 
 /**
  * The signed-in instructor's own room status, for the sidebar on every
@@ -26,7 +27,8 @@ function shapeOwnPresence(row) {
 
 async function loadOwnPresence(publicId) {
     try {
-        return shapeOwnPresence(await PresenceModel.getOwn(publicId));
+        const scannerOfflineAfter = await appSettings.get('presence_scanner_offline_after_sec');
+        return shapeOwnPresence(await PresenceModel.getOwn(publicId, scannerOfflineAfter));
     } catch (err) {
         console.error('[attachPresence]', err.message);
         return shapeOwnPresence(null);

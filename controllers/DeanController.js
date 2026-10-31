@@ -199,11 +199,14 @@ async function loadDepartment(deanPublicId) {
 
     const { since, until } = monthWindow();
 
-    const staleHours = await appSettings.get('pending_escalate_hours');
+    const [staleHours, scannerOfflineAfter] = await Promise.all([
+        appSettings.get('pending_escalate_hours'),
+        appSettings.get('presence_scanner_offline_after_sec'),
+    ]);
 
     const [dean, facultyRows, presenceRows, makeupRows, notifications, unansweredRows] = await Promise.all([
         DeanModel.getDean(deanPublicId),
-        DeanModel.getFaculty(deanPublicId, { since, until }),
+        DeanModel.getFaculty(deanPublicId, { since, until, scannerOfflineAfterSeconds: scannerOfflineAfter }),
         DeanModel.getPresenceHistory(deanPublicId),
         MakeupRequestModel.getByDepartment(deanPublicId).catch(err => {
             console.error('[Dean] Could not load make-up requests:', err.message);

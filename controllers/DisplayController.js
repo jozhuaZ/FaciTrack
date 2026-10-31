@@ -120,7 +120,10 @@ async function boardFor(device) {
 
     const staleAfter = await appSettings.get('presence_scanner_offline_after_sec');
     const [rows, coverage] = await Promise.all([
-        UserModel.getFacultyPresence({ departmentId: device.department_id }),
+        UserModel.getFacultyPresence({
+            departmentId: device.department_id,
+            scannerOfflineAfterSeconds: staleAfter,
+        }),
         PresenceModel.loungeCoverage(staleAfter),
     ]);
 
