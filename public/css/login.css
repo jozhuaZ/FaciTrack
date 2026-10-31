@@ -115,6 +115,16 @@ body:has(.login-main) main {
     flex-shrink: 0;
 }
 
+/* ── FACITRACK LOGO ── */
+.login-brand-logo {
+    height: 56px;
+    width: auto;
+    max-width: 180px;
+    object-fit: contain;
+    margin-bottom: 0.5rem;
+    flex-shrink: 0;
+}
+
 /* ── CARD HEADER ── */
 .login-header {
     width: 100%;
@@ -495,6 +505,11 @@ body:has(.login-main) main {
     .login-icon svg {
         width: 20px;
         height: 20px;
+    }
+
+    .login-brand-logo {
+        height: 38px;
+        max-width: 130px;
     }
 
     .form-input {
