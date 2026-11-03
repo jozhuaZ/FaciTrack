@@ -13,8 +13,6 @@ const DEFAULTS = {
     notifyReminders: true,
     notifyBleAbsence: false,
     notifyAnnouncements: true,
-    repeatWeekly: true,
-    repeatWeeks: 4,
 };
 
 /** notifications.type → the preference that gates its email/push delivery. */
@@ -29,7 +27,7 @@ const TYPE_TO_PREFERENCE = {
 };
 
 const COLUMNS = `notify_new_requests, notify_cancellations, notify_reminders,
-                 notify_ble_absence, notify_announcements, repeat_weekly, repeat_weeks`;
+                 notify_ble_absence, notify_announcements`;
 
 function toSettings(row) {
     if (!row) return { ...DEFAULTS };
@@ -39,8 +37,6 @@ function toSettings(row) {
         notifyReminders: Boolean(row.notify_reminders),
         notifyBleAbsence: Boolean(row.notify_ble_absence),
         notifyAnnouncements: Boolean(row.notify_announcements),
-        repeatWeekly: Boolean(row.repeat_weekly),
-        repeatWeeks: Number(row.repeat_weeks),
     };
 }
 
@@ -95,29 +91,6 @@ const InstructorSettingsModel = {
                  notify_ble_absence   = VALUES(notify_ble_absence),
                  notify_announcements = VALUES(notify_announcements)`,
             [user.id, ...values]
-        );
-        return true;
-    },
-
-    /** Upsert the consultation-schedule defaults applied to new slots. */
-    async saveScheduleSettings(publicId, { repeatWeekly, repeatWeeks }) {
-        const [[user]] = await pool.execute(
-            'SELECT id FROM users WHERE public_id = ?', [publicId]
-        );
-        if (!user) return false;
-
-        const parsed = parseInt(repeatWeeks, 10);
-        const weeks = Number.isFinite(parsed) ? Math.max(2, Math.min(52, parsed)) : null;
-
-        // No week count means "keep what is stored" — switching the toggle off
-        // must not forget the span the instructor picked.
-        await pool.execute(
-            `INSERT INTO instructor_settings (user_id, repeat_weekly, repeat_weeks)
-             VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-                 repeat_weekly = VALUES(repeat_weekly),
-                 repeat_weeks  = COALESCE(?, repeat_weeks)`,
-            [user.id, repeatWeekly ? 1 : 0, weeks === null ? DEFAULTS.repeatWeeks : weeks, weeks]
         );
         return true;
     },

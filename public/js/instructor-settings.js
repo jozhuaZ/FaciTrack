@@ -81,20 +81,6 @@
                 });
         },
 
-        schedule: function () {
-            return request('/instructor/settings/schedule', {
-                repeatWeekly: document.getElementById('toggleRepeatWeekly').checked,
-                repeatWeeks: parseInt(document.getElementById('repeatWeeks').value, 10),
-            }).then(function (data) {
-                if (!data.success) {
-                    showToast('error', 'Not Saved', data.error || 'Could not save schedule settings.');
-                    return false;
-                }
-                showToast('success', 'Saved', 'New consultation slots will use these settings.');
-                return true;
-            });
-        },
-
         notifications: function () {
             return request('/instructor/settings/notifications', {
                 notifyNewRequests: document.getElementById('notifyNewRequests').checked,
@@ -222,31 +208,6 @@
 
     paintStatus();
     syncStatusSelect();
-
-    // ── Schedule card: weeks stepper and live summary ──
-    var repeatToggle = document.getElementById('toggleRepeatWeekly');
-    var repeatPanel = document.getElementById('repeatSettingsPanel');
-    var weeksInput = document.getElementById('repeatWeeks');
-    var repeatSummary = document.getElementById('repeatSummary');
-
-    function paintSchedule() {
-        repeatPanel.classList.toggle('hidden', !repeatToggle.checked);
-        repeatSummary.textContent = repeatToggle.checked
-            ? 'Adding a slot will create it on the same weekday for the next ' +
-              weeksInput.value + ' weeks. You can still block individual dates later.'
-            : 'Adding a slot will create that single date only.';
-    }
-
-    function stepWeeks(delta) {
-        var value = parseInt(weeksInput.value, 10) || 2;
-        weeksInput.value = Math.min(52, Math.max(2, value + delta));
-        paintSchedule();
-        refreshDirtyState();
-    }
-    document.getElementById('weeksMinus').addEventListener('click', function () { stepWeeks(-1); });
-    document.getElementById('weeksPlus').addEventListener('click', function () { stepWeeks(1); });
-    repeatToggle.addEventListener('change', paintSchedule);
-    paintSchedule();
 
     // ── Security ──
     document.getElementById('btnChangePassword').addEventListener('click', function () {

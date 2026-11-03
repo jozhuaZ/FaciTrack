@@ -136,13 +136,10 @@ const InstructorController = {
                 });
             });
 
-            const scheduleSettings = await InstructorSettingsModel.getByPublicId(instructorId);
-
             res.render('pages/instructor/schedule', {
                 title: 'FaciTrack - Consultation Schedule',
                 instructor: instructor,
                 consultationSlots: consultationSlots,
-                scheduleSettings,
             });
         } catch (err) {
             console.error('[InstructorController.renderConsultationPage]', err);
@@ -153,18 +150,20 @@ const InstructorController = {
 
     async saveSlotBlock(req, res) {
         try {
-            const { date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId } = req.body;
+            const { date, day, timeStart, timeEnd, maxCapacity, repeatWeeks, replaceSlotId } = req.body;
 
-            // The Add Slot modal no longer asks how many weeks — the instructor's
-            // saved default decides. Editing an existing slot never repeats.
-            const settings = await InstructorSettingsModel.getByPublicId(req.session.userId);
+            // Editing an occurrence replaces only that occurrence; a new slot
+            // repeats for however many weeks the instructor typed in the
+            // Add Slot modal.
             const editing = Boolean(replaceSlotId);
-            const repeatWeeks = (!editing && repeat && settings.repeatWeekly) ? settings.repeatWeeks : 1;
+            const parsedWeeks = parseInt(repeatWeeks, 10);
+            const weeks = Number.isFinite(parsedWeeks) ? Math.max(1, Math.min(52, parsedWeeks)) : 1;
+            const effectiveWeeks = editing ? 1 : weeks;
 
             const result = await ConsultationModel.saveSlotBlock(req.session.userId, {
                 date, day, timeStart, timeEnd,
                 maxCapacity: parseInt(maxCapacity, 10) || 1,
-                repeatWeeks,
+                repeatWeeks: effectiveWeeks,
                 replaceSlotId: editing ? parseInt(replaceSlotId, 10) : null,
             });
 
@@ -193,7 +192,7 @@ const InstructorController = {
                 console.error('[AuditLog] Failed to log consultation slot:', err);
             }
 
-            let message = `Saved ${result.count} slot(s) across ${repeatWeeks - result.skipped.length} week(s).`;
+            let message = `Saved ${result.count} slot(s) across ${effectiveWeeks - result.skipped.length} week(s).`;
             if (result.skipped.length) {
                 message += ` Skipped ${result.skipped.length} week(s) that overlapped an existing slot: `
                     + result.skipped.map(formatFullDate).join(', ') + '.';
@@ -652,47 +651,6 @@ const InstructorController = {
         } catch (err) {
             console.error('[InstructorController.updateNotificationPrefs]', err);
             res.status(500).json({ success: false, error: 'Failed to save preferences.' });
-        }
-    },
-
-    /**
-     * Defaults applied when a new consultation slot is created. Holding them
-     * here is what lets the Add Slot modal drop its own repeat controls.
-     */
-    async updateScheduleSettings(req, res) {
-        try {
-            const repeatWeekly = Boolean(req.body.repeatWeekly);
-            const repeatWeeks  = parseInt(req.body.repeatWeeks, 10);
-
-            if (repeatWeekly && (!Number.isFinite(repeatWeeks) || repeatWeeks < 2 || repeatWeeks > 52)) {
-                return res.status(422).json({
-                    success: false,
-                    error: 'Repeat between 2 and 52 weeks.',
-                });
-            }
-
-            const saved = await InstructorSettingsModel.saveScheduleSettings(req.session.userId, {
-                repeatWeekly, repeatWeeks,
-            });
-            if (!saved) {
-                return res.status(404).json({ success: false, error: 'Instructor not found.' });
-            }
-
-            try {
-                const instructor = await UserModel.getUserByPublicId(req.session.userId);
-                await AuditLogModel.log(instructor.internal_id, instructor.role,
-                    repeatWeekly
-                        ? `Set new slots to repeat for ${repeatWeeks} week(s)`
-                        : 'Turned off weekly repeat for new slots',
-                    'settings');
-            } catch (err) {
-                console.error('[AuditLog] Failed to log schedule settings:', err);
-            }
-
-            res.json({ success: true });
-        } catch (err) {
-            console.error('[InstructorController.updateScheduleSettings]', err);
-            res.status(500).json({ success: false, error: 'Failed to save schedule settings.' });
         }
     },
 

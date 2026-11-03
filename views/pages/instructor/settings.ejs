@@ -56,22 +56,6 @@
 /* Right column */
 .settings-right { display:flex; flex-direction:column; gap:1.5rem; }
 
-/* Weeks stepper */
-.weeks-stepper { display:flex; align-items:center; gap:.5rem; }
-.weeks-stepper .stepper-btn {
-  width:34px; height:34px; display:flex; align-items:center; justify-content:center;
-  border:1.5px solid var(--gray-300); background:#fff; border-radius:8px; cursor:pointer; color:var(--gray-700);
-}
-.weeks-stepper .stepper-btn:hover { border-color:var(--primary-blue); color:var(--primary-blue); }
-.weeks-stepper input { width:64px; text-align:center; padding:.5rem; border:1.5px solid var(--gray-300); border-radius:8px; font-size:.875rem; font-weight:700; font-family:var(--font-body); }
-.repeat-settings-panel { margin-top:1rem; }
-.repeat-settings-panel.hidden { display:none; }
-.settings-note {
-  margin-top:1rem; padding:.85rem; background:var(--gray-50);
-  border:1px solid var(--gray-200); border-radius:var(--radius-md);
-  font-size:.78rem; color:var(--gray-600); line-height:1.6;
-}
-
 /* Device notifications */
 .push-row { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
 .push-copy { min-width:0; }
@@ -317,45 +301,6 @@
 
         <!-- RIGHT COLUMN -->
         <div class="settings-right">
-
-          <!-- Consultation schedule defaults -->
-          <div class="content-card settings-card" data-card="schedule">
-            <div class="card-header">
-              <h3 class="card-title">Consultation Schedule Settings</h3>
-              <span class="unsaved-pill">Unsaved</span>
-            </div>
-            <div class="card-body">
-              <p class="settings-description" style="margin-bottom:1rem;">Applied automatically whenever you add a new consultation slot.</p>
-
-              <div class="settings-toggle-list">
-                <div class="settings-toggle-row">
-                  <div>
-                    <p class="toggle-label">Repeat Weekly</p>
-                    <p class="toggle-desc">New slots are created on the same weekday for several weeks</p>
-                  </div>
-                  <label class="toggle-switch">
-                    <input type="checkbox" id="toggleRepeatWeekly" <%= settings.repeatWeekly ? 'checked' : '' %>>
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
-              </div>
-
-              <div id="repeatSettingsPanel" class="repeat-settings-panel <%= settings.repeatWeekly ? '' : 'hidden' %>">
-                <label class="modal-label" for="repeatWeeks">Number of weeks</label>
-                <div class="weeks-stepper">
-                  <button type="button" class="stepper-btn" id="weeksMinus" aria-label="Fewer weeks">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  </button>
-                  <input type="number" id="repeatWeeks" min="2" max="52" value="<%= settings.repeatWeeks %>" readonly>
-                  <button type="button" class="stepper-btn" id="weeksPlus" aria-label="More weeks">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  </button>
-                </div>
-              </div>
-
-              <p class="settings-note" id="repeatSummary"></p>
-            </div>
-          </div>
 
           <!-- Online consultation link -->
           <%#

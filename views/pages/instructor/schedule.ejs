@@ -127,25 +127,23 @@
             updateSplitPreview(). %>
         <p class="slot-split-preview" id="slotSplitPreview" aria-live="polite"></p>
       </div>
+      <!-- How far a new slot repeats is chosen here. Editing an occurrence
+           replaces only that occurrence, so this is hidden when editing. -->
+      <div class="slot-form-group" id="repeatGroup">
+        <label class="slot-form-label" for="slotRepeatWeeks">Repeat for <span style="font-weight:400;color:var(--gray-400)">(weeks)</span></label>
+        <div class="slot-stepper">
+          <button type="button" class="stepper-btn" id="repeatWeeksMinus" aria-label="Fewer weeks">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <input type="number" id="slotRepeatWeeks" class="stepper-input" min="1" max="52" value="1" inputmode="numeric" aria-label="Number of weeks">
+          <button type="button" class="stepper-btn" id="repeatWeeksPlus" aria-label="More weeks">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <p class="slot-split-preview" id="repeatWeeksPreview" aria-live="polite">Creates this date only.</p>
+      </div>
       <!-- Validation feedback -->
       <div id="timeValidationMsg" style="display:none;padding:.6rem .8rem;border-radius:8px;font-size:.78rem;margin-top:.5rem;"></div>
-    </div>
-    <!-- How far a new slot repeats is a saved preference, so the modal only reports it -->
-    <div class="repeat-card<%= scheduleSettings.repeatWeekly ? ' repeat-on' : '' %>" id="repeatGroup">
-      <div class="repeat-toggle-row">
-        <div>
-          <p class="repeat-toggle-label">
-            <% if (scheduleSettings.repeatWeekly) { %>
-              Repeats weekly for <%= scheduleSettings.repeatWeeks %> weeks
-            <% } else { %>
-              This date only
-            <% } %>
-          </p>
-          <p class="repeat-toggle-desc">
-            Change this in <a href="/instructor/settings">Settings &rsaquo; Consultation Schedule Settings</a>.
-          </p>
-        </div>
-      </div>
     </div>
     <div class="modal-footer"><button class="btn-modal btn-cancel" id="cancelSlot">Cancel</button><button class="btn-modal btn-confirm" id="confirmSlot">Save Slot</button></div>
   </div>
@@ -1066,6 +1064,8 @@ function openAddModal(day, date){
   document.getElementById('slotDay').value=day||'';
   document.getElementById('slotModalTitle').textContent='Add Slot'+(day?' - '+day:'');
   document.getElementById('repeatGroup').style.display = 'block';
+  document.getElementById('slotRepeatWeeks').value='1';
+  paintRepeatWeeks(true);
   if(date) document.getElementById('slotModal').dataset.date=date.getTime();
   else delete document.getElementById('slotModal').dataset.date;
   document.getElementById('slotMaxCapacity').value='3';
@@ -1073,12 +1073,28 @@ function openAddModal(day, date){
   document.getElementById('slotModal').classList.add('show');
 }
 
+/* -- Repeat weeks field -- */
+function paintRepeatWeeks(rewrite) {
+  const input = document.getElementById('slotRepeatWeeks');
+  const preview = document.getElementById('repeatWeeksPreview');
+  if (!input || !preview) return;
+
+  const raw = parseInt(input.value, 10);
+  const weeks = Number.isFinite(raw) ? Math.max(1, Math.min(52, raw)) : 1;
+  if (rewrite) input.value = weeks;
+
+  const day = document.getElementById('slotDay').value;
+  preview.textContent = weeks <= 1
+    ? 'Creates this date only.'
+    : 'Creates a slot' + (day ? ' every ' + day : ' each week') + ' for ' + weeks + ' weeks.';
+}
+
 /* -- Save -- */
-async function saveSlotBlock(date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId) {
+async function saveSlotBlock(date, day, timeStart, timeEnd, maxCapacity, repeatWeeks, replaceSlotId) {
   const res = await fetch('/instructor/schedule/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId }),
+      body: JSON.stringify({ date, day, timeStart, timeEnd, maxCapacity, repeatWeeks, replaceSlotId }),
   });
   const data = await res.json().catch(() => ({}));
   if (!data.success) {
@@ -1102,8 +1118,11 @@ document.getElementById('confirmSlot').addEventListener('click', async function(
     const timeEnd     = formatTimeFromState('end');
     const maxCapacity = Math.max(1, Math.min(10, parseInt(document.getElementById('slotMaxCapacity').value, 10) || 1));
     const editIdx     = parseInt(document.getElementById('slotEditIdx').value, 10);
-    // Editing replaces one occurrence; only a brand-new slot follows the repeat setting
-    const repeat      = editIdx < 0;
+    // Editing replaces one occurrence; only a brand-new slot repeats, for the
+    // number of weeks the instructor entered in this modal.
+    const repeatWeeks = editIdx < 0
+        ? Math.max(1, Math.min(52, parseInt(document.getElementById('slotRepeatWeeks').value, 10) || 1))
+        : 1;
 
     if (!day || !timeStart || !timeEnd) {
         showToast('error', 'Required', 'Please fill in all fields.');
@@ -1129,7 +1148,7 @@ document.getElementById('confirmSlot').addEventListener('click', async function(
     // overlap, say) left the slot gone.
     const replaceSlotId = (editIdx >= 0 && slots[editIdx]?.id) ? slots[editIdx].id : null;
 
-    const ok = await saveSlotBlock(slotDate, day, timeStart, timeEnd, maxCapacity, repeat, replaceSlotId);
+    const ok = await saveSlotBlock(slotDate, day, timeStart, timeEnd, maxCapacity, repeatWeeks, replaceSlotId);
     if (!ok) return;
 
     document.getElementById('slotModal').classList.remove('show');
@@ -1153,6 +1172,21 @@ populateTimeSelects();
   }
   if (minusBtn) minusBtn.addEventListener('click', function() { updateStepper(-1); });
   if (plusBtn)  plusBtn.addEventListener('click',  function() { updateStepper(+1); });
+
+  const weeksMinus = document.getElementById('repeatWeeksMinus');
+  const weeksPlus  = document.getElementById('repeatWeeksPlus');
+  const weeksInput = document.getElementById('slotRepeatWeeks');
+  function stepWeeks(delta) {
+    let val = parseInt(weeksInput.value, 10) || 1;
+    weeksInput.value = Math.min(52, Math.max(1, val + delta));
+    paintRepeatWeeks(true);
+  }
+  if (weeksMinus) weeksMinus.addEventListener('click', function() { stepWeeks(-1); });
+  if (weeksPlus)  weeksPlus.addEventListener('click',  function() { stepWeeks(+1); });
+  if (weeksInput) {
+    weeksInput.addEventListener('input', function() { paintRepeatWeeks(false); });
+    weeksInput.addEventListener('change', function() { paintRepeatWeeks(true); });
+  }
 })();
 
 /* -- Event wiring -- */

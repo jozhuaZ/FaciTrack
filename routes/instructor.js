@@ -530,7 +530,6 @@ router.get('/settings', InstructorController.renderSettingsPage);
 router.patch('/profile',              InstructorController.updateOwnProfile);
 router.patch('/password',             InstructorController.changePassword);
 router.patch('/settings/notifications', InstructorController.updateNotificationPrefs);
-router.patch('/settings/schedule',      InstructorController.updateScheduleSettings);
 
 // The instructor's own room status, for the sidebar to refresh itself when a
 // scanner reports a change (presence:changed), without reloading the page.

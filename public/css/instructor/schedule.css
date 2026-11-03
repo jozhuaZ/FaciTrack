@@ -124,9 +124,6 @@
   .time-separator{margin:0 .1rem; font-size: 1.2rem;}
   .time-select{width:56px;min-width:54px;height:50px;font-size:1.05rem;}
   .slot-form-input, .slot-form-select { padding: 0.5rem 0.7rem; font-size: 0.8rem; }
-  .repeat-card { padding: .75rem .85rem; }
-  .repeat-toggle-row { flex-wrap: wrap; row-gap: .5rem; }
-  .repeat-toggle-desc { font-size: .72rem; }
 }
 @media (max-width:520px) {
   .gcal-wrap { padding: 0.8rem; pointer-events: auto !important; }
@@ -815,37 +812,6 @@
 }
 .stepper-input::-webkit-inner-spin-button,
 .stepper-input::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-/* Repeat-weekly card */
-.repeat-card {
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: .85rem 1rem;
-  margin-top: 1rem;
-  background: linear-gradient(to bottom, #fff, #fafbfc);
-  transition: border-color .2s ease;
-}
-.repeat-card.repeat-on {
-  border-color: #bfdbfe;
-  background: linear-gradient(135deg, #f5f9ff 0%, #ffffff 100%);
-}
-.repeat-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.repeat-toggle-label {
-  font-size: .85rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 .1rem;
-}
-.repeat-toggle-desc {
-  font-size: .74rem;
-  color: #6b7280;
-  margin: 0;
-}
 
 /* Save Slot button */
 #confirmSlot {
