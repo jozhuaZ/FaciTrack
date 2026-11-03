@@ -6,9 +6,11 @@
  *
  * Each placed room is a small dot on the building. A room with somebody in it
  * also gets a line rising above the roof, topped with the faces of whoever is
- * inside. The line is real geometry, so the building hides it correctly; the
- * dot, faces and labels are HTML laid over the canvas and moved every frame,
- * which keeps photos sharp and lets them take hover and tap like any element.
+ * inside. The heads, dots and labels are HTML laid over the canvas and moved
+ * every frame, which keeps photos sharp and lets them take hover and tap like
+ * any element; the line is drawn over the model rather than depth-tested
+ * against it, so a room on the far side still shows a connector instead of a
+ * bubble floating with nothing under it.
  *
  *   CcsPins.init({ onSelect: fn(room, event) })
  *   CcsPins.setRooms([{ id, number, floor, type, pos:{x,y,z}, occupants:[...],
@@ -128,18 +130,34 @@
   function addLine(r) {
     var color = LINE_COLOR[r.tone] || LINE_COLOR.live;
     var h = r._topY - r.pos.y;
+
+    // The head is HTML and cannot be hidden by the model, so the connector is
+    // drawn last with depth testing off. A room on the far side of the
+    // building then still reads as a pin with a line, not a bubble floating
+    // above an invisible one. It writes no depth, so it cannot hide anything
+    // else the model draws after it.
+    function overlayMaterial() {
+      return new THREE.MeshBasicMaterial({
+        color: color,
+        depthTest: false,
+        depthWrite: false,
+      });
+    }
+
     var line = new THREE.Mesh(
       new THREE.CylinderGeometry(0.1, 0.1, h, 10),
-      new THREE.MeshBasicMaterial({ color: color })
+      overlayMaterial()
     );
     line.position.set(r.pos.x, r.pos.y + h / 2, r.pos.z);
+    line.renderOrder = 10;
     group.add(line);
 
     var base = new THREE.Mesh(
       new THREE.SphereGeometry(0.26, 16, 12),
-      new THREE.MeshBasicMaterial({ color: color })
+      overlayMaterial()
     );
     base.position.set(r.pos.x, r.pos.y, r.pos.z);
+    base.renderOrder = 10;
     group.add(base);
   }
 
