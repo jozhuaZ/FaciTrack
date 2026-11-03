@@ -143,12 +143,10 @@
             </div>
 
             <div class="mk-req-actions">
-              <% r.documents.forEach(function (d) { %>
-                <a class="mk-btn doc" href="/instructor/makeup/document/<%= d.id %>"
-                   target="_blank" rel="noopener">
-                  <%= d.kind === 'polling' ? 'Polling sheet' : d.original_name %>
-                </a>
-              <% }); %>
+              <% if (r.documents.length) { %>
+                <%- include('../../partials/makeup-attachments', {
+                      documents: r.documents, attachBase: '/instructor/makeup' }) %>
+              <% } %>
               <% if (r.status === 'pending') { %>
                 <a class="mk-btn edit" href="/instructor/makeup/request/<%= r.id %>/edit">Edit</a>
                 <button type="button" class="mk-btn withdraw" data-withdraw="<%= r.id %>">Withdraw</button>

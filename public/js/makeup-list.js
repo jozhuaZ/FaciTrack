@@ -101,4 +101,75 @@
 
     // Initial render
     apply();
+
+    // ── Attachments menu ──
+    // One paperclip per request. The menu is fixed-positioned because a card
+    // clips its own overflow to keep its rounded corners, so an absolutely
+    // positioned menu would be cut off at the card's edge. It closes whenever
+    // the page moves underneath it, so it never floats beside the wrong card.
+    var openMenu = null;
+    var openBtn = null;
+
+    function closeMenu() {
+        if (!openMenu) return;
+        openMenu.hidden = true;
+        openBtn.setAttribute('aria-expanded', 'false');
+        openMenu = null;
+        openBtn = null;
+    }
+
+    function placeMenu(btn, menu) {
+        var rect = btn.getBoundingClientRect();
+        var gap = 6;
+        var width = menu.offsetWidth;
+        var height = menu.offsetHeight;
+        var left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+        var top = rect.bottom + gap;
+
+        // Open upwards when there is no room below, as the last cards sit at
+        // the bottom of a long list.
+        if (top + height > window.innerHeight - 8) {
+            top = Math.max(8, rect.top - height - gap);
+        }
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+    }
+
+    document.querySelectorAll('.mk-attach-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var menu = btn.parentNode.querySelector('.mk-attach-menu');
+            if (!menu) return;
+
+            if (openMenu === menu) { closeMenu(); return; }
+
+            closeMenu();
+            menu.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+            openMenu = menu;
+            openBtn = btn;
+            placeMenu(btn, menu);
+        });
+    });
+
+    // Selecting a document opens it in a new tab; close the menu behind it.
+    document.querySelectorAll('.mk-attach-item').forEach(function (item) {
+        item.addEventListener('click', closeMenu);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!openMenu) return;
+        if (openMenu.contains(e.target) || (openBtn && openBtn.contains(e.target))) return;
+        closeMenu();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !openMenu) return;
+        var btn = openBtn;
+        closeMenu();
+        if (btn) btn.focus();
+    });
+
+    window.addEventListener('resize', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
 }());

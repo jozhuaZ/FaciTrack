@@ -143,12 +143,10 @@
           <div class="mk-req-actions">
             <% if (!r.documents.length) { %>
               <span class="mk-btn doc is-muted">No documents</span>
+            <% } else { %>
+              <%- include('../../partials/makeup-attachments', {
+                    documents: r.documents, attachBase: '/dean/makeup' }) %>
             <% } %>
-            <% r.documents.forEach(function (d) { %>
-              <a class="mk-btn doc" href="/dean/makeup/document/<%= d.id %>" target="_blank" rel="noopener">
-                <%= d.kind === 'polling' ? 'Polling sheet' : d.original_name %>
-              </a>
-            <% }); %>
             <% if (r.status === 'pending') { %>
               <button type="button" class="mk-btn approve" data-approve="<%= r.id %>">Approve</button>
               <button type="button" class="mk-btn decline" data-decline="<%= r.id %>">Decline</button>

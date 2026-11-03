@@ -1,0 +1,39 @@
+<%#
+  One paperclip per make-up request instead of a row of document buttons.
+  Selecting an entry still opens that document in a new tab.
+
+  The menu is positioned by makeup-list.js rather than by CSS alone: a request
+  card clips its own overflow to keep its rounded corners, so an absolutely
+  positioned menu would be cut off at the card's edge.
+
+  Locals: documents (the request's files), attachBase (e.g. '/dean/makeup').
+%>
+<div class="mk-attach">
+  <button type="button" class="mk-attach-btn"
+          aria-haspopup="true" aria-expanded="false"
+          aria-label="Attachments (<%= documents.length %>)"
+          title="Attachments (<%= documents.length %>)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    </svg>
+    <% if (documents.length > 1) { %>
+      <span class="mk-attach-count"><%= documents.length %></span>
+    <% } %>
+  </button>
+
+  <div class="mk-attach-menu" role="menu" hidden>
+    <% documents.forEach(function (d) { %>
+      <a class="mk-attach-item" role="menuitem"
+         href="<%= attachBase %>/document/<%= d.id %>"
+         target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span><%= d.kind === 'polling' ? 'Polling sheet' : d.original_name %></span>
+      </a>
+    <% }); %>
+  </div>
+</div>
