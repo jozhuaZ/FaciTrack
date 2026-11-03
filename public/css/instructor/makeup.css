@@ -429,7 +429,6 @@
     font-size: .65rem; font-weight: 700; padding: .1rem .4rem; border-radius: 4px;
     background: var(--gray-100); color: var(--gray-600);
 }
-.mk-note.warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
 
 /* ── Bulk approval result ── */
 .mk-bulk-heading { font-size: .78rem; font-weight: 700; color: var(--gray-700); margin: 1rem 0 .4rem; }

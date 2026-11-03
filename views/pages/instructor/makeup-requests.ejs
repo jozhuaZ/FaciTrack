@@ -137,9 +137,6 @@
               <% if (r.status === 'approved' && r.dean_statement) { %>
                 <p class="mk-note dean"><strong>Dean:</strong> <%= r.dean_statement %></p>
               <% } %>
-              <% if (!r.pollingDocument) { %>
-                <p class="mk-note warn">No polling document attached.</p>
-              <% } %>
             </div>
 
             <div class="mk-req-actions">

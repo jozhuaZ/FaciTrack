@@ -129,9 +129,6 @@
             <% if (!r.supportDocuments.length) { %>
               <p class="mk-note decline"><strong>Missing:</strong> no supporting document attached.</p>
             <% } %>
-            <% if (!r.pollingDocument) { %>
-              <p class="mk-note warn">No polling document attached.</p>
-            <% } %>
             <% if (r.status === 'declined' && r.decline_reason) { %>
               <p class="mk-note decline"><strong>You declined:</strong> <%= r.decline_reason %></p>
             <% } %>
