@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (hClose) hClose.style.display = 'none';
             }
             const footer = document.querySelector('.sidebar-footer');
-            if (footer && window.innerWidth <= 1024) footer.style.display = 'none';
+            if (footer && window.innerWidth <= 1100) footer.style.display = 'none';
         }
     });
 

@@ -17,7 +17,7 @@
 
         if (toggleBtn && sidebarNav) {
             // On mobile, hide footer initially (nav is collapsed)
-            if (window.innerWidth <= 1024 && sidebarFooter) {
+            if (window.innerWidth <= 1100 && sidebarFooter) {
                 sidebarFooter.style.display = 'none';
             }
 
@@ -26,7 +26,7 @@
                 toggleBtn.setAttribute('aria-expanded', isOpen);
                 if (iconMenu) iconMenu.style.display = isOpen ? 'none' : '';
                 if (iconClose) iconClose.style.display = isOpen ? '' : 'none';
-                if (sidebarFooter && window.innerWidth <= 1024) {
+                if (sidebarFooter && window.innerWidth <= 1100) {
                     sidebarFooter.style.display = isOpen ? 'block' : 'none';
                 }
             });
@@ -34,7 +34,7 @@
             // Close nav when a nav item is tapped on mobile
             sidebarNav.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', function () {
-                    if (window.innerWidth <= 1024) {
+                    if (window.innerWidth <= 1100) {
                         sidebarNav.classList.remove('mobile-open');
                         toggleBtn.setAttribute('aria-expanded', 'false');
                         if (iconMenu) iconMenu.style.display = '';
