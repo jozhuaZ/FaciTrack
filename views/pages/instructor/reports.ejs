@@ -183,7 +183,7 @@
        <%# Sits on the page, not inside a card, so it drops the in-card bottom
            padding and rule; the page's normal spacing separates it from the
            table below. %>
-       <div class="table-toolbar is-standalone">
+       <div class="table-toolbar is-standalone" data-toolbar-for="log">
         <div class="toolbar-group">
           <span class="toolbar-label">Search</span>
           <input type="search" class="table-search" data-role="search" placeholder="Student or topic…">
@@ -197,6 +197,8 @@
             <option value="pending">Pending</option>
             <option value="declined">Declined</option>
             <option value="cancelled">Cancelled</option>
+            <option value="rescheduled">Rescheduled</option>
+            <option value="expired">Expired</option>
           </select>
         </div>
         <div class="toolbar-group">
