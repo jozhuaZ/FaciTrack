@@ -651,6 +651,14 @@ const MakeupRequestModel = {
         return row || null;
     },
 
+    /**
+     * The instructor's own requests.
+     *
+     * Pending comes first because it is the only status that still needs the
+     * instructor (to edit or withdraw), and withdrawn comes last because it is
+     * the only status the instructor closed themselves. Everything else keeps
+     * the familiar newest-first order.
+     */
     async getByInstructor(instructorPublicId) {
         const [rows] = await pool.execute(
             `SELECT mr.*, dc.first_name AS decided_by_first, dc.last_name AS decided_by_last
@@ -658,7 +666,15 @@ const MakeupRequestModel = {
                JOIN users u ON mr.instructor_id = u.id
                LEFT JOIN users dc ON mr.decided_by = dc.id
               WHERE u.public_id = ?
-              ORDER BY mr.submitted_at DESC, mr.id DESC`,
+              ORDER BY CASE mr.status
+                           WHEN 'pending'   THEN 0
+                           WHEN 'approved'  THEN 1
+                           WHEN 'declined'  THEN 2
+                           WHEN 'expired'   THEN 3
+                           WHEN 'withdrawn' THEN 4
+                           ELSE 5
+                       END,
+                       mr.submitted_at DESC, mr.id DESC`,
             [instructorPublicId]
         );
         return this.attachSessions(rows);

@@ -68,12 +68,8 @@
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
             <option value="declined">Declined</option>
-            <% if (counts.withdrawn) { %>
-              <option value="withdrawn">Withdrawn</option>
-            <% } %>
-            <% if (counts.expired) { %>
-              <option value="expired">Expired</option>
-            <% } %>
+            <option value="expired">Expired</option>
+            <option value="withdrawn">Withdrawn</option>
           </select>
 
           <select class="mk-filter-select" id="mkTypeFilter" aria-label="Filter by class type">
@@ -151,6 +147,11 @@
             </div>
           </div>
         <% }); %>
+        </div>
+
+        <div class="mk-list-footer">
+          <p class="mk-list-count" id="mkListCount" aria-live="polite"></p>
+          <button type="button" class="mk-load-more" id="mkLoadMore" hidden>Load more</button>
         </div>
       <% } %>
     </div>

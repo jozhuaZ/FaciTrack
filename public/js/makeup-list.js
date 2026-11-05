@@ -9,46 +9,77 @@
  *
  * Every card is rendered once with data-status, data-class-type, and
  * data-search so all filtering is instant with no round trips.
+ *
+ * On the instructor page the cards are also revealed in batches: the first
+ * page is shown, and "Load more" appends the next page of whatever the
+ * current filters match. The dean page has no load-more button, so there the
+ * whole list is shown at once exactly as before.
  */
 (function () {
     'use strict';
 
-    var cards        = document.querySelectorAll('.mk-req');
+    var grid         = document.querySelector('.mk-req-grid');
+    var cards        = grid ? Array.prototype.slice.call(grid.querySelectorAll('.mk-req')) : [];
     var searchInput  = document.getElementById('mkSearch');
     var clearBtn     = document.getElementById('mkSearchClear');
     var statusSelect = document.getElementById('mkStatusFilter');
     var typeSelect   = document.getElementById('mkTypeFilter');
     var emptyBox     = document.getElementById('mkFilterEmpty');
+    var loadMoreBtn  = document.getElementById('mkLoadMore');
+    var countLabel   = document.getElementById('mkListCount');
 
     // Nothing to do if the list is absent (empty-state path)
     if (!cards.length) return;
 
+    var PAGE_SIZE = 6;
+    var paginate  = !!loadMoreBtn;
+
     var query      = '';
-    var activeStatus = 'all';
-    var activeType   = 'all';
+    var shownLimit = paginate ? PAGE_SIZE : Infinity;
+
+    function selectedValue(select) {
+        return (select && select.value) || 'all';
+    }
+
+    function matches(card) {
+        var activeStatus = selectedValue(statusSelect);
+        var activeType   = selectedValue(typeSelect);
+
+        var matchesStatus = activeStatus === 'all' ||
+                            card.dataset.status === activeStatus;
+
+        // data-class-type is a space-separated list of types on the card
+        var matchesType = activeType === 'all' ||
+                          (card.dataset.classType || '').split(' ').indexOf(activeType) !== -1;
+
+        var matchesQuery = !query ||
+                           (card.dataset.search || '').indexOf(query) !== -1;
+
+        return matchesStatus && matchesType && matchesQuery;
+    }
 
     function apply() {
-        var shown = 0;
+        var matched = 0;
 
         cards.forEach(function (card) {
-            var matchesStatus = activeStatus === 'all' ||
-                                card.dataset.status === activeStatus;
+            if (!matches(card)) {
+                card.hidden = true;
+                return;
+            }
 
-            // data-class-type is a space-separated list of types on the card
-            var matchesType = activeType === 'all' ||
-                              (card.dataset.classType || '').split(' ').indexOf(activeType) !== -1;
-
-            var matchesQuery = !query ||
-                               (card.dataset.search || '').indexOf(query) !== -1;
-
-            var visible = matchesStatus && matchesType && matchesQuery;
-            card.hidden = !visible;
-            if (visible) shown++;
+            // Only the first `shownLimit` matches are on screen. Counting the
+            // matches rather than the cards keeps the batch full even when a
+            // filter hides cards between them.
+            var withinLimit = matched < shownLimit;
+            matched++;
+            card.hidden = !withinLimit;
         });
 
+        var shown = Math.min(matched, shownLimit);
+
         if (emptyBox) {
-            emptyBox.hidden = shown > 0;
-            if (!emptyBox.hidden) {
+            emptyBox.hidden = matched > 0;
+            if (matched === 0) {
                 emptyBox.textContent = query
                     ? 'Nothing matches \u201c' + searchInput.value.trim() + '\u201d.'
                     : 'No requests match the selected filters.';
@@ -56,19 +87,56 @@
         }
 
         if (clearBtn) clearBtn.hidden = !query;
+
+        if (countLabel) {
+            countLabel.textContent = matched
+                ? 'Showing ' + shown + ' of ' + matched +
+                  ' request' + (matched === 1 ? '' : 's')
+                : '';
+        }
+
+        if (loadMoreBtn) loadMoreBtn.hidden = !paginate || matched <= shownLimit;
+    }
+
+    /** A filter changed, so start again from the first page. */
+    function reset() {
+        shownLimit = paginate ? PAGE_SIZE : Infinity;
+        apply();
+    }
+
+    /**
+     * If the page was opened at #req-<id> (the dean dashboard's "View"
+     * shortcut), make sure that card is on screen even when it would fall
+     * beyond the first batch.
+     */
+    function revealTarget() {
+        if (!paginate || !window.location.hash) return;
+
+        var id = window.location.hash.slice(1);
+        if (!id) return;
+
+        var seen = 0;
+        for (var i = 0; i < cards.length; i++) {
+            if (!matches(cards[i])) continue;
+            seen++;
+            if (cards[i].id === id) {
+                shownLimit = Math.max(shownLimit, seen);
+                return;
+            }
+        }
     }
 
     // ── Search ──
     if (searchInput) {
         searchInput.addEventListener('input', function () {
             query = this.value.trim().toLowerCase();
-            apply();
+            reset();
         });
         searchInput.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 this.value = '';
                 query = '';
-                apply();
+                reset();
             }
         });
     }
@@ -78,28 +146,30 @@
             searchInput.value = '';
             query = '';
             searchInput.focus();
-            apply();
+            reset();
         });
     }
 
     // ── Status select ──
     if (statusSelect) {
-        statusSelect.addEventListener('change', function () {
-            activeStatus = this.value;
-            apply();
-        });
-        activeStatus = statusSelect.value || 'all';
+        statusSelect.addEventListener('change', reset);
     }
 
     // ── Class type select ──
     if (typeSelect) {
-        typeSelect.addEventListener('change', function () {
-            activeType = this.value;
+        typeSelect.addEventListener('change', reset);
+    }
+
+    // ── Load more ──
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function () {
+            shownLimit += PAGE_SIZE;
             apply();
         });
     }
 
     // Initial render
+    revealTarget();
     apply();
 
     // ── Attachments menu ──

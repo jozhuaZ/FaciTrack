@@ -199,6 +199,30 @@
 @media (max-width: 900px) {
     .mk-req-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ── Load more ── */
+.mk-list-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .75rem; flex-wrap: wrap; margin-top: 1.25rem;
+}
+.mk-list-count {
+    margin: 0; font-size: .78rem; color: var(--gray-500);
+}
+.mk-load-more {
+    margin-left: auto;
+    padding: .55rem 1.35rem; border-radius: var(--radius-md);
+    border: 1.5px solid var(--gray-300); background: #fff; color: var(--gray-700);
+    font-family: var(--font-body); font-size: .78rem; font-weight: 700;
+    cursor: pointer; transition: border-color .15s, color .15s, background .15s;
+}
+.mk-load-more:hover {
+    border-color: var(--primary-blue); color: var(--primary-blue); background: #f8fbff;
+}
+.mk-load-more:focus-visible {
+    outline: none; border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(10, 61, 98, .12);
+}
+.mk-load-more[hidden] { display: none; }
 /* The request the dean dashboard's View button jumped to */
 .mk-req:target { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.22); }
 .mk-req-head {
