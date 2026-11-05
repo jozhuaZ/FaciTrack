@@ -277,55 +277,29 @@ function getFaculty(id) {
 }
 
 // Compute the next available slot label from a faculty's consultation slots.
-// Skips slots whose time has already passed today, and skips fully-booked slots.
+// Students book from tomorrow onwards, so today never counts; fully-booked
+// slots are skipped too.
 function computeNextAvailable(slots) {
     if (!slots || !slots.length) return 'No schedule set';
 
     const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const now = new Date();
-    const todayIdx = now.getDay(); // 0=Sun
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-
-    // Parse "9:00 AM" → minutes since midnight
-    function parseMins(str) {
-        if (!str) return 0;
-        const parts = str.trim().split(' ');
-        const [h, m] = parts[0].split(':').map(Number);
-        const period = parts[1] || 'AM';
-        let hours = h;
-        if (period === 'PM' && h !== 12) hours += 12;
-        if (period === 'AM' && h === 12) hours = 0;
-        return hours * 60 + (m || 0);
-    }
-
-    // Get start time of a slot (handles "9:00 AM – 10:00 AM" or timeStart field)
-    function getSlotStartMins(slot) {
-        if (slot.timeStart) return parseMins(slot.timeStart);
-        const parts = (slot.time || '').split('–');
-        return parseMins(parts[0].trim());
-    }
+    const todayIdx = new Date().getDay(); // 0=Sun
 
     // Only consider open slots
     const openSlots = slots.filter(s => s.status === 'open');
     if (!openSlots.length) return 'No open slots';
 
-    // Search up to 7 days ahead (current week + next week)
-    for (let offset = 0; offset < 7; offset++) {
+    // Search up to 7 days ahead (current week + next week), starting tomorrow
+    for (let offset = 1; offset <= 7; offset++) {
         const checkIdx = (todayIdx + offset) % 7;
         const dayName = DAY_NAMES[checkIdx];
-        const isToday = offset === 0;
 
         const daySlots = openSlots.filter(s => s.day === dayName);
         if (!daySlots.length) continue;
 
         for (const slot of daySlots) {
-            const startMins = getSlotStartMins(slot);
-            // If today, skip slots that have already started or passed
-            if (isToday && startMins <= nowMins) continue;
-
             // Format the label
             const startLabel = slot.timeStart || (slot.time || '').split('–')[0].trim();
-            if (isToday) return `Today, ${startLabel}`;
             if (offset === 1) return `Tomorrow, ${startLabel}`;
             return `${dayName}, ${startLabel}`;
         }

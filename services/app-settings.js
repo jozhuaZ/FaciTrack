@@ -6,18 +6,14 @@
  * variables first, so an install that has never opened the settings page keeps
  * behaving exactly as its .env says.
  *
- * Values are cached briefly because they are read on hot paths (every booking
- * checks the lead time). Saving clears the cache, so a change takes effect on
- * the next request rather than the next restart.
+ * Values are cached briefly because they are read on hot paths (presence
+ * boards poll them, for example). Saving clears the cache, so a change takes
+ * effect on the next request rather than the next restart.
  */
 
 const AppSettingModel = require('../models/AppSettingModel');
 
 const DEFINITIONS = {
-    booking_lead_time_hours: {
-        type: 'int', env: 'BOOKING_LEAD_TIME_HOURS', fallback: 4, min: 0, max: 168,
-        label: 'Booking lead time (hours)',
-    },
     pending_nudge_every_hours: {
         type: 'int', env: 'PENDING_NUDGE_EVERY_HOURS', fallback: 6, min: 1, max: 168,
         label: 'Remind instructors every (hours)',

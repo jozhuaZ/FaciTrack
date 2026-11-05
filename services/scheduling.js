@@ -78,53 +78,52 @@ const SLOT_HOLDING_SQL = SLOT_HOLDING_STATUSES.map(s => `'${s}'`).join(', ');
 const LIVE_APPOINTMENT_STATUSES = ['pending', 'confirmed'];
 const LIVE_APPOINTMENT_SQL = LIVE_APPOINTMENT_STATUSES.map(s => `'${s}'`).join(', ');
 
-// ── Booking lead time ──
-// Students may book same-day, but not a slot starting within this many hours.
-// The administrator sets this in System Settings; .env is the fallback for an
-// install that has never opened that page.
-const BOOKING_LEAD_TIME_HOURS = Number(process.env.BOOKING_LEAD_TIME_HOURS) || 4;
+// ── No same-day booking ──
+//
+// Students may book from tomorrow onwards. A slot dated today or earlier is
+// never bookable, whatever time it starts: the rule is about the calendar
+// date, not a rolling window from now. This replaced a configurable
+// hour-based lead time, which let a late-evening student book the next
+// morning but not the same afternoon — and needed an admin setting to explain.
+//
+// One rule, used by the SQL filters, the controller checks and the "next
+// available" labels, so a slot can never look open on one page and be
+// refused on the next.
 
-/** The configured lead time. Async because the stored value wins over .env. */
-async function bookingLeadTimeHours() {
-  const settings = require('./app-settings');
-  return settings.get('booking_lead_time_hours');
-}
+/** Today's date in the database's clock, as YYYY-MM-DD. */
+const BOOKING_TZ_OFFSET = process.env.DB_TIME_ZONE || '+08:00';
 
-/** Earliest instant a slot may start and still be bookable. */
-function earliestBookableStart(now = new Date(), leadHours = BOOKING_LEAD_TIME_HOURS) {
-  return new Date(now.getTime() + leadHours * 60 * 60 * 1000);
+/**
+ * Today's date as YYYY-MM-DD, measured on the database's clock.
+ *
+ * Consultation dates are Manila wall-clock values and every DB session runs at
+ * DB_TIME_ZONE (see configs/db.js), so "today" must be read at that offset.
+ * Using the Node server's local date instead would disagree with CURDATE() for
+ * eight hours around midnight on a host that runs in UTC — long enough for a
+ * direct booking link to slip a same-day slot through.
+ */
+function todayDateKey(now = new Date()) {
+  const match = /^([+-])(\d{2}):(\d{2})$/.exec(BOOKING_TZ_OFFSET);
+  if (!match) return normalizeDateKey(now);
+  const offsetMins = (match[1] === '-' ? -1 : 1) *
+    (Number(match[2]) * 60 + Number(match[3]));
+  const shifted = new Date(now.getTime() + offsetMins * 60000);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(shifted.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**
- * True when a slot starts too soon to book.
- * @param {string} dateKey   YYYY-MM-DD
- * @param {string} startTime HH:MM or HH:MM:SS (24h)
- * @param {number} leadHours defaults to the .env value; pass the configured one
+ * True when a slot dated `dateKey` is today or already past, so cannot be
+ * booked. An unparseable date is left to the other checks rather than being
+ * treated as blocked.
+ * @param {string} dateKey YYYY-MM-DD
  */
-function isWithinLeadTime(dateKey, startTime, now = new Date(), leadHours = BOOKING_LEAD_TIME_HOURS) {
-  const mins = toMinutesOfDay(startTime);
-  if (mins === null) return false;
-  const parts = String(dateKey).slice(0, 10).split("-").map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return false;
-  const slotStart = new Date(parts[0], parts[1] - 1, parts[2], Math.floor(mins / 60), mins % 60, 0, 0);
-  return slotStart < earliestBookableStart(now, leadHours);
-}
-
-/**
- * Minutes past midnight from either a 24h DB time ("14:30:00", "14:30")
- * or a 12h display time ("2:30 PM"). parseTimeToMinutes only accepts the
- * latter and returns null on the seconds suffix MySQL sends back.
- */
-function toMinutesOfDay(value) {
-  if (!value) return null;
-  const raw = String(value).trim();
-  if (/(AM|PM)$/i.test(raw)) return parseTimeToMinutes(raw);
-  const m = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) return parseTimeToMinutes(raw);
-  const h = parseInt(m[1], 10);
-  const min = parseInt(m[2], 10);
-  if (h > 23 || min > 59) return null;
-  return h * 60 + min;
+function isSameDayOrPast(dateKey, now = new Date()) {
+  const key = String(dateKey || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+  return key <= todayDateKey(now);
 }
 
 module.exports = {
@@ -136,9 +135,6 @@ module.exports = {
   SLOT_HOLDING_SQL,
   LIVE_APPOINTMENT_STATUSES,
   LIVE_APPOINTMENT_SQL,
-  BOOKING_LEAD_TIME_HOURS,
-  bookingLeadTimeHours,
-  earliestBookableStart,
-  isWithinLeadTime,
-  toMinutesOfDay
+  todayDateKey,
+  isSameDayOrPast
 };

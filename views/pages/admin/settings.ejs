@@ -53,15 +53,8 @@
                         <h3 class="card-title">Appointment Settings</h3>
                     </div>
                     <div class="card-body">
-                        <p class="settings-section-desc">How far ahead students may book, and how often instructors are chased about requests they have not answered.</p>
+                        <p class="settings-section-desc">How often instructors are chased about requests they have not answered.</p>
                         <div class="settings-group">
-
-                            <div class="settings-field">
-                                <label class="settings-label" for="bookingLeadTimeHours">Booking lead time (hours)</label>
-                                <input type="number" class="settings-input" id="bookingLeadTimeHours" min="0" max="168" step="1"
-                                       value="<%= settings.booking_lead_time_hours %>">
-                                <p class="settings-hint">Students may book the same day, but not a slot starting within this many hours.</p>
-                            </div>
 
                             <div class="settings-field">
                                 <label class="settings-label" for="pendingNudgeEveryHours">Remind instructors every (hours)</label>

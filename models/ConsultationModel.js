@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { to12Hour, to24Hour, toMins, fromMins, formatFullDate } = require('../utils/timeFormat');
 const SlotReservation = require('./SlotReservationModel');
 const NotificationModel = require('./NotificationModel');
-const { bookingLeadTimeHours, SLOT_HOLDING_SQL, LIVE_APPOINTMENT_SQL } = require('../services/scheduling');
+const { SLOT_HOLDING_SQL, LIVE_APPOINTMENT_SQL } = require('../services/scheduling');
 const { notBlockedByCalendarSql, blockedByCalendarSql } = require('../services/availability');
 
 function generateSubSlots(timeStart, timeEnd, maxCapacity) {
@@ -231,8 +231,8 @@ const ConsultationModel = {
            AND (u.availability_status IS NULL
                 OR u.availability_status = 'available'
                 OR cs.consultation_date > CURDATE())
-           -- Same-day booking is allowed, but not within the lead-time window
-           AND TIMESTAMP(cs.consultation_date, cs.start_time) >= DATE_ADD(NOW(), INTERVAL ? HOUR)
+           -- Students book from tomorrow onwards; today's slots are closed
+           AND cs.consultation_date > CURDATE()
            AND NOT EXISTS (
                SELECT 1 FROM instructor_unavailability iu
                WHERE iu.instructor_id = u.id AND iu.unavail_date = cs.consultation_date
@@ -240,7 +240,7 @@ const ConsultationModel = {
            -- A blocking event on a synced calendar hides the slot too
            AND ${notBlockedByCalendarSql('u.id', 'cs.consultation_date', 'cs.start_time', 'cs.end_time')}
          ORDER BY cs.consultation_date, cs.start_time`,
-            [publicId, await bookingLeadTimeHours()]
+            [publicId]
         );
         return groupConsultationRows(rows);
     },
@@ -295,8 +295,8 @@ const ConsultationModel = {
                         AND ch2.end_time   > cs.start_time
                   ) < r.capacity
             ) AS room_available,
-            (TIMESTAMP(cs.consultation_date, cs.start_time)
-                 < DATE_ADD(NOW(), INTERVAL ? HOUR))            AS too_soon,
+            -- A slot dated today or earlier is never bookable
+            (cs.consultation_date <= CURDATE())                  AS too_soon,
             EXISTS (
                 SELECT 1 FROM instructor_unavailability iu
                 WHERE iu.instructor_id = u.id AND iu.unavail_date = cs.consultation_date
@@ -312,7 +312,7 @@ const ConsultationModel = {
          WHERE u.public_id = ?
            AND cs.status <> 'closed'
          ORDER BY cs.consultation_date, cs.start_time`,
-            [await bookingLeadTimeHours(), publicId]
+            [publicId]
         );
         return groupConsultationRows(rows);
     },

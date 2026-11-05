@@ -178,7 +178,6 @@ const unavailableDates = new Set(<%- JSON.stringify(unavailableDates || []) %>);
 const facultyId = '<%= faculty.id %>';
 const WINDOW_START = new Date('<%- windowStart %>');
 const WINDOW_END   = new Date('<%- windowEnd %>');
-const LEAD_TIME_HOURS = <%- leadTimeHours %>;   // slots starting sooner than this are not bookable
 const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -189,7 +188,7 @@ const SLOT_REASON_HELP = {
     'Already booked': 'Another student has this slot.',
     'Another student is booking': 'Another student is filling in the booking form for this slot right now. It frees up again if they leave without booking.',
     'Instructor busy': 'The instructor has something else on their calendar at this time.',
-    'Too soon to book': 'Slots must be booked at least ' + LEAD_TIME_HOURS + ' hours ahead.',
+    'Same-day booking closed': 'Consultations can only be booked from tomorrow onwards.',
     'No room or link': 'Every consultation room is full for this time and the instructor has no online meeting link.',
 };
 
@@ -302,11 +301,11 @@ function renderCalendar() {
 
         const cellDateOnly = new Date(viewYear, viewMonth, d);
         const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        // Same-day booking is allowed; per-slot lead time is applied below.
+        // Students book from tomorrow onwards, so today is shown but never
+        // bookable; every one of its slots carries a reason.
         const isPast = cellDateOnly < todayOnly;
 
-        // Today keeps its ring and stays selectable — the lead-time filter
-        // decides whether any of its slots are still offered.
+        // Today keeps its ring, but the same-day rule closes all its slots.
         if (cellDateOnly.getTime() === todayOnly.getTime()) cell.classList.add('today');
 
         if (isPast) {
@@ -579,7 +578,7 @@ function hideTooltip() {
             instructorBusy: 'The instructor has something else scheduled at that time. Please choose another slot.',
             noMeetingLink: 'This instructor has not set up an online meeting link yet. Please choose face-to-face.',
             noModeAvailable: 'That slot cannot be booked: every consultation room is full for that time and the instructor has no online meeting link.',
-            tooSoon: 'Slots starting within ' + LEAD_TIME_HOURS + ' hours can no longer be booked. Please choose a later time.',
+            sameDayClosed: 'Consultations can only be booked from tomorrow onwards. Please choose a later date.',
         };
         showToast('error', 'Unable to Book', messages[bookingError] || 'Something went wrong. Please try again.');
         window.history.replaceState({}, '', window.location.pathname);

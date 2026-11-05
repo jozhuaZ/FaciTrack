@@ -7,7 +7,7 @@ const AuditLogModel = require('../models/AuditLogModel');
 const StudentSettingsModel = require('../models/StudentSettingsModel');
 const { buildStudentUser } = require('../utils/sessionUser');
 const { to12Hour } = require('../utils/timeFormat');
-const { isWithinLeadTime, bookingLeadTimeHours } = require('../services/scheduling');
+const { isSameDayOrPast, todayDateKey } = require('../services/scheduling');
 
 /**
  * A non-available availability_status is a "right now" signal, so it only bars
@@ -45,7 +45,7 @@ function getTwoWeekWindow() {
  * Why a slot cannot be booked, or null when it can.
  *
  * Ordered most-specific first: a day the instructor blocked off explains more
- * than "too soon", and the student only ever sees one reason per slot.
+ * than the same-day rule, and the student only ever sees one reason per slot.
  */
 function slotReason(sub, { isReservedByOther, roomAvailable, canDoOnline }) {
     if (sub.dateBlocked) return 'Instructor away';
@@ -53,15 +53,13 @@ function slotReason(sub, { isReservedByOther, roomAvailable, canDoOnline }) {
     if (sub.isBooked) return 'Already booked';
     if (isReservedByOther) return 'Another student is booking';
     if (sub.calendarBlocked) return 'Instructor busy';
-    if (sub.tooSoon) return 'Too soon to book';
+    if (sub.tooSoon) return 'Same-day booking closed';
     if (!roomAvailable && !canDoOnline) return 'No room or link';
     return null;
 }
 
 function findNextAvailable(consultationSlots) {
-    const now = new Date();
-    const todayKey = localDateKey(now);
-    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const todayKey = todayDateKey();
 
     const openSlots = [];
     consultationSlots.forEach(group => {
@@ -86,12 +84,8 @@ function findNextAvailable(consultationSlots) {
         return a.timeStartMins - b.timeStartMins;
     });
 
-    // Skip slots earlier today that have already passed
-    const next = openSlots.find(s => {
-        if (s.date > todayKey) return true;
-        if (s.date === todayKey) return s.timeStartMins > nowMins;
-        return false;
-    });
+    // Today's slots are never bookable, so the next opening starts tomorrow
+    const next = openSlots.find(s => s.date > todayKey);
 
     if (!next) return null;
 
@@ -221,7 +215,7 @@ const StudentController = {
                 // The same query the profile page uses, so the directory's
                 // "next available" cannot advertise a slot the profile then
                 // shows as closed. The previous query knew nothing about
-                // blocked dates, calendar events or lead time.
+                // blocked dates or calendar events.
                 const grouped = await ConsultationModel.getSlotsForStudentView(f.instructor_id);
                 const canDoOnline = !!(f.default_meeting_link || f.google_connected);
 
@@ -360,7 +354,6 @@ const StudentController = {
                 unavailableDates: unavailability.map(u => u.date),
                 windowStart: windowStart.toISOString(),
                 windowEnd: windowEnd.toISOString(),
-                leadTimeHours: await bookingLeadTimeHours(),
                 canDoOnline,
             });
         } catch (err) {
@@ -395,8 +388,8 @@ const StudentController = {
                 return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=instructorUnavailable`);
             }
 
-            if (isWithinLeadTime(slotDetails.date, slotDetails.rawStartTime, new Date(), await bookingLeadTimeHours())) {
-                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=tooSoon`);
+            if (isSameDayOrPast(slotDetails.date)) {
+                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=sameDayClosed`);
             }
 
             if (slotDetails.isBooked) {
@@ -702,11 +695,11 @@ const StudentController = {
                 });
             }
 
-            if (slot && isWithinLeadTime(slot.date, slot.rawStartTime, new Date(), await bookingLeadTimeHours())) {
+            if (slot && isSameDayOrPast(slot.date)) {
                 return res.status(409).json({
                     success: false,
-                    reason: 'TOO_SOON',
-                    error: `Slots starting within ${await bookingLeadTimeHours()} hours can no longer be booked.`,
+                    reason: 'SAME_DAY_CLOSED',
+                    error: 'Consultations can only be booked from tomorrow onwards.',
                 });
             }
 
@@ -761,9 +754,9 @@ const StudentController = {
             }
 
             // The slot list already filters these out, but a stale page or a direct
-            // POST could still target a slot that is now inside the lead-time window.
-            if (isWithinLeadTime(slotDetails.date, slotDetails.rawStartTime, new Date(), await bookingLeadTimeHours())) {
-                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=tooSoon`);
+            // POST could still target a slot dated today.
+            if (isSameDayOrPast(slotDetails.date)) {
+                return res.redirect(`/student/faculty/${slotDetails.faculty.id}?bookingError=sameDayClosed`);
             }
 
             if (statusBlocksSlot(slotDetails.faculty.availability_status, slotDetails.date)) {

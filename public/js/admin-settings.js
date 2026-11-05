@@ -56,7 +56,6 @@
                 return Promise.resolve(false);
             }
             return saveCard({
-                booking_lead_time_hours: Number(value('bookingLeadTimeHours')),
                 pending_nudge_every_hours: Number(value('pendingNudgeEveryHours')),
                 makeup_max_weeks_ahead: Number(value('makeupMaxWeeksAhead')),
                 makeup_day_start: value('makeupDayStart'),
